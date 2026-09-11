@@ -17,16 +17,11 @@ flowchart TB
 
 Test individual:
 
-- crypto wrappers
-    
-- serializers
-    
-- replay state
-    
-- routing functions
-    
-- validation functions
-    
+-   crypto wrappers
+-   serializers
+-   replay state
+-   routing functions
+-   validation functions
 
 ## Protocol
 
@@ -50,7 +45,7 @@ Every major security property must have at least one negative test.
 
 Example:
 
-> If we claim tampering is detected, a test must deliberately tamper  
+> If we claim tampering is detected, a test must deliberately tamper
 > with authenticated data and expect rejection.
 
 ## Observability tests
@@ -60,25 +55,28 @@ Observability is part of the test surface.
 Test at least:
 
 - expected metrics for packet receive/forward/drop/expiry
-    
 - expected security events for replay and authentication failures
-    
 - absence of plaintext from relay logs
-    
 - absence of private/session keys from logs
-    
 - resistance to log injection through attacker-controlled fields
-    
 - bounded telemetry behavior under event floods
-    
 - continued message delivery when monitoring components are unavailable
-    
 
 The test suite should distinguish between:
 
 1. **Telemetry correctness** — did the expected event/metric appear?
-    
 2. **Telemetry safety** — did the event avoid leaking protected data?
-    
-3. **Telemetry independence** — does the mesh still work without the  
-    observability backend?
+3. **Telemetry independence** — does the mesh still work without the
+   observability backend?
+
+## M1.1 Protocol Serialization Tests
+
+The M1.1 baseline includes regression coverage for:
+
+- Protobuf serialization/deserialization of valid packets
+- malformed serialized data rejection
+- unknown-field rejection
+- successful generated-code compilation
+
+These tests are prerequisites for later runtime packet validation and must
+remain passing as the protocol evolves.

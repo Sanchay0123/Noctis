@@ -140,3 +140,38 @@ allocating the frame buffer**.
 
 Oversized frames are rejected and must not trigger unbounded memory
 allocation.
+
+## M1.1 Implementation Freeze — Protobuf Schema & Code Generation
+
+The M1.1 implementation establishes the canonical Protobuf source at
+`internal/protocol/meshchat.proto` and generated Go output at
+`internal/protocol/meshchat.pb.go`.
+
+The generated-code workflow is containerized through
+`scripts/generate_proto.sh`; host-installed Protobuf tooling is not required.
+The implementation report records `protoc-gen-go` v1.33.0 and the Go 1.21
+Alpine container as the controlled generation environment.
+
+### Runtime validation invariants
+
+The Protobuf schema does not itself enforce all security-sensitive byte
+lengths. Runtime validation must enforce the documented exact sizes for
+packet IDs, node identities, ephemeral keys, signatures, and session IDs.
+
+The runtime packet validator must also enforce consistency between
+`PacketType` and the selected `oneof` payload:
+
+- `PACKET_TYPE_INIT` -> `init`
+- `PACKET_TYPE_RESP` -> `resp`
+- `PACKET_TYPE_APP_DATA` -> `app_data`
+- `PACKET_TYPE_UNKNOWN` -> reject
+
+Unknown Protobuf fields are not accepted by the protocol. The implementation
+currently validates this policy at runtime after unmarshaling; this behavior
+must remain covered by an explicit regression test.
+
+### Generation validation
+
+Changes to the `.proto` source must be followed by deterministic regeneration
+of the generated Go code and the normal formatting, vet, test, and build
+validation sequence.
