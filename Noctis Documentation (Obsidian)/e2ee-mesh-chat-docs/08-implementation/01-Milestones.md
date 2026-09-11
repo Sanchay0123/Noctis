@@ -1,166 +1,152 @@
 # Implementation Milestones
 
-## M0 — Architecture
+## M0 --- Architecture
 
-**Status: Revised review complete**
+Deliver:
 
-Architecture is **approved with changes**.
+- requirements
+- threat model
+- architecture
+- component model
+- data flows
+- protocol proposal
+- cryptographic design
+- technology decision
+- repository plan
+- testing strategy
 
-M1 and M2 are authorized. M3 remains gated on final cryptographic
-protocol specification.
+### M0.1 --- Repository & Architecture Initialization/Audit
 
-## M1 — Project Skeleton, Tooling & Containerization
+- Go module and repository structure
+- package boundary skeleton
+- `.gitignore` and secret policy
+- Docker/Compose development skeleton
+- CLI entrypoint stub
+- deterministic build/test command definition
+- initial dependency policy
+- architecture consistency audit
 
-**Status: AUTHORIZED**
+**Status:** Completed as a foundation task; implementation validation remains subject to technical-lead review.
 
-- Go module
-- repository structure
-- Protobuf schema skeleton
+**Gate:** Technical lead review of actual repository artifacts and validation evidence.
+
+### M0.2 --- Architecture Consistency / Specification Freeze
+
+- verify repository structure against architecture
+- freeze protocol terminology and packet schema
+- verify security boundaries
+- verify containerization constraints
+- verify testing and security acceptance criteria
+
+**Gate:** Technical lead approval before protocol implementation.
+
+## M1 --- Skeleton
+
+- repository
+- build system
+- configuration
+- logging
+- test framework
+- startup
+- Protobuf schema/tooling
 - generated-code workflow
-- Dockerfile
-- Docker Compose topology skeleton
-- CI workflow
-- dependency management
-- `.gitignore`
-- configuration/secrets policy
-- deterministic test command
+- CI baseline
+- containerized deterministic validation
 
-### M1 gate
+**Constraint:** No custom cryptographic handshake, identity implementation, encrypted messaging, or mesh-routing implementation.
 
-Clean environment must be able to:
+**Gate:** build and tests pass; generated-code workflow is reproducible; technical lead approval.
 
-1. build containers
-2. generate/compile Protobuf
-3. run tests
-4. run the minimal node skeleton
+## M2 --- Identity
 
-No custom cryptographic handshake implementation in M1.
-
-## M2 — Cryptographic Primitives & Identity
-
-**Status: AUTHORIZED WITH SCOPE**
-
-Implement and test:
-
-- Ed25519 identity generation
-- public/private key representation
-- signing
+- Ed25519 generation
+- storage
+- loading
+- signatures
 - verification
-- secure randomness
 
-Do not invent session protocol semantics during M2.
+**Gate:** crypto review + tests.
 
-## M3 — Secure Session Establishment
+## M3 --- Session establishment
 
-**Status: BLOCKED**
+- X25519
+- Ed25519 authentication
+- HKDF
+- session lifecycle
 
-Before implementation, finalize:
+**Gate:** MITM test passes.
 
-- exact canonical transcript
-- INIT/RESP wire messages
-- exact signature inputs
-- full 32-byte session ID
-- exact HKDF construction
-- handshake replay cache/state
-- retransmission behavior
-- timeout behavior
-- key erasure lifecycle
-
-### M3 gate
-
-Cryptographic protocol review must pass.
-
-## M4 — Encrypted Messaging
-
-After M3 approval:
+## M4 --- Encrypted messaging
 
 - ChaCha20-Poly1305
-- canonical AAD
-- nonce construction
-- sequence numbers
-- replay window
-- key rotation
+- nonce management
+- AAD
+- message serialization
+- replay model
 
-### Gate
+**Gate:** negative crypto tests pass.
 
-Crypto + replay review.
+## M5 --- Direct networking
 
-## M5 — Direct Networking
+- two-node connection
+- peer authentication
+- direct encrypted message
 
-- TCP
-- 4-byte length-prefixed framing
-- strict maximum frame size
-- Protobuf parsing
-- connection lifecycle
-- backpressure
+**Gate:** end-to-end two-node demo.
 
-### Gate
+## M6 --- Mesh routing
 
-Two-node integration tests.
-
-## M6 — Mesh Routing
-
-- bootstrap peers
-- PacketID seen-cache
+- discovery
+- routing
+- multi-hop
 - TTL
-- managed flooding
-- resource controls
-- four-node integration
+- duplicate detection
+- failure handling
 
-### Gate
+**Gate:** four-node demonstration.
 
-Mesh/routing review.
+## M7 --- Security hardening
 
-## M7 — UI & Observability
+- malformed input
+- replay
+- impersonation
+- packet tampering
+- malicious relay
+- basic DoS
+- telemetry leakage
+- telemetry/log injection
+- telemetry resource bounds
 
-- CLI/UI
+**Gate:** security test review.
+
+## M8 --- Observability and UI
+
+### Observability
+
 - Prometheus-compatible metrics
 - structured security-safe events
 - log aggregation
 - Grafana dashboard
 - telemetry failure isolation
 
-### Gate
+### UI
 
-Observability security review.
+Only after protocol stability.
 
-## M8 — Security Hardening
+**Gate:** observability safety review + UI smoke tests.
 
-- malformed input
-- replay
-- impersonation
-- tampering
-- malicious relay
-- resource exhaustion
-- log/telemetry injection
-- secret/plaintext leakage
-- dependency review
+## M9 --- Demonstration environment
 
-### Gate
+- fully containerized node topology
+- observability stack
+- reproducible setup
+- scripted security demonstrations
+- documented GitHub workflow
 
-Security review.
+**Gate:** clean-environment reproduction.
 
-## M9 — Demonstration Environment
+## M10 --- Documentation
 
-- complete Docker Compose topology
-- four-node demonstration
-- security demonstrations
-- observability dashboard
-- clean-environment reproduction
+Final technical and academic documentation.
 
-### Gate
-
-Reproducibility test.
-
-## M10 — Documentation & Release
-
-- final report
-- synchronized protocol documentation
-- limitations
-- test evidence
-- GitHub repository state
-- meaningful milestone commits
-
-### Gate
-
-Final technical-lead approval.
+See [[08-implementation/05-Definition-of-Done]].
