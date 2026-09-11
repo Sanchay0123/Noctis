@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package protocol;
+option go_package = "github.com/sanchayjain/meshchat/internal/protocol";
+
+enum PacketType {
+  PACKET_TYPE_UNKNOWN = 0;
+  PACKET_TYPE_INIT = 1;
+  PACKET_TYPE_RESP = 2;
+  PACKET_TYPE_APP_DATA = 3;
+}
+
+message MeshPacket {
+  uint32 version = 1;
+  PacketType type = 2;
+
+  bytes packet_id = 3;
+  uint32 ttl = 4;
+  bytes source_node = 5;
+  bytes dest_node = 6;
+
+  oneof payload {
+    InitPayload init = 7;
+    RespPayload resp = 8;
+    AppDataPayload app_data = 9;
+  }
+}
+
+message InitPayload {
+  bytes ephemeral_key = 1;
+  bytes signature = 2;
+}
+
+message RespPayload {
+  bytes ephemeral_key = 1;
+  bytes signature = 2;
+}
+
+message AppDataPayload {
+  bytes session_id = 1;
+  uint64 sequence_num = 2;
+  bytes ciphertext = 3;
+}

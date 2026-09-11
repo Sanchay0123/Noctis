@@ -1,0 +1,35 @@
+# Binaries and build artifacts
+/bin/
+meshchat
+*.exe
+*.test
+*.out
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Cryptographic private keys and sensitive state (CRITICAL)
+*.key
+*.pem
+*.priv
+identity.priv
+secrets/
+session_keys/
+
+# Runtime and local state
+runtime/
+state/
+*.log
+*.pid
+
+# Go dependencies and local vendor
+vendor/
+
+# IDE and editor state
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
