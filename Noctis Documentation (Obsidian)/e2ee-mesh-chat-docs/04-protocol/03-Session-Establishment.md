@@ -2,159 +2,206 @@
 
 ## Status
 
-**Design under review — M3 implementation blocked until the canonical  
-construction is approved.**
+**M3 implementation blocked pending final cryptographic specification.**
 
-## Key roles
+The revised architecture has the correct high-level model:
 
-Each node has:
+- Ed25519 = long-term identity/signature
+- X25519 = fresh ephemeral key agreement
+- HKDF-SHA-256 = session key derivation
+- ChaCha20-Poly1305 = application encryption
 
-- long-term Ed25519 identity keypair
-    
-- fresh ephemeral X25519 keypair per session
-    
+## Identity trust
 
-The Ed25519 key is used for authentication/signatures only.
+A node must already know and authenticate the expected peer's Ed25519
+public key through the project's configured out-of-band trust mechanism.
 
-The X25519 key is used for key agreement only.
+Trust-on-First-Use is an application policy, not cryptographic
+authentication by itself.
 
-## Initiation
+## Canonical transcript
 
-Alice generates:
+The handshake must use one exact byte representation.
 
-```
-eA = ephemeral X25519 private key
-EA = corresponding public key
-```
+Define:
 
-Alice creates an authenticated INIT structure containing at minimum:
+```text
+DOMAIN = "MeshChat-Handshake-v1"
 
-```
-protocol_version
-handshake_domain
-initiator_identity = ID_A
-responder_identity = ID_B
-initiator_ephemeral = EA
-```
+T_INIT =
+    DOMAIN ||
+    u8(PROTOCOL_VERSION) ||
+    ID_A ||
+    ID_B ||
+    E_A ||
+    ZERO32
 
-Alice signs the canonical encoding of that structure with her Ed25519  
-private key.
-
-## Response
-
-Bob verifies Alice's identity signature and confirms that the requested  
-responder identity is Bob.
-
-Bob generates:
-
-```
-eB = ephemeral X25519 private key
-EB = corresponding public key
+T_RESP =
+    DOMAIN ||
+    u8(PROTOCOL_VERSION) ||
+    ID_A ||
+    ID_B ||
+    E_A ||
+    E_B
 ```
 
-Bob signs a canonical response transcript containing:
+Where:
 
+- `ID_A` = exactly 32 bytes Ed25519 public key
+- `ID_B` = exactly 32 bytes Ed25519 public key
+- `E_A` = exactly 32 bytes X25519 public key
+- `E_B` = exactly 32 bytes X25519 public key
+- `ZERO32` = exactly 32 zero bytes
+- `PROTOCOL_VERSION` = `1`
+
+`DOMAIN` is a fixed protocol constant and must have exactly one defined
+byte representation in the implementation.
+
+The implementation must not use ambiguous string concatenation.
+
+## INIT
+
+Alice:
+
+1. generates a fresh X25519 ephemeral keypair
+2. constructs `T_INIT`
+3. signs `T_INIT` with Alice's Ed25519 identity key
+4. sends INIT containing Alice's identity, Bob's identity, ephemeral
+   public key and signature
+
+Bob:
+
+1. validates packet structure and sizes
+2. confirms the requested responder identity is Bob
+3. obtains Alice's trusted Ed25519 public key
+4. verifies the INIT signature
+5. checks the handshake replay/duplicate state
+6. generates a fresh X25519 ephemeral keypair
+
+## RESP
+
+Bob constructs:
+
+```text
+T_RESP =
+    DOMAIN ||
+    u8(PROTOCOL_VERSION) ||
+    ID_A ||
+    ID_B ||
+    E_A ||
+    E_B
 ```
-protocol_version
-handshake_domain
-initiator_identity = ID_A
-responder_identity = ID_B
-initiator_ephemeral = EA
-responder_ephemeral = EB
+
+Bob signs `T_RESP` using Bob's Ed25519 identity key.
+
+Bob then computes:
+
+```text
+SS = X25519(e_B, E_A)
 ```
 
-Alice verifies Bob's signature.
+Bob derives session keys and sends RESP.
 
-## Shared secret
+## Alice finalization
 
-Both parties compute:
+Alice:
 
-```
-SS = X25519(ephemeral_private, peer_ephemeral_public)
-```
-
-The implementation must reject an invalid/low-order result according to  
-the selected library's documented behavior.
-
-## Key derivation
-
-The final KDF must be specified before M3.
-
-It must bind:
-
-- the shared secret
-    
-- protocol/domain context
-    
-- authenticated handshake transcript
-    
-- both identities
-    
-- both ephemeral public keys
-    
-- directional role labels
-    
-
-Two independent directional AEAD keys are required.
-
-Do not use a generic string such as `"MeshChat_v1_A_to_B"` without  
-binding it to the actual session transcript.
+1. validates the RESP structure
+2. confirms the responder identity is Bob
+3. confirms the returned initiator identity is Alice
+4. confirms `E_A` matches the outstanding handshake
+5. verifies Bob's signature over the exact `T_RESP`
+6. computes `SS = X25519(e_A, E_B)`
+7. derives the same session keys
+8. securely erases `e_A`
+9. marks the session established
 
 ## Session identifier
 
-`session_id` is a protocol identifier for selecting the correct session  
-state. It is not a cryptographic secret.
+**Use the full transcript hash.**
 
-The implementation must define how it is generated and ensure that it  
-cannot cause ambiguous session-state lookup.
-
-A cryptographic transcript hash may be used as the basis for deriving a  
-session identifier, subject to the final schema/type decision.
-
-## Key lifecycle
-
-After a successful handshake:
-
-- retain only the session state required for operation
-    
-- erase ephemeral private keys as soon as they are no longer required
-    
-- never persist session keys by default
-    
-- establish fresh session keys after restart
-    
-- establish fresh session keys during rotation
-    
-
-## Handshake replay
-
-Handshake messages must have their own duplicate/replay handling.
-
-A captured INIT or RESP must not cause an endpoint to silently replace a  
-live session with attacker-controlled state.
-
-The implementation must define session-state transitions and acceptable  
-retransmission behavior.
-
-## Failure states
-
-At minimum:
-
-```
-stateDiagram-v2
-    [*] --> Idle
-    Idle --> InitSent: send INIT
-    InitSent --> Established: valid RESP
-    InitSent --> Failed: invalid/timeout
-    Idle --> Failed: invalid INIT
-    Established --> Rekeying: rotation threshold
-    Rekeying --> Established: valid new handshake
-    Established --> Closed: disconnect
-    Failed --> Idle
-    Closed --> Idle
+```text
+session_id = SHA256(T_RESP)
 ```
 
-Invalid signatures, malformed messages, unexpected state transitions and  
-timeouts must fail closed.
+Therefore `session_id` is exactly 32 bytes.
 
-See [[04-protocol/06-State-Machines]].
+Do not truncate it to 32 bits. A 4-byte identifier is insufficient for
+robust session-state separation.
+
+## Key derivation
+
+Use HKDF-SHA-256:
+
+```text
+salt = SHA256(T_RESP)
+
+PRK = HKDF-Extract(salt, SS)
+
+K_A_to_B =
+    HKDF-Expand(
+        PRK,
+        "MeshChat-v1|session|initiator->responder",
+        32
+    )
+
+K_B_to_A =
+    HKDF-Expand(
+        PRK,
+        "MeshChat-v1|session|responder->initiator",
+        32
+    )
+```
+
+The exact byte strings are protocol constants.
+
+Both parties therefore derive two distinct directional ChaCha20-Poly1305
+keys.
+
+## Handshake replay state
+
+A bounded replay/duplicate cache is required.
+
+A cache entry must identify the handshake sufficiently to distinguish:
+
+- peer identity
+- requested local identity
+- initiator ephemeral public key
+
+A duplicate INIT for a completed/active handshake must not silently
+create an unrelated replacement session.
+
+The implementation must define bounded capacity and expiration.
+
+A timeout clears the outstanding handshake state and requires a fresh
+ephemeral key for a new attempt.
+
+## Concurrent handshakes
+
+If multiple handshakes for the same peer are permitted, each must have
+independent state and an unambiguous identifier.
+
+If only one outstanding handshake per peer is permitted, additional INITs
+must be handled deterministically and documented.
+
+## Key erasure
+
+Ephemeral private keys must be erased as soon as protocol processing no
+longer requires them.
+
+Session keys remain in memory only for the active session.
+
+Application restart destroys session state and requires a fresh
+handshake.
+
+## Forward secrecy limitation
+
+The design does not provide Signal-style post-compromise security.
+
+Compromise of an active session key compromises messages protected by that
+key until the session is replaced.
+
+Do not claim PCS or protection against compromised endpoints.
+
+See [[04-protocol/06-State-Machines]] and
+[[05-cryptography/06-Key-Lifecycle]].

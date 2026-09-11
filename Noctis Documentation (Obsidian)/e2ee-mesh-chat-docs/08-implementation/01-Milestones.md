@@ -2,106 +2,129 @@
 
 ## M0 — Architecture
 
-**Status: Under review**
+**Status: Revised review complete**
 
-- architecture baseline
-- threat model
-- protocol design
-- crypto design
-- observability design
-- containerization strategy
-- GitHub/CI strategy
+Architecture is **approved with changes**.
 
-**Gate:** architecture approval.
+M1 and M2 are authorized. M3 remains gated on final cryptographic
+protocol specification.
 
-## M1 — Project Skeleton & Tooling
+## M1 — Project Skeleton, Tooling & Containerization
+
+**Status: AUTHORIZED**
 
 - Go module
 - repository structure
-- Protobuf schema and generated code
+- Protobuf schema skeleton
+- generated-code workflow
 - Dockerfile
-- Compose demonstration topology
-- deterministic test command
+- Docker Compose topology skeleton
 - CI workflow
-- lint/static analysis where justified
+- dependency management
 - `.gitignore`
 - configuration/secrets policy
+- deterministic test command
 
-**Gate:** clean containerized test run and CI pass.
+### M1 gate
+
+Clean environment must be able to:
+
+1. build containers
+2. generate/compile Protobuf
+3. run tests
+4. run the minimal node skeleton
+
+No custom cryptographic handshake implementation in M1.
 
 ## M2 — Cryptographic Primitives & Identity
 
-- Ed25519 identity
-- secure key generation
-- key serialization/storage policy
-- signature tests
+**Status: AUTHORIZED WITH SCOPE**
 
-**Gate:** crypto review.
+Implement and test:
+
+- Ed25519 identity generation
+- public/private key representation
+- signing
+- verification
+- secure randomness
+
+Do not invent session protocol semantics during M2.
 
 ## M3 — Secure Session Establishment
 
-- canonical signed handshake
-- X25519 ephemeral agreement
-- transcript-bound KDF
-- directional session keys
-- session state machine
-- handshake replay handling
-- key erasure/rotation
+**Status: BLOCKED**
 
-**Gate:** cryptographic protocol review.
+Before implementation, finalize:
+
+- exact canonical transcript
+- INIT/RESP wire messages
+- exact signature inputs
+- full 32-byte session ID
+- exact HKDF construction
+- handshake replay cache/state
+- retransmission behavior
+- timeout behavior
+- key erasure lifecycle
+
+### M3 gate
+
+Cryptographic protocol review must pass.
 
 ## M4 — Encrypted Messaging
 
+After M3 approval:
+
 - ChaCha20-Poly1305
 - canonical AAD
+- nonce construction
 - sequence numbers
 - replay window
-- nonce uniqueness enforcement
+- key rotation
 
-**Gate:** crypto + replay test review.
+### Gate
+
+Crypto + replay review.
 
 ## M5 — Direct Networking
 
 - TCP
-- message framing
+- 4-byte length-prefixed framing
+- strict maximum frame size
 - Protobuf parsing
 - connection lifecycle
-- backpressure/error handling
+- backpressure
 
-**Gate:** two-node integration tests.
+### Gate
+
+Two-node integration tests.
 
 ## M6 — Mesh Routing
 
-- peer management
-- PacketID cache
+- bootstrap peers
+- PacketID seen-cache
 - TTL
 - managed flooding
-- resource limits
-- four-node integration tests
+- resource controls
+- four-node integration
 
-**Gate:** mesh test review.
+### Gate
 
-## M7 — Observability & Security Telemetry
+Mesh/routing review.
 
+## M7 — UI & Observability
+
+- CLI/UI
 - Prometheus-compatible metrics
 - structured security-safe events
-- log aggregation candidate (Loki preferred)
+- log aggregation
 - Grafana dashboard
 - telemetry failure isolation
-- telemetry leakage tests
 
-**Gate:** observability/security review.
+### Gate
 
-## M8 — UI & Demonstration Environment
+Observability security review.
 
-- CLI or web UI
-- reproducible four-node topology
-- security demonstrations
-- dashboard demonstrations
-
-**Gate:** clean-environment demo.
-
-## M9 — Security Hardening
+## M8 — Security Hardening
 
 - malformed input
 - replay
@@ -109,18 +132,35 @@
 - tampering
 - malicious relay
 - resource exhaustion
-- telemetry leakage/injection
+- log/telemetry injection
+- secret/plaintext leakage
 - dependency review
 
-**Gate:** security review.
+### Gate
+
+Security review.
+
+## M9 — Demonstration Environment
+
+- complete Docker Compose topology
+- four-node demonstration
+- security demonstrations
+- observability dashboard
+- clean-environment reproduction
+
+### Gate
+
+Reproducibility test.
 
 ## M10 — Documentation & Release
 
 - final report
-- architecture/protocol documentation
+- synchronized protocol documentation
 - limitations
 - test evidence
-- reproducibility instructions
-- GitHub release state
+- GitHub repository state
+- meaningful milestone commits
 
-**Gate:** final technical-lead approval.
+### Gate
+
+Final technical-lead approval.

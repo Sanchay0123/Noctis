@@ -1,63 +1,102 @@
 # Replay Protection
 
-## Message sequence
+## Two independent replay mechanisms
 
-Each direction of a session maintains an independent monotonically
-increasing sequence number.
+The protocol uses two different identifiers for two different layers.
 
-A new session receives fresh session keys, so sequence numbering may
-restart at zero only with those new keys.
+### Mesh PacketID
 
-## Nonce invariant
+Prevents repeated forwarding of the same network packet.
 
-ChaCha20-Poly1305 requires nonce uniqueness for a given key.
+### Session sequence number
 
-The protocol invariant is:
+Prevents replay of an authenticated application message.
 
-> No `(AEAD key, nonce)` pair may ever be reused.
+Neither mechanism replaces the other.
 
-The proposed nonce construction may encode a 64-bit sequence number into
-the 96-bit nonce, provided:
+## Sequence numbers
 
-- the mapping is injective
-- the directional key is unique
-- sequence state never repeats under that key
-- the session key is never reused after restart
-- overflow is handled by terminating/rotating the session before reuse
+Each directional session key has an independent sequence space.
 
-The implementation must test this invariant.
+The sender begins at sequence `0` for a newly established session and
+increments exactly once for each encrypted application message.
 
-## Sliding window
+## Nonce
+
+The AEAD nonce is a deterministic 96-bit encoding of the sequence number:
+
+```text
+nonce = 0x00000000 || uint64_be(sequence_num)
+```
+
+This construction is safe only under the `(key, nonce)` uniqueness
+invariant.
+
+## Nonce uniqueness invariant
+
+The implementation must guarantee:
+
+> A given ChaCha20-Poly1305 key is never used with the same nonce twice.
+
+This is achieved by:
+
+- separate directional keys
+- fresh X25519 ephemeral keys for every new session
+- in-memory-only session state
+- mandatory fresh handshake after restart
+- monotonic sequence numbers
+- session replacement before sequence exhaustion
+
+## Receiver sliding window
 
 The receiver maintains a bounded replay window.
 
-A candidate sequence number is:
+For each incoming sequence number:
 
-1. rejected if already accepted
-2. rejected if outside the permitted old-message window
-3. authenticated before being committed as accepted, according to the
-   final protocol state machine
-4. accepted and recorded if valid
+1. reject if already accepted
+2. reject if too old for the window
+3. authenticate/decrypt according to the protocol state machine
+4. commit the sequence number as accepted only according to the defined
+   successful-authentication path
 
-The exact window width is an implementation parameter and must be
-documented.
+The window width is initially `64`.
 
-## PacketID versus sequence number
+## Session rotation
 
-These solve different problems:
+Rotate/re-establish session keys before sequence-number exhaustion.
 
-- `PacketID` prevents mesh forwarding loops and duplicate flooding.
-- `sequence_number` protects an authenticated session against message
-  replay.
+The initial policy is:
 
-Do not substitute one for the other.
+- maximum `2^16` application messages, or
+- maximum 24 hours
 
-## Rotation
+whichever occurs first.
 
-Session rotation must occur before any sequence/nonce exhaustion limit.
+The implementation must not reuse the old key/nonce space.
 
-The proposed `2^16` message threshold is acceptable as a conservative
-prototype policy but must be implemented as a policy constant rather
-than an assumption in the cryptographic primitive.
+## Restart
 
-See [[05-cryptography/04-AEAD-and-Nonce-Management]].
+Session keys and sequence state are not persisted.
+
+After restart:
+
+```text
+old session state = invalid
+        ↓
+fresh X25519 handshake
+        ↓
+fresh session keys
+        ↓
+sequence starts at 0 under new keys
+```
+
+This is a security requirement, not merely a convenience.
+
+## Handshake replay
+
+Handshake messages require their own duplicate/replay state.
+
+A fresh ephemeral key does not by itself prove that an incoming handshake
+is new.
+
+See [[04-protocol/03-Session-Establishment]].

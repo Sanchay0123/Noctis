@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  node-alice:
+    build: .
+    environment:
+      - MESH_ROLE=initiator
+      - LOG_LEVEL=debug
+    # No private keys or secrets here. They would be mounted at runtime securely.
+    networks:
+      - meshnet
+
+  node-bob:
+    build: .
+    environment:
+      - MESH_ROLE=responder
+      - LOG_LEVEL=debug
+    networks:
+      - meshnet
+
+networks:
+  meshnet:
+    driver: bridge

@@ -1,0 +1,22 @@
+# Binaries
+/bin/
+meshchat
+
+# Environment
+.env
+.env.local
+
+# Dependencies
+vendor/
+# go.sum (Normally checked in, but ignored here if generated locally without go mod tidy)
+
+# IDEs
+.idea/
+.vscode/
+
+# Secrets & Keys (CRITICAL: Do not commit private keys)
+*.key
+*.pem
+secrets/
+identity.priv
+session_keys/

@@ -4,72 +4,87 @@
 
 **Managed flooding** is approved for the educational prototype.
 
-It is intentionally simpler than a full distance-vector or link-state
-protocol.
+## Forwarding algorithm
 
-## Forwarding
+For each received packet:
 
-A node that receives a packet not destined for itself may forward it to
-eligible peers except the incoming peer.
+```text
+1. Validate frame size and basic packet structure.
+2. Extract PacketID.
+3. Check bounded seen-cache.
+4. If already seen: drop.
+5. Record PacketID according to cache policy.
+6. If destination is local: pass to protocol/application handling.
+7. Otherwise:
+   a. if TTL <= 1: drop
+   b. decrement TTL
+   c. forward to eligible peers
+```
 
-Forwarding must occur only after basic packet validation and duplicate
-checking.
-
-## Duplicate detection
-
-Every packet has a sender-generated PacketID.
-
-Each node maintains a bounded seen-cache.
-
-The cache must define:
-
-- maximum number of entries
-- expiration policy
-- eviction policy
-- memory limit
-
-A fixed 60-second lifetime is not automatically sufficient. It must be
-consistent with the maximum expected packet lifetime.
+The implementation must ensure duplicate suppression occurs before
+forwarding.
 
 ## TTL
 
-Packets have a finite hop limit.
+Initial TTL is `16`.
 
-On receipt:
+A packet arriving at its destination with TTL `1` may be processed.
 
-1. reject invalid TTL values
-2. if the packet is for the local node, process it as appropriate
-3. otherwise decrement TTL before forwarding
-4. do not forward when the resulting TTL is zero
+A non-destination packet with TTL `1` is not forwarded.
 
-## Flooding risks
+A packet with invalid/zero TTL must not be forwarded.
 
-Managed flooding does not prevent a malicious node from injecting many
-unique PacketIDs.
+## Seen-cache
 
-The implementation should therefore include reasonable:
+The cache is bounded by:
 
-- packet size limits
-- peer limits
-- connection limits
-- forwarding/backpressure limits
-- rate limits where justified
+- maximum entries
+- expiration time
+- eviction policy
 
-These are DoS mitigations, not a claim of complete DoS protection.
+The initial target may be 10,000 entries with a 60-second expiration,
+but these are configurable engineering parameters and must be validated
+against the expected demonstration topology and packet lifetime.
 
-## Loop prevention
+A cache-full condition must have deterministic behavior.
 
-PacketID caching prevents repeated forwarding of the same packet through
-cycles.
+## Flooding resource controls
 
-Sequence numbers are unrelated to mesh duplicate suppression.
+At minimum define:
+
+- maximum peers/connections
+- maximum frame size
+- maximum forwarding queue
+- backpressure behavior
+- per-connection read/write limits
+
+Optional rate limiting may be added during hardening.
+
+Managed flooding does not eliminate denial-of-service risk.
 
 ## Relay confidentiality
 
-Routing logic must not require access to:
+Relays operate on routing metadata only.
 
-- application plaintext
-- recipient session keys
-- sender session keys
+They do not decrypt application data and must not inspect application
+plaintext to make routing decisions.
 
-See [[04-protocol/04-Message-Format]].
+## Bootstrap peers
+
+Initial implementation uses explicit bootstrap peers.
+
+UDP broadcast discovery is deferred.
+
+## Testing
+
+Required tests:
+
+- linear topology
+- ring topology
+- duplicate PacketID
+- TTL expiry
+- TTL == 1 at destination
+- oversized frame
+- malformed Protobuf
+- cache saturation
+- forwarding queue pressure

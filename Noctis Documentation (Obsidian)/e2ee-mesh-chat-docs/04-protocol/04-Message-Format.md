@@ -2,109 +2,141 @@
 
 ## Status
 
-**Proposed wire schema — requires implementation review before freezing.**
+**Draft — M1 schema work authorized; cryptographic fields must not be
+considered frozen until M3 review.**
 
-Protocol Buffers is the selected serialization format.
-
-## Design principles
-
-- fixed protocol version
-- explicit packet type
-- bounded fields
-- binary identifiers represented as `bytes`
-- no application plaintext in relay-visible fields
-- cryptographic metadata included in authenticated context
-- handshake messages defined separately from encrypted application data
-
-## Draft schema
+## Protobuf schema
 
 ```protobuf
 syntax = "proto3";
 
+enum PacketType {
+  PACKET_TYPE_UNKNOWN = 0;
+  PACKET_TYPE_INIT = 1;
+  PACKET_TYPE_RESP = 2;
+  PACKET_TYPE_APP_DATA = 3;
+}
+
 message MeshPacket {
-  uint32 protocol_version = 1;
-  PacketType packet_type = 2;
+  uint32 version = 1;
+  PacketType type = 2;
 
   // Routing metadata.
-  bytes packet_id = 3;       // fixed 16-byte identifier
+  bytes packet_id = 3;       // exactly 16 bytes
   uint32 ttl = 4;
-  bytes source_node = 5;     // Ed25519 public key, fixed 32 bytes
-  bytes dest_node = 6;       // Ed25519 public key, fixed 32 bytes
+  bytes source_node = 5;     // exactly 32 bytes
+  bytes dest_node = 6;       // exactly 32 bytes
 
-  // Session/message metadata.
-  bytes session_id = 7;      // exact size/derivation to be finalized
-  uint64 sequence_num = 8;
-
-  // Opaque E2EE application ciphertext + authentication tag.
-  bytes ciphertext = 9;
+  oneof payload {
+    InitPayload init = 7;
+    RespPayload resp = 8;
+    AppDataPayload app_data = 9;
+  }
 }
 
-enum PacketType {
-  PACKET_TYPE_UNSPECIFIED = 0;
-  HANDSHAKE_INIT = 1;
-  HANDSHAKE_RESP = 2;
-  ENCRYPTED_MESSAGE = 3;
+message InitPayload {
+  bytes ephemeral_key = 1;   // exactly 32 bytes
+  bytes signature = 2;       // exactly 64 bytes
+}
+
+message RespPayload {
+  bytes ephemeral_key = 1;   // exactly 32 bytes
+  bytes signature = 2;       // exactly 64 bytes
+}
+
+message AppDataPayload {
+  bytes session_id = 1;      // exactly 32 bytes
+  uint64 sequence_num = 2;
+  bytes ciphertext = 3;      // ciphertext + 16-byte AEAD tag
 }
 ```
 
-This is a design draft, not the final schema.
+## Session identifier
 
-## Important corrections
+`session_id` is the SHA-256 hash of the canonical RESP transcript and is
+therefore exactly 32 bytes.
 
-Do not encode Ed25519 public keys as base64 strings inside Protobuf
-unless interoperability requirements justify it. `bytes` avoids
-unnecessary encoding/decoding and makes fixed-size validation clearer.
-
-The exact `session_id` representation must be finalized.
-
-## AAD
-
-For an encrypted application packet, the canonical AAD must include at
-least:
-
-```text
-protocol_version
-source_node
-dest_node
-session_id
-sequence_num
-```
-
-The exact byte encoding must be specified so both endpoints authenticate
-the same bytes.
-
-## Routing mutation
-
-A relay may decrement TTL.
-
-Any fields covered by AAD must be treated as cryptographically
-authenticated. A relay modifying them must cause destination
-authentication failure.
-
-If TTL is deliberately excluded from AAD, its mutation remains a
-routing-layer operation and must be protected by routing validation
-rather than application AEAD.
-
-This distinction must be explicit in the final protocol specification.
-
-## Handshake packets
-
-Handshake packets must define exact Protobuf messages for:
-
-- INIT
-- RESP
-
-Do not place an underspecified binary blob in a generic `ciphertext`
-field and call it a protocol.
+Do not truncate it to four bytes.
 
 ## Validation
 
-Before cryptographic processing:
+Before expensive processing:
 
-- validate protocol version
-- validate packet type
-- validate required fields
-- validate fixed-size identifiers
-- validate TTL
-- validate field/packet size limits
-- reject malformed input safely
+1. enforce maximum TCP frame size
+2. parse Protobuf
+3. validate protocol version
+4. validate packet type
+5. validate required fields
+6. validate fixed-width identifier sizes
+7. validate payload structure
+8. validate protocol-specific limits
+
+## Unknown versions
+
+An unsupported `version` must be rejected.
+
+## Unknown fields
+
+Do not assume the Protobuf library automatically rejects unknown fields.
+
+The implementation must make an explicit decision:
+
+- reject unknown fields through a validation policy, or
+- tolerate them according to a documented compatibility policy
+
+For protocol version 1, security-sensitive canonicalized structures must
+not acquire alternate interpretations because of ignored fields.
+
+## TTL
+
+Routing semantics:
+
+```text
+if destination == local_node:
+    process according to packet type/state
+else:
+    if ttl <= 1:
+        drop
+    else:
+        ttl = ttl - 1
+        forward
+```
+
+The destination must not be accidentally dropped merely because its
+incoming TTL is `1`.
+
+## AAD
+
+For application data, the canonical AAD is:
+
+```text
+ProtocolVersion ||
+PacketType ||
+SessionID ||
+SequenceNumber ||
+SourceNode ||
+DestNode
+```
+
+All fields must have deterministic fixed-width encodings.
+
+## Relay behavior
+
+A relay only needs to inspect the routing envelope required for
+forwarding and duplicate/TTL processing.
+
+It must not access:
+
+- application plaintext
+- session keys
+- private keys
+
+## Frame limit
+
+The initial maximum frame size may be 64 KiB.
+
+The 4-byte TCP length prefix must be checked against this limit **before
+allocating the frame buffer**.
+
+Oversized frames are rejected and must not trigger unbounded memory
+allocation.
