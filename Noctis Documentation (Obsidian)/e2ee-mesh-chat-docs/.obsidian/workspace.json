@@ -1,0 +1,215 @@
+{
+  "main": {
+    "id": "5838377a395f882f",
+    "type": "split",
+    "children": [
+      {
+        "id": "da1a4524180c3fac",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "7589df5d6c226c13",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "README.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "README"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "f11987065477d8b3",
+    "type": "split",
+    "children": [
+      {
+        "id": "4e567f1ce3a4ddd9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "01e3809d3b758205",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "03f6ca8d96f20255",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "8dcc2a5846878e30",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "3d5b87b29b71a003",
+    "type": "split",
+    "children": [
+      {
+        "id": "5e614f0fb447ba6f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "5d79572b25a61646",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "README.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "19fe2bcdfd378e15",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "README.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "af48c69acbaedd2d",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "6eefbca0e51d5856",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "bf29b5e4fcbd5349",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "README.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "7589df5d6c226c13",
+  "lastOpenFiles": [
+    "00-governance/01-Architecture-Review-M0..md",
+    "04-protocol/03-Session-Establishment.md",
+    "05-Security-Demonstrations.md",
+    "04-protocol/05-Replay-Protection.md",
+    "04-protocol/01-Protocol-Overview.md",
+    "02-architecture/06-Deployment-Architecture.md",
+    "02-architecture/03-Component-Architecture.md",
+    "02-architecture/01-System-Architecture.md",
+    "02-architecture/02-Architecture-Decisions.md",
+    "07-testing/01-Testing-Strategy.md",
+    "03-security/04-Security-Controls.md",
+    "03-security/03-Attack-Surface.md",
+    "01-project/03-Goals-and-Non-Goals.md",
+    "01-project/02-Requirements.md",
+    "02-architecture/07-Observability-and-Security-Telemetry.md",
+    "02-architecture/04-Data-Flow.md",
+    "README.md",
+    "00-governance/01-Vault-Index.md",
+    "00-governance/00-Project-State.md",
+    "01-project/04-Assumptions-and-Constraints.md",
+    "01-project/01-Project-Overview.md"
+  ]
+}
