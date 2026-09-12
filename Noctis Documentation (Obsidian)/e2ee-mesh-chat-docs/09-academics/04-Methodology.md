@@ -104,3 +104,13 @@ message integration boundary. Tests establish bounded framing, packet
 validation, session/identity binding, bidirectional encrypted delivery and
 transport-path tamper rejection. They do not establish mesh routing,
 anonymity, metadata hiding or production-grade network resilience.
+
+
+### M5 evidence boundary
+
+M5 extends the evidence from direct secure messaging into runtime direct-network
+management. The evaluation covers authenticated peer registration, inbound and
+outbound connection lifecycle, resource limits, deterministic duplicate
+connection arbitration, lifecycle race safety, telemetry isolation and a
+containerized multi-node runtime. It does not establish multi-hop routing or
+network-wide forwarding behavior.

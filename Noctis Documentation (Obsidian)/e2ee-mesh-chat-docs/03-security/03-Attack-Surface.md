@@ -109,3 +109,24 @@ Relevant controls include:
 
 M2 does not yet address the active network attacks associated with session
 establishment; those remain in the M3 threat-control scope.
+
+
+## M5 Runtime Networking Attack Surface
+
+M5 makes the direct networking layer an explicit runtime attack surface.
+Relevant threats and controls include:
+
+| Threat | M5 control |
+|---|---|
+| Connection exhaustion | Pending-handshake, active-peer and dial limits |
+| Oversized frame allocation | 64 KiB bound checked before allocation |
+| Slow/incomplete handshake | Handshake deadline |
+| Dial resource retention | Dial timeout and bounded concurrency |
+| Simultaneous duplicate connections | Deterministic identity-based arbitration |
+| Stale peer cleanup race | Atomic registry replacement and identity-safe cleanup |
+| Telemetry blocking | Bounded queue and worker outside manager WaitGroup |
+| Telemetry recorder panic/failure | Recorder boundary recovery / failure isolation |
+
+M5 does not claim protection against routing attacks, global traffic analysis,
+perfect anonymity or compromised endpoints. Those properties remain outside the
+approved scope.

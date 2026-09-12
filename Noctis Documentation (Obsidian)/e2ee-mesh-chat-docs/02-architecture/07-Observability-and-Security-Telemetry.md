@@ -342,3 +342,19 @@ metrics.
 Future security telemetry may report bounded security events such as
 authentication/signature failures, but must never export cryptographic secret
 material.
+
+
+## M5 Telemetry Implementation Boundary
+
+M5 introduces the first bounded runtime telemetry execution path. Peer-manager
+events are submitted through a non-blocking bounded queue. Queue overflow drops
+telemetry events rather than blocking networking.
+
+The telemetry worker is intentionally outside the PeerManager `WaitGroup`.
+Consequently, a blocking external recorder cannot prevent manager shutdown.
+Recorder failures are recovered at the telemetry boundary. The telemetry queue
+is not closed during manager shutdown, avoiding send-on-closed-channel races; the
+worker lifecycle is controlled independently through its quit signal.
+
+M5 telemetry remains out-of-band and must never contain application plaintext,
+private keys, session keys, passwords or other secret cryptographic material.

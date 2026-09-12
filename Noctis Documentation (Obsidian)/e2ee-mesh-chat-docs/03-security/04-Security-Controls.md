@@ -113,3 +113,30 @@ The following direct-messaging controls are implemented and verified:
 
 M4 evidence demonstrates direct secure messaging and transport-path tamper
 rejection. It does not establish mesh routing security or anonymity.
+
+
+## M5 Implemented Security and Resilience Controls
+
+M5 adds runtime network controls without changing the M3/M4 cryptographic
+construction:
+
+1. Peer registration occurs only after authenticated direct-channel setup.
+2. Peer identity is canonicalized from the authenticated Ed25519 identity.
+3. Pending handshakes are bounded and rejected without blocking the listener.
+4. Active peer count is bounded.
+5. Concurrent outbound dials are bounded and their slots are released on all
+   terminal outcomes.
+6. Handshake and dial deadlines limit incomplete connection resource use.
+7. Initial oversized frames are rejected before large allocation.
+8. Duplicate direct connections are deterministically resolved using the
+   lexicographic identity rule.
+9. Registry replacement is synchronized and stale cleanup cannot delete the
+   replacement.
+10. Terminal peer states cannot be resurrected.
+11. Telemetry uses a bounded non-blocking queue and is outside the E2EE path.
+12. The telemetry worker is outside the manager WaitGroup, so an indefinitely
+    blocking external recorder cannot prevent manager shutdown.
+13. Telemetry records no plaintext, private keys, session keys or passwords.
+
+M5 evidence establishes direct-network runtime controls; it does not establish
+resistance to all routing attacks or network-wide metadata analysis.

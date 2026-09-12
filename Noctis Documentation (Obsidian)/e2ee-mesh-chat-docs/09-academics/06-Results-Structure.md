@@ -63,3 +63,21 @@ remain for later milestones.
 
 *Replay resistance remains a property of the approved M3 session layer; M4
 transports the sequence number and ciphertext through the direct packet path.
+
+
+## M5 preliminary results
+
+M5 demonstrates a functioning direct networking runtime above the approved M4
+secure channel. The implementation passed race-detector validation and repeated
+100-run race testing for the mesh package. Explicit arbitration tests cover all
+four identity/direction permutations.
+
+The containerized runtime starts Alice, Bob, Carol and Dave. A deliberate
+simultaneous Dave↔Bob connection collision demonstrates the deterministic rule:
+Dave's identity (`4765bd805913e158`) is smaller than Bob's
+(`563f793f6ad353dd`), so Dave's outbound connection survives while Bob's
+competing outbound connection is rejected as a duplicate. Both nodes retain one
+active peer.
+
+These results establish direct-network runtime hardening, not multi-hop mesh
+routing. M6 must provide separate routing evidence.

@@ -112,4 +112,4 @@ met the milestone acceptance boundary:
 M4 approval does not constitute approval of mesh routing, multi-hop forwarding,
 anonymity, metadata hiding or production-grade endpoint security.
 
-**Next milestone:** M5 — Direct networking hardening / runtime integration.
+**Next milestone:** M6 — Mesh routing architecture/design review.

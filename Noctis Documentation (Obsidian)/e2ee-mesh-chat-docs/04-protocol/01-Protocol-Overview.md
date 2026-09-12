@@ -113,7 +113,7 @@ Implemented:
 - role-derived direction markers
 - 64-message authenticated replay window
 
-Direct networking and mesh forwarding remain future implementation stages.
+M5 direct networking runtime integration is implemented and approved. Mesh forwarding remains a future implementation stage under M6.
 
 
 ## M4 Direct Transport Integration

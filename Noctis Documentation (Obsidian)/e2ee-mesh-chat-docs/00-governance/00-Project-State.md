@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**M4 complete — post-milestone documentation synchronization / M5 gate**
+**M5 complete — post-milestone documentation synchronization / M6 architecture gate**
 
 ## Status
 
@@ -13,20 +13,20 @@
 | Architecture | Approved baseline |
 | Cryptographic architecture | M3 implemented / verified for session crypto scope |
 | Protocol | Frozen baseline / M3 implementation verified |
-| Networking | M4 direct TCP transport integrated / M5 broader direct-networking scope pending |
-| Observability | Approved supporting design / not implemented |
+| Networking | M5 direct networking hardening / multi-peer runtime integration complete and verified |
+| Observability | Approved supporting design / M5 bounded telemetry lifecycle integrated as supporting runtime facility |
 | Containerization | Required / foundation implemented |
 | GitHub synchronization | Required / not yet verified in this gate |
 | Testing strategy | Documented / M3 crypto evidence added |
-| Implementation | M4 direct secure messaging integration implemented |
-| Security verification | M4 direct secure messaging integration verified |
+| Implementation | M5 direct networking hardening / runtime integration implemented |
+| Security verification | M5 networking lifecycle, resource-boundary and arbitration evidence verified |
 | UI | Not started |
 | Demo | Not started |
 | Final academic material | Draft |
 
 ## Current gate
 
-**M3 — Cryptographic Session Layer: COMPLETE / APPROVED**
+**M5 — Direct Networking Hardening / Runtime Integration: COMPLETE / APPROVED**
 
 M0, M0.1, M1.1, M2.1/M2.1-B/M2.1-C, M3.1, M3.2 and M3.3 have been
 completed within their approved scopes.
@@ -53,8 +53,8 @@ that its implementation exists.
 
 ## Next action
 
-Complete the technical-lead documentation synchronization for M3, then open
-M4 separately. M4 must not be started merely because M3 is complete.
+Complete the technical-lead documentation synchronization for M5, then open
+M6 architecture separately. M6 implementation must not begin merely because M5 is complete.
 
 ## M3 Completion Gate
 
@@ -97,7 +97,7 @@ M3 completion does **not** imply that direct networking, mesh routing,
 observability, UI, or production-grade metadata/privacy protection is
 complete.
 
-**M4 has been authorized, implemented, independently reviewed, and approved. M5 remains gated until separately authorized by the Project Overseer.**
+**M4 has been authorized, implemented, independently reviewed, and approved. M5 has subsequently been authorized, implemented, independently reviewed, and approved. M6 remains gated pending architecture review.**
 
 
 ## M4 Completion Gate
@@ -142,4 +142,41 @@ M4 establishes direct secure messaging integration but does not establish
 mesh routing, multi-hop forwarding, anonymity, metadata hiding, or endpoint
 compromise resistance.
 
-**M5 remains NOT STARTED / GATED.**
+**M5 has been authorized, implemented, independently reviewed, and approved. M6 remains gated pending architecture review.**
+
+
+## M5 Completion Gate
+
+**M5 — Direct Networking Hardening / Runtime Integration: 🟢 COMPLETE / APPROVED**
+
+M5 extends the approved M4 direct secure channel into a multi-peer runtime networking layer without changing the M3 cryptographic/session construction or M4 transport semantics.
+
+### M5 runtime networking
+
+The implementation introduces a `PeerManager` and `Peer` lifecycle above M4. It manages inbound and outbound authenticated direct connections, peer registry state, connection limits, handshake limits, dialing limits, timeouts, shutdown and application-triggered disconnect/reconnect behavior. Automatic PeerManager reconnect remains out of scope.
+
+### M5 duplicate arbitration
+
+Simultaneous direct connections between the same authenticated identities are resolved deterministically. The connection initiated by the lexicographically smaller 32-byte Ed25519 identity is retained. Registry replacement is performed under the manager mutex and the incumbent connection is closed after the registry transition, preventing stale cleanup from deleting the replacement.
+
+### M5 resource and lifecycle controls
+
+- Maximum active peers are enforced before registry insertion.
+- Maximum pending handshakes are enforced with a non-blocking semaphore path.
+- Concurrent outbound dials are bounded and slots are released on all outcomes.
+- TCP handshake/dial deadlines bound incomplete connection attempts.
+- Oversized initial frames are rejected before body allocation.
+- Peer terminal states cannot be resurrected by stale goroutines.
+- Manager shutdown is synchronized with networking goroutines.
+
+### M5 telemetry boundary
+
+Telemetry is an out-of-band supporting subsystem. Events enter a bounded queue using a non-blocking enqueue path. The telemetry worker is deliberately outside the PeerManager `WaitGroup`, so an indefinitely blocking external recorder cannot prevent manager shutdown. Telemetry failures are recovered at the recorder boundary and queue overflow drops events rather than blocking networking. No plaintext, private keys, session keys or passwords are exported.
+
+### M5 validation evidence
+
+The reported validation includes `go test -race ./internal/mesh`, repeated `go test -race ./internal/mesh -count=100`, explicit four-case duplicate-arbitration tests, and a deliberate Docker Dave↔Bob simultaneous-dial collision. In the runtime collision, Dave's identity was lexicographically smaller than Bob's, Dave's outbound connection survived, Bob's competing outbound connection was rejected as a duplicate, and both nodes retained exactly one active peer. Four Docker nodes (Alice, Bob, Carol, Dave) started successfully.
+
+M5 does not establish multi-hop routing, route discovery, forwarding, TTL processing, routing tables, DHT, flooding algorithms, anonymity, metadata hiding, or production-grade network resilience. Those remain future scope.
+
+**M5 is formally closed. M6 requires a separate architecture/design review before implementation.**

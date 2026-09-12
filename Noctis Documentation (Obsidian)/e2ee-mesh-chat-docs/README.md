@@ -1,6 +1,6 @@
 # E2EE Mesh Chat --- Documentation Hub
 
-> **Status:** M4 complete / M5 gated\
+> **Status:** M5 complete / M6 architecture gated\
 > **Project type:** Academic cybersecurity and networking prototype
 
 ## Purpose

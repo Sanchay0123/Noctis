@@ -88,3 +88,19 @@ images or Compose configuration.
 
 The existing containerized build/test workflow remains the required validation
 environment.
+
+
+## M5 Containerized Runtime Status
+
+M5 validates the direct networking runtime in a four-node Docker Compose
+environment containing Alice, Bob, Carol and Dave. The nodes run the same
+containerized MeshChat application with independently generated identities.
+
+The final runtime evidence demonstrates a deliberate simultaneous Dave↔Bob
+dial collision. Dave's identity (`4765bd805913e158`) is lexicographically smaller
+than Bob's (`563f793f6ad353dd`), so Dave's outbound connection is retained and
+Bob's competing outbound connection is rejected by duplicate arbitration. Both
+nodes report one active peer.
+
+This topology is a runtime hardening demonstration, not evidence of M6 multi-hop
+routing. No relay forwarding is claimed by M5.

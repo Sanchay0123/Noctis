@@ -141,3 +141,24 @@ session-key or handshake API has been introduced.
 
 This component is the dependency boundary that the future M3
 session-establishment implementation will consume.
+
+
+## M5 Component Status
+
+M5 adds the implemented `internal/mesh` runtime layer above the M4 transport
+boundary. `PeerManager` owns the authenticated peer registry and coordinates
+inbound listeners, outbound dialing, peer lifecycle, connection limits,
+timeouts, deterministic duplicate arbitration and shutdown. Each `Peer` owns
+one M4 `DirectChannel` for a direct authenticated connection.
+
+M5 duplicate arbitration compares the canonical 32-byte Ed25519 identities.
+The connection initiated by the lexicographically smaller identity is retained.
+Registry replacement occurs under the manager mutex; incumbent closure occurs
+after unlocking.
+
+M5 telemetry is bounded and out-of-band. Its worker is intentionally not part
+of the PeerManager `WaitGroup`, so external telemetry blocking cannot stall
+manager shutdown.
+
+M5 remains strictly a direct-networking layer. Routing, forwarding, TTL, route
+discovery and network-wide duplicate suppression remain M6 responsibilities.

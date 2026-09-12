@@ -128,3 +128,36 @@ M4 adds transport and end-to-end integration tests covering:
 
 M4 validation included formatting, vetting, unit/integration tests, race
 detection and build validation in the controlled container environment.
+
+
+## M5 Direct Networking Evidence
+
+M5 testing covers the runtime peer-management layer above M4:
+
+- pending-handshake exhaustion and immediate rejection
+- active-peer exhaustion
+- concurrent dial slot exhaustion and release
+- oversized initial frame rejection before allocation
+- malformed packet and wrong inbound identity rejection
+- deterministic duplicate-arbitration permutations
+- stale-peer/read-loop race behavior
+- shutdown/read-loop race behavior
+- concurrent send/close behavior
+- repeated `Close()` safety
+- terminal peer-state behavior
+- blocking and failing telemetry isolation
+- concurrent sends to multiple peers
+
+The final duplicate-arbitration test covers all four combinations of local
+identity ordering and inbound/outbound connection direction.
+
+The reported validation passed:
+
+```text
+go test -race ./internal/mesh
+go test -race ./internal/mesh -count=100
+```
+
+A deliberate Docker integration scenario simultaneously dials Dave and Bob in
+both directions and verifies that the connection initiated by the smaller
+identity survives with exactly one active peer on each side.

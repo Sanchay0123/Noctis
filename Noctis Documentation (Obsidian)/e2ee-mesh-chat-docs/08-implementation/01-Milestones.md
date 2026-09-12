@@ -75,8 +75,8 @@ The reported containerized validation suite passed formatting, vetting, tests,
 race detection, and build checks.
 
 M3 is now closed. M4 has subsequently been implemented, independently reviewed,
-and approved. M5 is **NOT STARTED / GATED** and requires separate Project
-Overseer authorization.
+and approved. M5 has now been implemented, independently reviewed, and approved
+by the Project Overseer.
 
 ## M4 --- Direct secure messaging integration
 
@@ -105,25 +105,60 @@ passed. M4 was independently reviewed and approved by the Project Overseer.
 
 ## M5 --- Direct networking hardening / runtime integration
 
-M5 extends the M4 direct secure channel into the project's intended runtime
-networking environment and validates real two-node operation beyond the M4
-transport/integration harness. Scope includes connection management, peer
-relationships, runtime configuration and clean two-node demonstration.
+M5 extends the M4 direct secure channel into the project's runtime networking
+environment. Scope includes connection management, peer relationships,
+inbound/outbound dialing, authenticated peer registration, deterministic
+duplicate-connection arbitration, resource limits, lifecycle/shutdown safety,
+bounded telemetry isolation, and reproducible containerized multi-node runtime
+evidence.
 
-**Status:** 🔒 NOT STARTED / GATED
+**Status:** 🟢 COMPLETE / APPROVED
 
-**Gate:** Project Overseer authorization + reproducible two-node runtime demo.
+**Gate:** Project Overseer final evidence review — PASSED.
+
+### M5 Completion Record
+
+M5 implemented the `PeerManager` / `Peer` runtime layer above the approved M4
+transport boundary. It added inbound listening, outbound dialing, peer lifecycle
+states, identity-bound peer registration, handshake and dial limits, active-peer
+limits, timeout enforcement, stale-peer-safe registry replacement, and clean
+shutdown.
+
+Duplicate direct connections are resolved by the frozen rule that the connection
+initiated by the lexicographically smaller Ed25519 identity wins. The final
+Docker evidence deliberately created simultaneous Dave↔Bob outbound dials; Dave
+(`4765bd805913e158`) was smaller than Bob (`563f793f6ad353dd`), Dave's outbound
+connection survived, Bob's competing connection was rejected as a duplicate, and
+both nodes retained one active peer.
+
+Telemetry uses a bounded non-blocking queue and a worker deliberately outside
+the PeerManager `WaitGroup`, isolating blocking/failing external recorders from
+network shutdown and delivery.
+
+Validation passed `go test -race ./internal/mesh` and the repeated
+`go test -race ./internal/mesh -count=100` run, plus the explicit four-case
+`TestDuplicateArbitrationCases`. Docker Compose successfully built and started
+the four-node Alice/Bob/Carol/Dave environment.
+
+M5 does not implement M6 routing or multi-hop forwarding.
 
 ## M6 --- Mesh routing
 
--   discovery
--   routing
--   multi-hop
--   TTL
--   duplicate detection
--   failure handling
+**Status:** 🔒 ARCHITECTURE REVIEW REQUIRED / NOT STARTED
 
-**Gate:** four-node demonstration.
+M6 is the next implementation milestone and must first receive a separate
+Project Overseer architecture/design approval.
+
+Planned scope:
+- peer discovery
+- routing / next-hop decisions
+- multi-hop forwarding
+- TTL / hop limits
+- network-wide PacketID duplicate suppression
+- forwarding failure handling
+
+**Gate:** M6 architecture approval before implementation; implementation gate
+will require reproducible multi-hop evidence.
 
 ## M7 --- Security hardening
 
