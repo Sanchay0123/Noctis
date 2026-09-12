@@ -56,3 +56,14 @@ Every new component must state:
 2.  what trusts it
 3.  what secrets it can access
 4.  what attacker-controlled input it accepts
+
+
+## M4 direct transport boundary
+
+The TCP connection is an attacker-controlled byte boundary. M4 therefore
+performs bounded framing and structural packet validation before session-layer
+processing. The transport does not receive plaintext or session secrets.
+
+`DirectChannel` is the integration boundary between the application-facing
+message API and the protocol/crypto layers. It must not expose plaintext from
+a failed authentication or decryption attempt.

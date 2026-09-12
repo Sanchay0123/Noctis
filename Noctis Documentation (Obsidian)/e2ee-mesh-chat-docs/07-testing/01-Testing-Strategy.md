@@ -106,3 +106,25 @@ concurrent send/receive behavior.
 
 The reported containerized validation sequence passed `gofmt`, `go vet`,
 tests, race detection and build checks.
+
+
+## M4 Direct Secure Messaging Evidence
+
+M4 adds transport and end-to-end integration tests covering:
+
+- 4-byte length-prefixed framing
+- partial reads
+- oversized frames
+- short writes and failing writes
+- concurrent write serialization
+- unknown Protobuf field rejection
+- protocol version and fixed-width field validation
+- INIT/RESP/APP_DATA structural validation
+- APP_DATA rejection before session establishment
+- session/source/destination binding
+- A-to-B and B-to-A encrypted message delivery
+- ciphertext tampering on the transport path
+- absence of application plaintext from intercepted transport bytes
+
+M4 validation included formatting, vetting, unit/integration tests, race
+detection and build validation in the controlled container environment.

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-**M3 complete — post-milestone documentation synchronization / M4 gate**
+**M4 complete — post-milestone documentation synchronization / M5 gate**
 
 ## Status
 
@@ -13,13 +13,13 @@
 | Architecture | Approved baseline |
 | Cryptographic architecture | M3 implemented / verified for session crypto scope |
 | Protocol | Frozen baseline / M3 implementation verified |
-| Networking | Proposed / not implemented |
+| Networking | M4 direct TCP transport integrated / M5 broader direct-networking scope pending |
 | Observability | Approved supporting design / not implemented |
 | Containerization | Required / foundation implemented |
 | GitHub synchronization | Required / not yet verified in this gate |
 | Testing strategy | Documented / M3 crypto evidence added |
-| Implementation | M3 crypto/session scope implemented |
-| Security verification | M3 crypto/session scope verified |
+| Implementation | M4 direct secure messaging integration implemented |
+| Security verification | M4 direct secure messaging integration verified |
 | UI | Not started |
 | Demo | Not started |
 | Final academic material | Draft |
@@ -97,4 +97,49 @@ M3 completion does **not** imply that direct networking, mesh routing,
 observability, UI, or production-grade metadata/privacy protection is
 complete.
 
-**M4 remains gated until separately authorized by the Project Overseer.**
+**M4 has been authorized, implemented, independently reviewed, and approved. M5 remains gated until separately authorized by the Project Overseer.**
+
+
+## M4 Completion Gate
+
+**M4 — Direct Secure Messaging Integration: 🟢 COMPLETE / APPROVED**
+
+M4 integrates the approved M3 cryptographic/session layer with a bounded TCP
+transport and the frozen Protobuf packet format. The implementation provides a
+direct two-node secure messaging path without changing M3 cryptographic
+semantics.
+
+### M4 Transport
+
+The direct transport uses a 4-byte big-endian length prefix followed by a
+Protobuf `MeshPacket`. The maximum frame size is 64 KiB and the length is
+validated before body allocation. Reads use `io.ReadFull`; writes serialize
+complete frames under a connection write mutex and correctly handle short
+writes.
+
+### M4 Packet boundary
+
+Incoming packets are structurally validated before cryptographic processing.
+Protocol version, packet type/oneof consistency, fixed-width identifiers,
+payload-specific fields and unknown Protobuf fields are rejected according to
+the version-1 policy.
+
+### M4 Direct secure channel
+
+`DirectChannel` binds one direct TCP connection to one established M3 session
+for the M4 scope. INIT and RESP are exchanged through the existing M3 handshake
+state machines. APP_DATA is accepted only after session establishment and is
+bound to the expected local identity, remote identity and session identifier.
+
+### M4 security evidence
+
+The M4 test suite includes framing, partial/short writes, malformed input,
+unknown-field rejection, session binding, end-to-end encrypted message
+exchange and transport-path tampering tests. Containerized formatting, vet,
+tests, race-detector tests and build validation passed.
+
+M4 establishes direct secure messaging integration but does not establish
+mesh routing, multi-hop forwarding, anonymity, metadata hiding, or endpoint
+compromise resistance.
+
+**M5 remains NOT STARTED / GATED.**

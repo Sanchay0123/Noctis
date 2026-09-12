@@ -89,3 +89,27 @@ foundation has:
 - synchronized implementation documentation
 
 M2 completion does not constitute approval of M3 session establishment.
+
+
+## M4 Completion Evidence
+
+M4 is complete and approved because the direct secure messaging integration
+met the milestone acceptance boundary:
+
+- bounded 4-byte length-prefixed TCP framing
+- correct short-write handling under a serialized writer lock
+- explicit unknown-Protobuf-field rejection
+- structural validation for INIT, RESP and APP_DATA
+- established-session requirement for APP_DATA
+- session ID and endpoint identity binding
+- authenticated plaintext delivery boundary
+- bidirectional end-to-end encrypted messaging test
+- transport-path ciphertext tampering test
+- short-write and failing-write regression tests
+- `go vet`, `go test`, `go test -race` and build validation passed
+- no M3 cryptographic semantics were changed
+
+M4 approval does not constitute approval of mesh routing, multi-hop forwarding,
+anonymity, metadata hiding or production-grade endpoint security.
+
+**Next milestone:** M5 — Direct networking hardening / runtime integration.

@@ -4056,6 +4056,1729 @@ The Project Overseer will independently audit the implementation before M3.3 is 
 
 
 ```
+# M4 — Direct Secure Messaging Integration
+
+You are the implementation agent for the E2EE Mesh Chat project.
+
+M0–M3 are approved and frozen by the Project Overseer.
+
+Your task is to implement **M4: Direct Secure Messaging Integration**.
+
+## 1. Objective
+
+Integrate the already-approved M3 cryptographic/session layer into an actual direct node-to-node messaging path.
+
+M4 must establish a working path:
+
+```text
+Application plaintext
+        ↓
+Session.EncryptMessage()
+        ↓
+AppDataPayload
+        ↓
+MeshPacket
+        ↓
+length-prefixed TCP transport
+        ↓
+remote node
+        ↓
+MeshPacket validation
+        ↓
+Session.DecryptMessage()
+        ↓
+Application plaintext
+
+
+This is a **direct transport integration milestone**.
+
+Do NOT implement mesh forwarding, multi-hop routing, flooding, route discovery, or advanced peer discovery in M4. Those belong to M5/M6 as specified by the project documentation.
+
+---
+
+# 2. Frozen constraints
+
+Do NOT modify the approved cryptographic protocol.
+
+The following are frozen:
+
+### Identity
+
+- Ed25519 long-term node identity.
+    
+- X25519 ephemeral keys.
+    
+- Approved Go cryptographic implementations only.
+    
+- Never implement cryptographic primitives manually.
+    
+
+### Handshake
+
+Use the exact M3.2 handshake:
+
+```text
+DOMAIN = "MeshChat-Handshake-v1"
+
+T_INIT =
+DOMAIN || u8(PROTOCOL_VERSION) ||
+ID_A || ID_B || E_A || ZERO32
+
+T_RESP =
+DOMAIN || u8(PROTOCOL_VERSION) ||
+ID_A || ID_B || E_A || E_B
+
+
+Alice signs `T_INIT`.
+
+Bob signs `T_RESP`.
+
+Session ID:
+
+```text
+SHA256(T_RESP)
+
+
+HKDF:
+
+```text
+salt = SHA256(T_RESP)
+
+PRK = HKDF-Extract(salt, shared_secret)
+
+K_A_to_B =
+HKDF-Expand(
+    PRK,
+    "MeshChat-v1|session|initiator->responder",
+    32
+)
+
+K_B_to_A =
+HKDF-Expand(
+    PRK,
+    "MeshChat-v1|session|responder->initiator",
+    32
+)
+
+
+### Message encryption
+
+Use the approved M3.3 implementation:
+
+- ChaCha20-Poly1305
+    
+- directional session keys
+    
+- deterministic 12-byte nonce:  
+    `4 zero bytes || uint64(sequence_number, big endian)`
+    
+- exact approved AAD
+    
+- internally derived direction marker
+    
+- sequence numbers
+    
+- 64-message replay window
+    
+- replay state changes only after successful authentication
+    
+- separate send/receive locking
+    
+- sequence exhaustion must return `ErrSequenceExhausted`
+    
+- no sequence wraparound
+    
+
+Do not change these semantics.
+
+---
+
+# 3. Protocol integration
+
+Use the existing protobuf `MeshPacket` and `AppDataPayload`.
+
+For an application message:
+
+```text
+MeshPacket.version = protocol version
+MeshPacket.type = PACKET_TYPE_APP_DATA
+MeshPacket.packet_id = cryptographically random 16-byte ID
+MeshPacket.ttl = appropriate direct-message value
+MeshPacket.source_node = local Ed25519 public key
+MeshPacket.dest_node = remote Ed25519 public key
+
+AppDataPayload.session_id = session.ID()
+AppDataPayload.sequence_num = sequence number
+AppDataPayload.ciphertext = ciphertext returned by Session.EncryptMessage()
+
+
+The exact field semantics already established by the protocol documentation remain authoritative.
+
+Do not invent an alternative message format.
+
+---
+
+# 4. Packet ID
+
+Implement packet ID generation using a cryptographically secure random source.
+
+Requirements:
+
+- exactly 16 bytes
+    
+- generated independently for each outgoing packet
+    
+- never use timestamps, counters, UUIDv1, MAC addresses, or predictable values
+    
+- generation failure must be returned to the caller
+    
+- do not silently substitute a weak fallback
+    
+
+Do not confuse:
+
+```text
+packet_id
+
+
+with:
+
+```text
+sequence_num
+
+
+They serve different protocol purposes.
+
+---
+
+# 5. TCP framing
+
+Implement the approved transport framing:
+
+```text
+4-byte big-endian length prefix
++
+protobuf MeshPacket bytes
+
+
+Requirements:
+
+- validate the declared length before allocating/reading the body
+    
+- maximum frame size = 64 KiB
+    
+- reject zero-length frames where appropriate
+    
+- reject oversized frames
+    
+- handle partial TCP reads correctly
+    
+- use io.ReadFull or equivalent correct framing logic
+    
+- correctly handle EOF and connection closure
+    
+- never trust the remote peer's length field
+    
+- never allocate unbounded memory based on remote input
+    
+
+Do not use newline-delimited JSON or another framing format.
+
+---
+
+# 6. Packet validation
+
+Before dispatching a received packet:
+
+Validate at minimum:
+
+1. protobuf decoding succeeds
+    
+2. unknown protobuf fields are rejected according to the existing protocol policy
+    
+3. protocol version is supported
+    
+4. packet type is valid
+    
+5. packet type matches the populated `oneof`
+    
+6. packet_id is exactly 16 bytes
+    
+7. source_node is exactly 32 bytes
+    
+8. destination_node is exactly 32 bytes
+    
+9. APP_DATA contains:
+    
+    - session_id exactly 32 bytes
+        
+    - valid sequence number
+        
+    - ciphertext meeting the AEAD minimum size
+        
+10. destination matches the local node when processing a direct packet
+    
+11. packet is not malformed
+    
+
+Do not silently accept malformed packets.
+
+Validation failures must not panic the process.
+
+---
+
+# 7. Session binding
+
+APP_DATA must be bound to the correct established session.
+
+On receipt:
+
+1. locate the session using the session ID
+    
+2. verify that the packet's source/destination identities correspond to that session
+    
+3. verify the packet is intended for the local node
+    
+4. pass the sequence number and ciphertext into the session's `DecryptMessage`
+    
+5. only deliver plaintext to the application after successful decryption/authentication
+    
+
+Unknown session IDs must be rejected.
+
+Do NOT create a new session merely because an APP_DATA packet references an unknown session.
+
+Do NOT fall back to another session.
+
+---
+
+# 8. Authentication boundary
+
+The application layer must NEVER receive unauthenticated plaintext.
+
+The flow must be:
+
+```text
+receive bytes
+    ↓
+decode
+    ↓
+validate packet
+    ↓
+find session
+    ↓
+DecryptMessage()
+    ↓
+authenticated plaintext
+    ↓
+application delivery
+
+
+Any failure before successful decryption must result in rejection.
+
+Do not log plaintext during failure handling.
+
+---
+
+# 9. Direct connection/session lifecycle
+
+Implement the minimum lifecycle necessary for a direct two-node demonstration:
+
+```text
+Node A connects to Node B
+        ↓
+handshake
+        ↓
+authenticated session established
+        ↓
+A sends encrypted APP_DATA
+        ↓
+B decrypts
+        ↓
+B sends encrypted APP_DATA
+        ↓
+A decrypts
+
+
+The implementation should support both initiator and responder roles.
+
+Do not assume both nodes are always running in the same process.
+
+---
+
+# 10. Connection ownership
+
+Clearly define which component owns:
+
+- TCP connection
+    
+- handshake state
+    
+- established session
+    
+- packet receive loop
+    
+- packet send path
+    
+- application message delivery
+    
+
+Avoid circular dependencies.
+
+Keep the following conceptual separation:
+
+```text
+Application
+    │
+    ▼
+Session / Crypto
+    │
+    ▼
+Protocol
+    │
+    ▼
+Transport
+
+
+Routing/mesh logic must remain outside the cryptographic message layer.
+
+---
+
+# 11. Concurrency
+
+The implementation must safely support:
+
+- receiving while sending
+    
+- multiple application sends
+    
+- packet receive loop running concurrently with application activity
+    
+
+Do not introduce data races around:
+
+- session state
+    
+- connection state
+    
+- message delivery
+    
+- packet framing
+    
+
+Reuse the M3 session's existing send/receive synchronization.
+
+Do not add unnecessary global locks.
+
+---
+
+# 12. Error handling
+
+Define typed/sentinel errors where useful.
+
+At minimum distinguish:
+
+- malformed frame
+    
+- oversized frame
+    
+- malformed packet
+    
+- unsupported protocol version
+    
+- invalid packet type
+    
+- unknown session
+    
+- wrong destination
+    
+- decryption/authentication failure
+    
+- replay rejection
+    
+- connection closed
+    
+
+Do not expose sensitive cryptographic internals through errors.
+
+Do not include:
+
+- private keys
+    
+- session keys
+    
+- plaintext
+    
+- shared secrets
+    
+
+in errors or logs.
+
+---
+
+# 13. Logging
+
+Use structured logging where the project already provides it.
+
+Allowed examples:
+
+```text
+session established
+packet received
+packet rejected
+message decrypted
+connection closed
+
+
+Do NOT log:
+
+- plaintext messages
+    
+- private keys
+    
+- session keys
+    
+- shared secrets
+    
+- raw ciphertext unnecessarily
+    
+- authentication secrets
+    
+
+Avoid logging attacker-controlled strings without safe structured handling.
+
+---
+
+# 14. Tests
+
+Add comprehensive M4 tests.
+
+At minimum include:
+
+### Transport
+
+- valid frame round trip
+    
+- partial read handling
+    
+- EOF handling
+    
+- zero/invalid length
+    
+- oversized frame
+    
+- malformed protobuf
+    
+- maximum valid frame
+    
+
+### Packet validation
+
+- valid APP_DATA
+    
+- invalid version
+    
+- invalid packet type
+    
+- type/oneof mismatch
+    
+- wrong packet ID length
+    
+- wrong identity length
+    
+- wrong session ID length
+    
+- missing ciphertext
+    
+- wrong destination
+    
+- unknown session
+    
+
+### Secure messaging
+
+- A → B plaintext round trip
+    
+- B → A plaintext round trip
+    
+- ciphertext modification rejected
+    
+- wrong session rejected
+    
+- wrong direction rejected
+    
+- replay rejected
+    
+- out-of-order valid messages accepted according to M3 window semantics
+    
+
+### Security boundary
+
+Explicitly verify that plaintext is delivered to the application only after successful decryption/authentication.
+
+### Concurrency
+
+Run relevant tests under:
+
+```text
+go test -race ./...
+
+
+Test concurrent sends and simultaneous send/receive where appropriate.
+
+---
+
+# 15. Integration test
+
+Create an end-to-end test equivalent to:
+
+```text
+Node A
+  |
+  | TCP
+  |
+Node B
+
+A generates identity
+B generates identity
+
+A ↔ B authenticated handshake
+
+A → B: "hello from A"
+B decrypts
+
+B → A: "hello from B"
+A decrypts
+
+
+The test must prove that the bytes transmitted over the transport are encrypted APP_DATA rather than plaintext.
+
+Also test tampering:
+
+```text
+A → B ciphertext
+       ↓
+    modified
+       ↓
+      B
+       ↓
+authentication failure
+       ↓
+no plaintext delivery
+
+
+---
+
+# 16. Do not expand scope
+
+Do NOT implement in M4:
+
+- multi-hop routing
+    
+- flooding
+    
+- route discovery
+    
+- DHT
+    
+- anonymity
+    
+- traffic analysis resistance
+    
+- onion routing
+    
+- cover traffic
+    
+- metadata hiding
+    
+- group messaging
+    
+- file transfer
+    
+- production UI
+    
+- advanced peer discovery
+    
+- routing attack mitigation
+    
+
+These remain future scope.
+
+---
+
+# 17. Dependency policy
+
+Follow the project dependency policy.
+
+Prefer:
+
+- Go standard library
+    
+- already-approved `golang.org/x/crypto/*`
+    
+- already-approved protobuf dependencies
+    
+
+Do not introduce arbitrary crypto libraries.
+
+Do not implement crypto primitives manually.
+
+If a new non-cryptographic dependency is genuinely necessary, report it explicitly before treating M4 as complete.
+
+---
+
+# 18. Validation
+
+Run the complete containerized validation suite.
+
+At minimum:
+
+```text
+gofmt
+go vet ./...
+go test ./...
+go test -race ./...
+go build ./...
+docker build
+docker compose config
+docker compose up
+docker compose down
+
+
+Use the project's existing containerized environment.
+
+Do not rely on undocumented host-only dependencies.
+
+---
+
+# 19. Documentation during implementation
+
+Do NOT rewrite the project's architecture/security documentation as part of implementation.
+
+You may add/update code-level documentation and test documentation necessary to explain the implementation.
+
+The Project Overseer will perform the formal M4 documentation synchronization separately after reviewing your implementation.
+
+---
+
+# 20. Completion report
+
+When finished, report:
+
+1. files created
+    
+2. files modified
+    
+3. architecture/components added
+    
+4. transport framing implementation
+    
+5. packet validation implementation
+    
+6. session binding implementation
+    
+7. security boundary
+    
+8. concurrency approach
+    
+9. tests added
+    
+10. dependency changes
+    
+11. exact validation commands and results
+    
+12. known limitations
+    
+13. any deviations from this prompt
+    
+14. any security concerns requiring Project Overseer review
+    
+
+Do not claim M4 is approved.
+
+Use the status:
+
+**M4 IMPLEMENTATION COMPLETE — PENDING PROJECT OVERSEER REVIEW**
+
+Stop after the implementation and report.
+
+```
+
+```
+# M4 — Corrections and Implementation Authorization
+
+The Project Overseer has reviewed your M4 implementation plan.
+
+**M4 is authorized to proceed**, with the following mandatory corrections.
+
+Do not re-design M4. Apply these corrections to the existing plan and begin implementation.
+
+---
+
+## 1. Unknown Protobuf Fields — Mandatory Correction
+
+Do NOT assume:
+
+```go
+proto.UnmarshalOptions{DiscardUnknown: false}
+
+
+rejects unknown fields.
+
+It does not.
+
+The project requirement is that unknown protobuf fields are rejected at the protocol boundary.
+
+Implement explicit unknown-field detection/rejection using the protobuf representation/API available in the project's current generated code and dependency version.
+
+This requirement applies to the top-level `MeshPacket` and any relevant nested payload messages.
+
+Add a test proving that a packet containing an unknown protobuf field is rejected.
+
+Do not silently discard unknown fields.
+
+---
+
+## 2. Validate Every Packet Type
+
+`ValidateIncomingPacket()` must be type-aware.
+
+### PACKET_TYPE_INIT
+
+Validate:
+
+- protocol version
+    
+- packet ID = exactly 16 bytes
+    
+- source node = exactly 32 bytes
+    
+- destination node = exactly 32 bytes
+    
+- `init` oneof is populated
+    
+- ephemeral key = exactly 32 bytes
+    
+- signature = exactly 64 bytes
+    
+- no conflicting oneof payload
+    
+
+### PACKET_TYPE_RESP
+
+Validate:
+
+- protocol version
+    
+- packet ID = exactly 16 bytes
+    
+- source node = exactly 32 bytes
+    
+- destination node = exactly 32 bytes
+    
+- `resp` oneof is populated
+    
+- ephemeral key = exactly 32 bytes
+    
+- signature = exactly 64 bytes
+    
+- no conflicting oneof payload
+    
+
+### PACKET_TYPE_APP_DATA
+
+Validate:
+
+- protocol version
+    
+- packet ID = exactly 16 bytes
+    
+- source node = exactly 32 bytes
+    
+- destination node = exactly 32 bytes
+    
+- `app_data` oneof is populated
+    
+- session ID = exactly 32 bytes
+    
+- ciphertext is at least ChaCha20-Poly1305 overhead
+    
+- no conflicting oneof payload
+    
+
+### PACKET_TYPE_UNKNOWN
+
+Reject.
+
+Any invalid packet/oneof combination must be rejected.
+
+---
+
+## 3. Session Identity Binding — Mandatory
+
+For an established APP_DATA session, all of the following must agree:
+
+```text
+packet.source_node
+        ↓
+expected remote identity
+
+packet.dest_node
+        ↓
+local identity
+
+packet.app_data.session_id
+        ↓
+active crypto.Session
+
+
+Do not authenticate a ciphertext solely because its `session_id` matches.
+
+The protocol identities must also correspond to the established session.
+
+An APP_DATA packet for another destination must be rejected.
+
+An APP_DATA packet claiming an incorrect source identity must be rejected.
+
+Add explicit negative tests for these cases.
+
+---
+
+## 4. Keep Transport Crypto-Agnostic
+
+`internal/transport/connection.go` must remain responsible for:
+
+- TCP socket I/O
+    
+- length-prefix framing
+    
+- bounded reads
+    
+- protobuf encoding/decoding
+    
+- synchronized writes
+    
+- connection lifecycle
+    
+
+It must NOT contain cryptographic protocol logic.
+
+The handshake/session orchestration belongs in the higher-level direct-channel/session integration component.
+
+Acceptable structure:
+
+```text
+Application
+     │
+     ▼
+DirectChannel
+     │
+     ├──────────────► Crypto Session
+     │
+     ▼
+Protocol Packet
+     │
+     ▼
+Connection
+     │
+     ▼
+TCP
+
+
+Do not move M3 cryptographic implementation into transport.
+
+---
+
+## 5. Concurrency Contract — Mandatory
+
+Implement and document this connection contract:
+
+### Reads
+
+Exactly **one goroutine** may own the receive/read loop for a `Connection`.
+
+Concurrent `ReadPacket()` calls are not supported.
+
+### Writes
+
+Multiple callers may invoke `WritePacket()` concurrently.
+
+`WritePacket()` must serialize complete framed packets so that concurrent writers cannot interleave:
+
+```text
+[length A][body A][length B][body B]
+
+
+into corrupted framing.
+
+Add tests for concurrent writes.
+
+Run them under:
+
+```bash
+go test -race ./...
+
+
+Do not claim that this makes the entire application universally thread-safe.
+
+---
+
+## 6. APP_DATA Requires an Established Session
+
+APP_DATA must never be processed before the handshake successfully establishes the M3 `crypto.Session`.
+
+Required state:
+
+```text
+Connection established
+        ↓
+Handshake
+        ↓
+Session established
+        ↓
+APP_DATA permitted
+
+
+If APP_DATA arrives before session establishment:
+
+```text
+reject
+do not decrypt
+do not deliver plaintext
+
+
+Unknown session IDs must also be rejected.
+
+Do not automatically create a session from an APP_DATA packet.
+
+Add a negative test.
+
+---
+
+## 7. One Session Per Connection Is an M4 Scope Constraint
+
+For M4:
+
+```text
+one DirectChannel
+        ↕
+one TCP Connection
+        ↕
+one established crypto.Session
+
+
+This is approved.
+
+However, do NOT encode this as a fundamental protocol limitation.
+
+Document it as:
+
+> M4 intentionally supports one established cryptographic session per direct TCP channel. Future versions may support session multiplexing.
+
+Do not implement multiplexing during M4.
+
+---
+
+## 8. Handshake Placement
+
+Implement handshake orchestration in the direct-channel/session integration layer, for example:
+
+```text
+internal/transport/direct_session.go
+
+
+or an equivalent appropriately named component.
+
+It may use the existing M3 APIs:
+
+```text
+NewInitiatorHandshake()
+GenerateInit()
+ProcessResp()
+
+NewResponderHandshake()
+ProcessInit()
+GenerateResp()
+
+
+`connection.go` itself must not understand the cryptographic handshake.
+
+The handshake sequence must be:
+
+### Initiator
+
+```text
+connect
+  ↓
+create M3 initiator handshake
+  ↓
+GenerateInit()
+  ↓
+send INIT
+  ↓
+receive RESP
+  ↓
+ProcessResp()
+  ↓
+Session established
+  ↓
+APP_DATA allowed
+
+
+### Responder
+
+```text
+accept
+  ↓
+create M3 responder handshake
+  ↓
+receive INIT
+  ↓
+ProcessInit()
+  ↓
+GenerateResp()
+  ↓
+send RESP
+  ↓
+Session established
+  ↓
+APP_DATA allowed
+
+
+---
+
+## 9. TTL
+
+For M4 direct messaging:
+
+```text
+TTL = 1
+
+
+This is correct.
+
+Do not implement forwarding in M4.
+
+---
+
+## 10. Packet ID
+
+Keep:
+
+```text
+packet_id = 16 cryptographically random bytes
+
+
+using a cryptographically secure random source.
+
+Do not derive packet IDs from sequence numbers, timestamps, identities, or predictable values.
+
+---
+
+## 11. Interceptor Test
+
+Keep the traffic-interception test.
+
+It must demonstrate that application plaintext does not traverse the TCP transport directly.
+
+For example:
+
+```text
+Application plaintext:
+"hello from A"
+
+        ↓ encryption
+
+TCP traffic:
+protobuf metadata + ciphertext
+
+        ↓ decryption
+
+Remote application:
+"hello from A"
+
+
+The test may assert that the plaintext is absent from the transmitted APP_DATA ciphertext/frame.
+
+Do NOT claim that this test proves metadata confidentiality.
+
+Protocol-visible metadata remains visible to the transport observer.
+
+---
+
+## 12. Security Boundary
+
+The only path to application plaintext must be:
+
+```text
+TCP bytes
+   ↓
+frame validation
+   ↓
+protobuf validation
+   ↓
+session lookup/binding
+   ↓
+Session.DecryptMessage()
+   ↓
+successful AEAD authentication
+   ↓
+application delivery
+
+
+Authentication/decryption failure must result in:
+
+```text
+no plaintext delivery
+
+
+Do not log plaintext or cryptographic secrets on failure.
+
+---
+
+## 13. Required Tests
+
+In addition to your original tests, ensure the suite covers:
+
+### Protocol validation
+
+- unknown protobuf field rejection
+    
+- INIT validation
+    
+- RESP validation
+    
+- APP_DATA validation
+    
+- oneof/type mismatch
+    
+- invalid version
+    
+- invalid lengths
+    
+- wrong destination
+    
+- wrong source identity
+    
+
+### Session binding
+
+- valid session + correct identities
+    
+- wrong session ID
+    
+- wrong source identity
+    
+- wrong destination identity
+    
+- APP_DATA before session establishment
+    
+
+### Transport
+
+- partial reads
+    
+- partial writes
+    
+- concurrent writes
+    
+- oversized frame
+    
+- malformed frame
+    
+- EOF/closed connection
+    
+
+### Security
+
+- ciphertext modification
+    
+- replay
+    
+- out-of-order delivery according to M3's 64-message window
+    
+- wrong-direction ciphertext
+    
+- cross-session ciphertext
+    
+- plaintext never delivered after authentication failure
+    
+
+### End-to-end
+
+```text
+A ↔ B TCP connection
+A ↔ B authenticated M3 handshake
+A → B encrypted message
+B → A encrypted message
+tampered ciphertext rejected
+
+
+---
+
+## 14. M3 Must Remain Untouched
+
+Do not modify the semantics of the approved M3 cryptographic protocol.
+
+Do not change:
+
+- X25519 behavior
+    
+- handshake transcript
+    
+- signatures
+    
+- session ID
+    
+- HKDF labels
+    
+- directional keys
+    
+- ChaCha20-Poly1305
+    
+- nonce construction
+    
+- AAD
+    
+- sequence numbers
+    
+- replay window
+    
+- sequence exhaustion behavior
+    
+
+If an integration issue appears to require changing M3 semantics, STOP and report it to the Project Overseer instead.
+
+---
+
+## 15. Scope Exclusions
+
+Do not implement:
+
+- mesh forwarding
+    
+- route discovery
+    
+- flooding
+    
+- multi-hop routing
+    
+- DHT
+    
+- anonymity
+    
+- metadata hiding
+    
+- onion routing
+    
+- cover traffic
+    
+- group messaging
+    
+- file transfer
+    
+- advanced peer discovery
+    
+- routing attack mitigation
+    
+
+These remain outside M4.
+
+---
+
+## 16. Validation
+
+Run the project validation suite in the containerized environment:
+
+```bash
+gofmt
+go vet ./...
+go test ./...
+go test -race ./...
+go build ./...
+docker build
+docker compose config
+docker compose up
+docker compose down
+
+
+If any command fails, investigate and report the failure rather than claiming M4 completion.
+
+---
+
+## 17. Final Report
+
+When implementation is complete, provide:
+
+1. Files created
+    
+2. Files modified
+    
+3. Architecture/components implemented
+    
+4. TCP framing implementation
+    
+5. Packet validation implementation
+    
+6. Handshake integration
+    
+7. Session binding
+    
+8. Application security boundary
+    
+9. Concurrency model
+    
+10. Tests added
+    
+11. Dependency changes
+    
+12. Exact validation commands/results
+    
+13. Known limitations
+    
+14. Any deviations from this prompt
+    
+15. Any security concerns requiring Project Overseer review
+    
+
+Final status must be:
+
+**M4 IMPLEMENTATION COMPLETE — PENDING PROJECT OVERSEER REVIEW**
+
+Do not declare M4 approved.
+
+Stop after the implementation report.
+
+```
+
+
+
+```
+
+# M4 — Project Overseer Source Audit Request
+
+M4 implementation is **not yet approved**.
+
+Your implementation report is accepted as a status report, but the Project Overseer requires an independent source-level audit before approving the milestone.
+
+Do NOT modify the implementation yet.
+
+Provide the following for review.
+
+## 1. Complete M4 source
+
+Provide the complete current contents, or an exact git diff against the M3-approved state, for:
+
+- `internal/transport/connection.go`
+    
+- `internal/transport/direct_session.go`
+    
+- `internal/transport/errors.go`
+    
+- `internal/transport/packet.go`
+    
+
+Also provide any other source files modified by M4.
+
+## 2. Tests
+
+Provide the complete current contents of:
+
+- `internal/transport/transport_test.go`
+    
+- `internal/transport/integration_test.go`
+    
+
+Also list every test name added by M4.
+
+## 3. Exact validation output
+
+Provide the actual output/results of:
+
+```bash
+gofmt -l .
+go vet ./...
+go test ./...
+go test -race ./...
+go build ./...
+docker build .
+docker compose config
+docker compose up
+docker compose down
+
+
+Do not summarize these as "passed" without showing the relevant result.
+
+If a command was not run, explicitly state that.
+
+## 4. Security audit checklist
+
+For each item below, state exactly which function/test demonstrates compliance.
+
+### Transport
+
+- 4-byte big-endian framing
+    
+- `io.ReadFull`
+    
+- 64 KiB maximum
+    
+- no allocation before length validation
+    
+- exact handling of EOF
+    
+- short-write handling
+    
+- concurrent writer serialization
+    
+- single-reader contract
+    
+
+### Packet validation
+
+- protocol version
+    
+- packet ID = 16 bytes
+    
+- source = 32 bytes
+    
+- destination = 32 bytes
+    
+- INIT validation
+    
+- RESP validation
+    
+- APP_DATA validation
+    
+- packet type/oneof consistency
+    
+- unknown-field rejection
+    
+- malformed packet rejection without panic
+    
+
+### Handshake
+
+- initiator state machine
+    
+- responder state machine
+    
+- exact M3 handshake integration
+    
+- APP_DATA unavailable before session establishment
+    
+- session establishment failure handling
+    
+
+### Session binding
+
+- session ID binding
+    
+- authenticated remote identity binding
+    
+- source identity verification
+    
+- destination identity verification
+    
+- unknown-session rejection
+    
+
+### Message security
+
+- successful A→B encryption/decryption
+    
+- successful B→A encryption/decryption
+    
+- ciphertext modification rejection
+    
+- replay rejection
+    
+- out-of-order acceptance according to M3
+    
+- wrong-direction rejection
+    
+- cross-session rejection
+    
+- no plaintext delivery after authentication failure
+    
+
+### Interception
+
+Explain exactly where the interceptor observes traffic and demonstrate that it observes the actual serialized TCP frame rather than an in-memory ciphertext object.
+
+## 5. Important
+
+Do not make any claims such as:
+
+> "No security concerns exist"
+
+unless the claim is explicitly limited to implementation behavior that has been demonstrated by tests.
+
+The final security approval belongs to the Project Overseer.
+
+Do not change code unless the Project Overseer requests changes after the audit.
+
+Return:
+
+**M4 SOURCE AUDIT MATERIAL — PENDING PROJECT OVERSEER REVIEW**
+```
+
+
+```
+
+# M4 — Mandatory Transport Correction
+
+The Project Overseer has completed the M4 source audit.
+
+M4 is **NOT YET APPROVED**.
+
+One mandatory correctness issue was found in `internal/transport/connection.go`.
+
+## 1. Fix `WritePacket()` short writes
+
+Current implementation effectively does:
+
+```go
+_, err = c.conn.Write(frame)
+return err
+
+
+This is insufficient because `net.Conn.Write` may legally write fewer bytes than requested.
+
+`io.ReadFull` only handles reads and does NOT provide short-write handling.
+
+Implement correct complete-frame writing.
+
+Acceptable approaches include:
+
+- `io.Copy` from an appropriate buffer/reader, or
+    
+- an explicit write loop that continues until the entire frame has been written.
+    
+
+The implementation must correctly handle:
+
+```text
+n == len(frame), err == nil
+n < len(frame), err == nil
+n < len(frame), err != nil
+
+
+If a write fails, return the appropriate error.
+
+Do not silently discard partial writes.
+
+## 2. Preserve writer serialization
+
+Keep the existing `writeMu`.
+
+The complete frame must remain protected by the same write lock so concurrent writers cannot interleave:
+
+```text
+[length A][body A][length B][body B]
+
+
+into:
+
+```text
+[length A][partial body A][length B][rest of body A]...
+
+
+The lock should cover the complete write operation.
+
+## 3. Add a dedicated short-write test
+
+Add a test using a custom `net.Conn` test double or equivalent mechanism that deliberately performs partial writes.
+
+For example, the underlying writer should intentionally accept only a small number of bytes per `Write()` call while returning `nil` error.
+
+Verify that `Connection.WritePacket()` eventually produces the complete:
+
+```text
+4-byte length prefix + complete protobuf body
+
+
+frame.
+
+Also test a failing partial write and verify the error is propagated.
+
+Do NOT rely solely on `net.Pipe()` or a normal TCP connection for this test, because those may not reliably reproduce the short-write condition.
+
+## 4. Correct the audit/report wording
+
+The previous statement:
+
+> “Short-write handling: Handled by io.ReadFull”
+
+is incorrect.
+
+After the fix, report exactly how short writes are handled.
+
+## 5. Do not change anything else
+
+Do NOT modify:
+
+- M3 crypto
+    
+- handshake transcript
+    
+- session construction
+    
+- AEAD
+    
+- replay protection
+    
+- packet format
+    
+- protocol fields
+    
+- session binding
+    
+- one-session-per-channel scope
+    
+- mesh/routing behavior
+    
+
+This is a targeted transport correctness fix.
+
+## 6. Re-run validation
+
+At minimum:
+
+```bash
+gofmt -l .
+go vet ./...
+go test ./...
+go test -race ./...
+go build ./...
+
+
+Also rerun the relevant Docker validation if the implementation environment requires it.
+
+## 7. Final report
+
+Return:
+
+1. exact code change
+    
+2. short-write test added
+    
+3. failing-write test added
+    
+4. complete validation results
+    
+5. confirmation that no M3 semantics changed
+    
+
+Status:
+
+**M4 CORRECTION COMPLETE — PENDING PROJECT OVERSEER RE-REVIEW**
+
+Do not claim M4 approval.
+```
+
+
+```
 
 
 ```

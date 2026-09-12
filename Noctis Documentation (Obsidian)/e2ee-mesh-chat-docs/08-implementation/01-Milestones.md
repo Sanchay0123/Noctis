@@ -74,29 +74,45 @@ directions, a 64-message replay window, and concurrency-safe session state.
 The reported containerized validation suite passed formatting, vetting, tests,
 race detection, and build checks.
 
-M3 is now closed. M4 is **NOT STARTED / GATED** and requires a separate
-Project Overseer authorization.
+M3 is now closed. M4 has subsequently been implemented, independently reviewed,
+and approved. M5 is **NOT STARTED / GATED** and requires separate Project
+Overseer authorization.
 
-## M4 --- Direct encrypted messaging integration
+## M4 --- Direct secure messaging integration
 
-The milestone previously labelled “M4 — Encrypted messaging” is now
-reframed as the next integration stage because the approved M3 implementation
-already contains the cryptographic message-protection layer.
+M4 integrates the completed M3 session/AEAD layer with the frozen Protobuf
+protocol and bounded TCP transport. The scope includes direct-channel
+handshake orchestration, packet validation, session/identity binding,
+application plaintext delivery after successful AEAD authentication, and
+transport-path tampering evidence.
 
-M4 must integrate the completed session/AEAD layer with the protocol and
-application message path without changing the frozen cryptographic
-construction unless separately reviewed.
+For M4, one established cryptographic session is associated with one direct TCP
+channel. This is a milestone scope constraint, not a protocol limitation.
 
-**Gate:** Project Overseer authorization, followed by integration tests and
-end-to-end evidence.
+**Status:** 🟢 COMPLETE / APPROVED
 
-## M5 --- Direct networking
+### M4 Completion Record
 
--   two-node connection
--   peer authentication
--   direct encrypted message
+M4 implemented `Connection`, packet validation and `DirectChannel` integration.
+The transport uses 4-byte big-endian framing with a 64 KiB bound, bounded reads,
+serialized complete writes including short-write handling, and explicit
+unknown-field rejection. Direct APP_DATA is bound to the active session and
+endpoint identities. End-to-end tests demonstrate bidirectional encrypted
+messaging and rejection of transport-path ciphertext tampering.
 
-**Gate:** end-to-end two-node demo.
+Containerized formatting, vetting, tests, race detection and build validation
+passed. M4 was independently reviewed and approved by the Project Overseer.
+
+## M5 --- Direct networking hardening / runtime integration
+
+M5 extends the M4 direct secure channel into the project's intended runtime
+networking environment and validates real two-node operation beyond the M4
+transport/integration harness. Scope includes connection management, peer
+relationships, runtime configuration and clean two-node demonstration.
+
+**Status:** 🔒 NOT STARTED / GATED
+
+**Gate:** Project Overseer authorization + reproducible two-node runtime demo.
 
 ## M6 --- Mesh routing
 

@@ -81,7 +81,15 @@ Forwards packets without decrypting application content.
 
 ### Connection Manager
 
-Manages transport connections, timeouts and reconnection.
+Manages transport connections, timeouts and reconnection. The M4 direct
+transport implementation provides bounded TCP framing and synchronized writes.
+
+### Direct Channel
+
+Binds one direct TCP `Connection` to one M3 `crypto.Session` for the M4 scope.
+It orchestrates INIT/RESP handshake exchange, validates endpoint identity
+bindings, constructs APP_DATA packets, and exposes authenticated plaintext to
+the application only after successful decryption..
 
 ### Local State
 
@@ -110,6 +118,17 @@ It must not:
 Telemetry interfaces should be bounded and non-blocking where practical.
 
 See [[02-architecture/07-Observability-and-Security-Telemetry]].
+
+## M4 Component Status
+
+M4 adds the implemented `internal/transport` boundary. `Connection` owns raw
+TCP framing and bounded Protobuf packet transport; `ValidatePacket` enforces
+protocol-level structural constraints; and `DirectChannel` integrates the
+approved M3 session layer with direct secure messaging. Transport does not
+implement cryptographic primitives or depend on mesh routing internals.
+
+The M4 channel intentionally supports one established session per direct TCP
+connection.
 
 ## M2 Component Status
 

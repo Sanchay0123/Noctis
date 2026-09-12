@@ -88,3 +88,28 @@ The following session-layer controls are implemented and verified:
 These controls establish the M3 cryptographic/session boundary. They do not
 establish secure direct networking, mesh routing security, anonymity,
 metadata hiding or endpoint compromise resistance.
+
+
+## M4 Implemented Security Controls
+
+The following direct-messaging controls are implemented and verified:
+
+1. TCP frames use a 4-byte big-endian length prefix.
+2. Frame length is bounded to 64 KiB before allocation.
+3. `io.ReadFull` handles complete frame reads, including partial TCP reads.
+4. Complete writes are serialized and short writes are handled explicitly.
+5. Unknown Protobuf fields are rejected at the top-level and populated payload
+   level.
+6. Packet type and Protobuf `oneof` payload are required to agree.
+7. INIT, RESP and APP_DATA fixed-width fields are validated before crypto.
+8. APP_DATA is rejected before an M3 session is established.
+9. APP_DATA is bound to the active session ID and expected source/destination
+   identities.
+10. Application plaintext is delivered only after successful AEAD
+    authentication.
+11. Direct M4 channels use one established session per TCP connection.
+12. The transport layer remains independent of cryptographic implementation
+    details.
+
+M4 evidence demonstrates direct secure messaging and transport-path tamper
+rejection. It does not establish mesh routing security or anonymity.

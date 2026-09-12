@@ -44,10 +44,16 @@ Validate:
 -   AEAD
 -   replay controls
 
-## Phase 4 --- Direct networking
+## Phase 4 --- Direct secure messaging integration
 
-Prove secure two-node communication before introducing routing
+Integrate the approved cryptographic/session layer with bounded direct TCP
+transport and prove secure two-node message delivery, packet validation,
+session binding and transport-path tamper rejection before introducing routing
 complexity.
+
+M4 evidence includes framing tests, short-write tests, packet validation tests,
+end-to-end bidirectional encrypted messaging and transport interception/tamper
+tests. The M4 implementation does not establish mesh routing behavior.
 
 ## Phase 5 --- Mesh
 
@@ -89,5 +95,12 @@ upgrading unverified claims into facts.
 
 The cryptographic implementation was validated through unit, negative,
 known-answer and race-detector tests in the controlled containerized Go
-environment. The evidence establishes the implemented session-layer
-properties but does not establish end-to-end network or mesh behavior.
+environment.
+
+### M4 evidence boundary
+
+The M4 implementation extends the evidence to the direct transport and secure
+message integration boundary. Tests establish bounded framing, packet
+validation, session/identity binding, bidirectional encrypted delivery and
+transport-path tamper rejection. They do not establish mesh routing,
+anonymity, metadata hiding or production-grade network resilience.

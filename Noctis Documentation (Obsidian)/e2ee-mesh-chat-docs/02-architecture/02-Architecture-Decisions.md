@@ -265,3 +265,39 @@ callers receive defensive copies of public identity material, and loaded
 private keys are copied before cryptographic derivation.
 
 **Status:** Implemented and audited in M2.1/M2.1-B/M2.1-C.
+
+
+------------------------------------------------------------------------
+
+## ADR-013 --- Direct secure channel integration
+
+**Status:** Implemented / verified / approved in M4
+
+### Decision
+
+Integrate the approved M3 session and AEAD layer with a bounded TCP transport
+and the frozen Protobuf `MeshPacket` format through a `DirectChannel`
+integration component.
+
+For M4, one direct TCP channel owns one established cryptographic session.
+This is an implementation scope constraint, not a protocol limitation.
+
+### Transport contract
+
+TCP framing uses a 4-byte big-endian length prefix followed by serialized
+Protobuf data, with a 64 KiB maximum frame size. Reads are bounded and use
+`io.ReadFull`; concurrent writes are serialized and complete short writes
+before returning success. One goroutine owns the receive loop for a connection.
+
+### Security boundary
+
+Transport remains cryptography-agnostic. `DirectChannel` orchestrates the M3
+handshake and binds APP_DATA to the established session and expected endpoint
+identities. Plaintext is delivered to the application only after successful
+AEAD authentication.
+
+### Consequence
+
+The project obtains a demonstrable direct encrypted messaging path while
+preserving separation between transport, protocol and cryptographic/session
+responsibilities. Session multiplexing and mesh forwarding remain future work.

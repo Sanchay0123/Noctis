@@ -6,8 +6,8 @@
 session/message protection implemented and verified.**
 
 The Protobuf wire schema and runtime validation policy are frozen for the
-current protocol version. This does not mean that X25519, HKDF, or AEAD
-implementation exists yet.
+current protocol version. The M3 X25519, HKDF and AEAD implementations are
+complete, and M4 integrates them with direct TCP messaging.
 
 ## Protobuf schema
 
@@ -202,3 +202,32 @@ plaintext.
 
 Relay nodes forward the encrypted payload without access to application
 plaintext or session keys.
+
+
+## M4 Transport Framing
+
+Direct TCP transport encodes each serialized `MeshPacket` as:
+
+```text
+4-byte big-endian unsigned length
++
+Protobuf MeshPacket bytes
+```
+
+The maximum body length is 64 KiB. The receiver validates the declared length
+before allocating the body buffer and uses complete-read semantics. The sender
+serializes concurrent writes and handles short writes until the complete frame
+has been transmitted or an error occurs.
+
+## M4 Direct APP_DATA Binding
+
+An established direct channel constructs APP_DATA with:
+
+- `source_node` = local Ed25519 public identity
+- `dest_node` = expected remote Ed25519 public identity
+- `session_id` = active M3 session identifier
+- `sequence_num` = M3 directional sequence number
+- `ciphertext` = M3 ChaCha20-Poly1305 output
+
+The receiver requires all three identity/session bindings to match the active
+channel before delivering authenticated plaintext.

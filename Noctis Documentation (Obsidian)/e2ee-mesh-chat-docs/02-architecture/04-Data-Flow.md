@@ -50,3 +50,32 @@ Examples:
 -   ciphertext: transport-visible but confidential
 
 See [[05-cryptography/06-Key-Lifecycle]].
+
+
+## M4 direct secure messaging flow
+
+```mermaid
+flowchart LR
+    P[Plaintext] --> E[M3 Session EncryptMessage]
+    E --> A[AppDataPayload]
+    A --> M[MeshPacket]
+    M --> F[4-byte length prefix + Protobuf]
+    F --> TCP[TCP Connection]
+    TCP --> UF[Frame + packet validation]
+    UF --> S[M3 Session binding]
+    S --> D[DecryptMessage / AEAD authentication]
+    D --> Q[Authenticated plaintext]
+```
+
+For M4 the path is direct and no forwarding occurs. The transport can observe
+outer packet metadata and ciphertext, but not application plaintext or session
+keys.
+
+### M4 handshake flow
+
+```text
+Initiator: GenerateInit -> send INIT -> receive RESP -> ProcessResp -> Session
+Responder: receive INIT -> ProcessInit -> GenerateResp -> send RESP -> Session
+```
+
+APP_DATA is rejected until the session is established.

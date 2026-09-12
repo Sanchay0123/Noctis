@@ -1,6 +1,6 @@
 # E2EE Mesh Chat --- Documentation Hub
 
-> **Status:** M3 complete / M4 gated\
+> **Status:** M4 complete / M5 gated\
 > **Project type:** Academic cybersecurity and networking prototype
 
 ## Purpose
@@ -153,15 +153,19 @@ operate if monitoring is unavailable.
 
 ## Current Implementation Status
 
-**M3 — Authenticated Session & Encrypted Message Layer: 🟢 Complete**
+**M4 — Direct Secure Messaging Integration: 🟢 Complete / Approved**
 
 The repository has completed and verified the long-term Ed25519 identity,
 fresh X25519 session establishment, transcript-bound HKDF-SHA-256 key
-derivation, and ChaCha20-Poly1305 application message protection with
-sequence-based replay control.
+derivation, ChaCha20-Poly1305 application message protection, sequence-based
+replay control, and direct TCP secure messaging integration.
 
-Direct networking and mesh routing remain future milestones. M4 is gated and
-requires a separate Project Overseer authorization.
+M4 provides bounded TCP framing, packet validation, direct handshake
+orchestration, session/identity binding, bidirectional encrypted messaging and
+transport-path tamper rejection. Mesh routing and broader runtime networking
+remain future milestones.
+
+**M5 is NOT STARTED / GATED.**
 
 See [[00-governance/00-Project-State]] and
 [[08-implementation/01-Milestones]] for the current gate.
