@@ -2,17 +2,34 @@
 
 ## X25519
 
-X25519 provides shared secret agreement between endpoints.
+X25519 provides shared secret agreement between authenticated endpoints.
 
-It does not, by itself, authenticate who owns a public key.
+It does not, by itself, authenticate who owns a public key. The MeshChat
+session protocol therefore authenticates the ephemeral exchange with
+long-term Ed25519 signatures.
 
-Therefore:
+## M3 implementation
 
-> X25519 must be authenticated by the Ed25519 identity mechanism.
+**Status: Implemented / verified**
+
+The implementation uses Go's standard `crypto/ecdh.X25519()` API.
+
+Properties:
+- a fresh ephemeral X25519 keypair is generated for each new session
+- the public key is exactly 32 bytes
+- the shared secret is exactly 32 bytes
+- long-term Ed25519 keys are never reused as X25519 private keys
+- malformed and invalid/low-order peer public keys are rejected
+- shared-secret material is returned only as the input to the session KDF
+- the ephemeral private key has an explicit `Destroy()` lifecycle boundary
+
+`Destroy()` is a best-effort memory-lifecycle measure. It must not be described
+as guaranteed RAM zeroization. The key object is not concurrency-safe with
+destruction; callers must use it sequentially with respect to `Destroy()`.
 
 ## Conceptual exchange
 
-``` text
+```text
 Alice:
   Ed25519 identity A
   X25519 ephemeral a
@@ -29,31 +46,15 @@ Both derive the same shared secret.
 Ed25519 signatures bind the ephemeral exchange to identities.
 ```
 
-## Status
+## Security boundary
 
-**Accepted design — implementation gated to M3.**
+X25519 output is raw shared-secret material. It is not used directly as an
+application encryption key. M3.2 passes it into the frozen HKDF-SHA-256
+schedule with the transcript hash as salt.
 
-The M2 identity component is complete, but no X25519 key agreement has
-been implemented yet. M3.1 must define the exact Go API/library choice,
-ephemeral-key ownership, invalid/low-order public-key handling, shared-secret
-ownership, and best-effort private-key erasure expectations before code is
-written.
+## Evidence
 
-## Required properties
-
--   both parties derive the same shared secret
--   unauthorized key substitution fails
--   session context is bound
--   roles/directions are separated
--   invalid authentication terminates the exchange
--   long-term Ed25519 private keys are never reused as X25519 private keys
--   a fresh ephemeral X25519 keypair is generated for each new session
-
-## Required security test
-
-MITM identity substitution:
-
-1.  attacker intercepts handshake
-2.  attacker substitutes X25519 public key
-3.  legitimate Ed25519 authentication no longer matches
-4.  handshake is rejected
+M3.1 testing covers key generation, agreement, an RFC7748 known-answer vector,
+invalid/low-order public keys, ownership/defensive-copy behavior and cleanup
+semantics. Containerized formatting, vetting, tests, race detection and build
+validation passed.

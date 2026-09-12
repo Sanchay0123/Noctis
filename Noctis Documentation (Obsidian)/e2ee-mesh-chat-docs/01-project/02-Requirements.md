@@ -169,4 +169,6 @@ The identity requirements are now implemented and tested:
 - Signing and verification use the standard Ed25519 implementation.
 - Identity functionality is isolated from session establishment, routing, transport, and application messaging.
 
-X25519 session establishment and encrypted messaging remain future milestones.
+X25519 session establishment and encrypted messaging are now implemented
+within M3. Direct networking, mesh routing and end-to-end delivery remain
+future milestones.

@@ -38,24 +38,57 @@ Deliver:
 
 **Gate:** crypto review + tests.
 
-## M3 --- Session establishment
+## M3 --- Authenticated session & encrypted message layer
 
 -   X25519
 -   Ed25519 authentication
--   HKDF
+-   canonical transcript binding
+-   HKDF-SHA-256
 -   session lifecycle
-
-**Gate:** MITM test passes.
-
-## M4 --- Encrypted messaging
-
 -   ChaCha20-Poly1305
 -   nonce management
 -   AAD
--   message serialization
--   replay model
+-   directional sequence spaces
+-   bounded replay protection
 
-**Gate:** negative crypto tests pass.
+**Gate:** cryptographic/session implementation review + negative tests +
+known-answer vectors + race-detector validation.
+
+**Status:** 🟢 COMPLETE / APPROVED
+
+### M3 Completion Record
+
+M3.1, M3.2 and M3.3 were implemented and independently reviewed against
+the frozen protocol construction.
+
+M3.1 established fresh X25519 ephemeral key agreement.
+
+M3.2 established mutually authenticated sessions using Ed25519 signatures,
+the canonical handshake transcript, SHA-256 session IDs, and the frozen
+HKDF-SHA-256 directional key schedule.
+
+M3.3 established the application AEAD layer using ChaCha20-Poly1305,
+sequence-derived nonces, authenticated associated data, role-separated
+directions, a 64-message replay window, and concurrency-safe session state.
+
+The reported containerized validation suite passed formatting, vetting, tests,
+race detection, and build checks.
+
+M3 is now closed. M4 is **NOT STARTED / GATED** and requires a separate
+Project Overseer authorization.
+
+## M4 --- Direct encrypted messaging integration
+
+The milestone previously labelled “M4 — Encrypted messaging” is now
+reframed as the next integration stage because the approved M3 implementation
+already contains the cryptographic message-protection layer.
+
+M4 must integrate the completed session/AEAD layer with the protocol and
+application message path without changing the frozen cryptographic
+construction unless separately reviewed.
+
+**Gate:** Project Overseer authorization, followed by integration tests and
+end-to-end evidence.
 
 ## M5 --- Direct networking
 

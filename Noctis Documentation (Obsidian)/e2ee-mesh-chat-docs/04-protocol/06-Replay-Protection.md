@@ -6,46 +6,47 @@ An attacker captures an accepted ciphertext and later sends it again.
 
 Without replay protection:
 
-``` text
-Alice → Bob: TRANSFER/COMMAND/MESSAGE
+```text
+Alice -> Bob: TRANSFER/COMMAND/MESSAGE
 Attacker captures packet
-Attacker → Bob: same packet again
+Attacker -> Bob: same packet again
 ```
 
 The application may incorrectly process it twice.
 
 ## Required controls
 
-Use a combination of:
-
--   unique message/packet identifiers
--   sequence numbers
--   authenticated session identifiers
--   receiver replay state
--   bounded replay windows where appropriate
+Use:
+- unique packet identifiers at the mesh layer
+- per-direction sequence numbers at the session layer
+- authenticated session identifiers
+- receiver replay state
+- a bounded replay window
 
 Timestamps alone are insufficient.
 
-## Conceptual receiver flow
+## Receiver flow
 
 ```mermaid
 flowchart TD
     P[Packet received] --> V[Validate structure]
-    V --> A[Authenticate AEAD]
-    A --> R{Replay state accepts?}
-    R -->|No| X[Reject]
-    R -->|Yes| U[Update replay state]
-    U --> D[Deliver plaintext]
+    V --> R[Check replay window without mutation]
+    R --> A[Authenticate AEAD]
+    A -->|Failure| X[Reject without state change]
+    A -->|Success| C[Commit replay state]
+    C --> D[Deliver plaintext]
 ```
 
-The exact ordering between cryptographic authentication and replay-state
-mutation must be designed carefully so attacker-controlled packets
-cannot poison state.
+The M3.3 implementation uses a 64-message receive window and commits state
+only after successful AEAD authentication.
 
 ## Requirements
 
--   duplicate packet rejected
--   old packet rejected
--   invalid packet does not advance replay state
--   replay state survives the relevant session lifetime
--   reconnect behavior is explicitly defined
+- duplicate application ciphertext rejected
+- sequence numbers outside the receive window rejected
+- valid out-of-order ciphertext inside the window accepted once
+- invalid ciphertext does not advance replay state
+- cross-session ciphertext rejected
+- cross-direction ciphertext rejected
+- restart invalidates old session replay state
+- mesh PacketID duplicate handling remains independent of session replay

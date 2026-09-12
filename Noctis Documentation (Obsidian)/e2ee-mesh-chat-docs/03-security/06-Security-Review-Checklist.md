@@ -1,6 +1,6 @@
 # Security Review Checklist
 
-## M2 reviewed scope
+## M2 and M3 reviewed scope
 
 -   [x] Established library primitives only for Ed25519
 -   [x] Ed25519 identity handling reviewed
@@ -8,9 +8,9 @@
 -   [x] Ed25519 key ownership/defensive-copy behavior reviewed
 -   [x] Ed25519 concurrent-signing behavior tested
 
-The remaining unchecked items are future protocol, session, AEAD, replay,
-networking, and integration controls and must not be interpreted as
-completed by the M2 gate.
+The remaining unchecked items are primarily networking, integration,
+deployment and final security-demonstration controls and must not be
+interpreted as completed by the M3 gate.
 
 
 ## Cryptography
@@ -33,9 +33,9 @@ completed by the M2 gate.
 -   [ ] Message types validated
 -   [ ] Field lengths bounded
 -   [ ] Unknown fields handled intentionally
--   [ ] Authentication occurs before trust-sensitive processing
--   [ ] Replay protection enforced
--   [ ] Duplicate detection enforced
+-   [x] Authentication occurs before trust-sensitive session-state commitment
+-   [x] Replay protection enforced for authenticated application messages
+-   [x] Duplicate detection enforced for session messages
 -   [ ] Error messages do not leak secrets
 
 ## Networking
@@ -63,3 +63,20 @@ completed by the M2 gate.
 -   [ ] Integration tests exist
 -   [ ] Demonstration evidence captured
 -   [ ] Documentation claims match actual evidence
+
+
+## M3 review evidence
+
+M3.1/M3.2/M3.3 were reviewed against the frozen protocol construction.
+Negative tests cover transcript tampering, identity and ephemeral
+substitution, malformed inputs, invalid ciphertext/AAD, duplicate and
+out-of-window sequence numbers, unauthenticated replay-state poisoning,
+cross-session and cross-direction use, and sequence exhaustion.
+
+The reported containerized validation sequence passed formatting, vetting,
+tests, race detection and build checks.
+
+The following remain future review scope: direct-network integration,
+multi-node behavior, mesh forwarding/routing controls, basic DoS resistance,
+telemetry leakage under the integrated runtime, and end-to-end security
+demonstrations.

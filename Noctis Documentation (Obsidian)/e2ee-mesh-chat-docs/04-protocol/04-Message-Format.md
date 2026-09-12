@@ -3,7 +3,7 @@
 ## Status
 
 **M1.1 schema frozen and verified; M2 identity complete; M3 cryptographic
-implementation gated.**
+session/message protection implemented and verified.**
 
 The Protobuf wire schema and runtime validation policy are frozen for the
 current protocol version. This does not mean that X25519, HKDF, or AEAD
@@ -109,20 +109,29 @@ else:
 The destination must not be accidentally dropped merely because its
 incoming TTL is `1`.
 
-## AAD
+## Application AEAD AAD
 
-For application data, the canonical AAD is:
+For M3 application encryption, the canonical AAD is:
 
 ```text
-ProtocolVersion ||
-PacketType ||
+"MeshChat-AppData-v1" ||
 SessionID ||
-SequenceNumber ||
-SourceNode ||
-DestNode
+uint64_be(SequenceNumber) ||
+Direction
 ```
 
-All fields must have deterministic fixed-width encodings.
+Where:
+- `SessionID` is the full 32-byte session identifier
+- `SequenceNumber` is the 8-byte big-endian application sequence number
+- `Direction` is one byte derived internally from the session role:
+  `0x01` initiator -> responder, `0x00` responder -> initiator
+
+The direction marker is not caller-controlled.
+
+Routing metadata remains part of the outer mesh packet and is not implicitly
+authenticated by this application-layer AAD construction. Any future
+cryptographic binding of additional envelope fields requires an explicit
+protocol decision.
 
 ## Relay behavior
 
@@ -179,3 +188,17 @@ must remain covered by an explicit regression test.
 Changes to the `.proto` source must be followed by deterministic regeneration
 of the generated Go code and the normal formatting, vet, test, and build
 validation sequence.
+
+
+## M3 application payload status
+
+`AppDataPayload.sequence_num` carries the application sequence number used by
+the M3 AEAD layer. `AppDataPayload.ciphertext` contains the encrypted
+application bytes together with the 16-byte Poly1305 authentication tag.
+
+The M3 implementation rejects truncated ciphertext and authenticates the
+session ID, sequence number and direction context before delivering
+plaintext.
+
+Relay nodes forward the encrypted payload without access to application
+plaintext or session keys.

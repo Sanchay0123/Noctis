@@ -16,8 +16,7 @@ stateDiagram-v2
 
 ## Session keys
 
-Session keys are not implemented in M2. The approved future design
-requires each session to have an explicit:
+M3 implements session keys and requires each session to have an explicit:
 
 -   creation event
 -   activation event
@@ -26,7 +25,7 @@ requires each session to have an explicit:
 -   destruction/retirement event
 
 The planned rotation threshold is 2^16 application messages or 24 hours,
-whichever occurs first, subject to implementation and M3 review evidence.
+whichever occurs first, as implemented and verified in M3.
 
 ## Reconnection
 
@@ -53,3 +52,31 @@ Document:
 -   what is encrypted at rest
 -   what is backed up
 -   what happens when state is lost
+
+
+## M3 session lifecycle
+
+```text
+fresh X25519 ephemeral keys
+        |
+        v
+authenticated handshake
+        |
+        v
+directional session keys
+        |
+        v
+encrypted messages + sequence state
+        |
+        +--> rotate at 2^16 messages or 24h
+        |
+        v
+retire old session
+```
+
+Session keys and sequence/replay state are not persisted. Restart invalidates
+the old session state and requires a fresh authenticated handshake.
+
+Forward secrecy remains conditional on fresh ephemeral keys, appropriate
+private-key lifecycle handling and uncompromised endpoints. The protocol
+does not claim post-compromise security.

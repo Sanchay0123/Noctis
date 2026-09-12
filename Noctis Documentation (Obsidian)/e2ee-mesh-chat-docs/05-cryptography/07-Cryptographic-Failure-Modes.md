@@ -48,3 +48,24 @@ Indicates catastrophic protocol failure.
 ## Review principle
 
 Cryptographic failure handling should generally be fail-closed.
+
+
+## M3 verified failure handling
+
+The M3 implementation includes negative tests for:
+- invalid/low-order X25519 peer public keys
+- transcript and identity substitution
+- malformed handshake state
+- modified ciphertext
+- modified AAD/context
+- truncated ciphertext
+- duplicate and outside-window sequence numbers
+- cross-session and cross-direction ciphertext
+- sequence-number exhaustion
+
+The AEAD receive path authenticates ciphertext before committing replay-window
+state. Cryptographic failures therefore do not advance the receiver's replay
+state.
+
+The implementation uses typed errors for the principal X25519/session failure
+conditions rather than exposing secret material in diagnostics.

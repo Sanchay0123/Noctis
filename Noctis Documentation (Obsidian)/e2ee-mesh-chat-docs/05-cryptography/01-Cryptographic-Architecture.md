@@ -5,9 +5,9 @@
   Purpose                     Primitive           Status
   --------------------------- ------------------- -------------------
   Identity/signature          Ed25519             Implemented / verified
-  Key agreement               X25519              Accepted / M3 gated
+  Key agreement               X25519              Implemented / verified in M3
   Symmetric AEAD              ChaCha20-Poly1305   Accepted / future milestone
-  KDF                         HKDF-SHA-256        Accepted / M3 gated
+  KDF                         HKDF-SHA-256        Implemented / verified in M3
   Password KDF if needed      Argon2id            Conditional
   General hashing if needed   SHA-256/SHA-3       Context-dependent
 
@@ -38,13 +38,43 @@ flowchart TB
 
 ## Current implementation boundary
 
-The Ed25519 identity/signature component is implemented and audited in M2.
-X25519, HKDF, and AEAD remain unimplemented. The approved protocol design
-requires separate long-term Ed25519 identity keys and fresh ephemeral
-X25519 keys; identity keys must never be reused as X25519 private keys.
+The M2 Ed25519 long-term identity component and the M3 authenticated session
+and message-protection layer are implemented and verified within their
+approved scopes.
 
-The canonical handshake transcript and session KDF are frozen in the
-protocol documentation, but implementation remains gated to M3.
+M3 establishes the cryptographic boundary:
+
+```text
+Ed25519 identity
+      |
+      v
+signed X25519 ephemeral exchange
+      |
+      v
+canonical handshake transcript
+      |
+      +--> session_id = SHA256(T_RESP)
+      |
+      v
+HKDF-SHA-256
+      |
+      +--> initiator -> responder key
+      +--> responder -> initiator key
+      |
+      v
+ChaCha20-Poly1305
+      |
+      v
+authenticated application ciphertext
+```
+
+The implementation uses established library primitives only. X25519 uses
+Go's `crypto/ecdh`, Ed25519 uses the standard library, HKDF and ChaCha20-
+Poly1305 use approved Go cryptographic libraries.
+
+M3 does not implement direct networking or mesh routing. Relays therefore
+remain outside the cryptographic session layer and must never receive
+application plaintext or session keys.
 
 See [[04-protocol/03-Session-Establishment]] and
 [[05-cryptography/07-Cryptographic-Failure-Modes]].

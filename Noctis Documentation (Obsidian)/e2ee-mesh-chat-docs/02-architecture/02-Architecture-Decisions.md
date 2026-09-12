@@ -42,7 +42,7 @@ key-agreement keys.
 
 ## ADR-003 --- X25519 for key agreement
 
-**Status:** Accepted / implementation gated to M3
+**Status:** Implemented / verified in M3
 
 ### Decision
 
@@ -61,11 +61,11 @@ The X25519 exchange must be authenticated by the Ed25519 identity.
 
 ## ADR-004 --- ChaCha20-Poly1305
 
-**Status:** Proposed
+**Status:** Implemented / verified in M3
 
 ### Decision
 
-Prefer ChaCha20-Poly1305 as the single application AEAD.
+Use ChaCha20-Poly1305 as the single application AEAD.
 
 ### Rationale
 
@@ -80,7 +80,7 @@ Nonce lifecycle becomes a central protocol invariant.
 
 ## ADR-005 --- HKDF-SHA-256
 
-**Status:** Proposed
+**Status:** Implemented / verified in M3
 
 ### Decision
 
@@ -217,7 +217,7 @@ limits and malformed-input handling.
 
 ## ADR-012 --- Signed ephemeral X25519 handshake
 
-**Status:** Accepted / implementation gated to M3
+**Status:** Implemented / verified in M3
 specification
 
 The project will use distinct Ed25519 identity keys and X25519 ephemeral
@@ -229,7 +229,27 @@ before implementation.
 
 See [[00-governance/01-Architecture-Review-M0]].
 
-## M2 Decision Record
+## M3 Decision Record
+
+### ADR — Authenticated Session and Message Protection
+
+**Decision:** Implement the frozen signed-ephemeral X25519 handshake, HKDF-SHA-256
+directional key schedule, and ChaCha20-Poly1305 application-protection layer.
+
+**Security consequences:** Ed25519 authenticates the X25519 exchange; the
+complete handshake transcript determines the session identifier and HKDF
+salt; directional keys prevent role/direction key reuse; sequence-derived
+nonces provide deterministic nonce uniqueness under each session key; and
+replay state is committed only after successful AEAD authentication.
+
+**Implementation constraints:** Fresh X25519 ephemeral keys are required for
+new sessions. Session keys and sequence state are memory-only. Sequence
+exhaustion is an error and never wraps. The receive replay window is
+per-session and 64 messages wide.
+
+**Status:** Implemented and verified in M3.1/M3.2/M3.3.
+
+### M2 Decision Record
 
 ### ADR — Long-Term Identity Implementation
 

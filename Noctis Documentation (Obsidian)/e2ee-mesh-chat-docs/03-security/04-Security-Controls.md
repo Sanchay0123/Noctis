@@ -58,3 +58,33 @@ The following identity controls are implemented and tested:
 
 These controls do not imply session confidentiality or forward secrecy; those
 depend on the later X25519/session protocol.
+
+
+## M3 Implemented Security Controls
+
+The following session-layer controls are implemented and verified:
+
+1. Fresh ephemeral X25519 keypairs are generated for new sessions.
+2. X25519 is authenticated by Ed25519 signatures over the canonical handshake
+   transcripts.
+3. The full responder transcript hash binds the session identifier and HKDF
+   salt.
+4. HKDF role-specific labels derive independent directional session keys.
+5. ChaCha20-Poly1305 authenticates application ciphertext and canonical AAD.
+6. The deterministic 96-bit nonce is derived from the per-direction
+   sequence number and is never intentionally reused under a session key.
+7. Direction is derived from the established session role rather than
+   caller-controlled input.
+8. Sequence numbers begin at zero and never wrap; exhaustion returns an
+   explicit error.
+9. A 64-message receive replay window rejects duplicates and packets that are
+   too old.
+10. Replay-window state is committed only after successful AEAD
+    authentication.
+11. Send and receive session state use independent mutexes for concurrent use.
+12. Session keys and sequence/replay state are memory-only and fresh
+    sessions are required after restart.
+
+These controls establish the M3 cryptographic/session boundary. They do not
+establish secure direct networking, mesh routing security, anonymity,
+metadata hiding or endpoint compromise resistance.

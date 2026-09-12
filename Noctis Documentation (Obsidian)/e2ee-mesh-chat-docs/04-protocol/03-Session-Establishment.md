@@ -2,28 +2,23 @@
 
 ## Status
 
-**Canonical construction frozen; M3 implementation remains gated.**
+**Canonical construction implemented / verified in M3.2.**
 
-The following transcript and KDF decisions are the approved protocol
-baseline for M3.1 and subsequent session-establishment work. Freezing the
-construction does not mean that the implementation exists.
+The following transcript, signature and KDF construction is the frozen
+protocol baseline and is now implemented.
 
 ## Key roles
 
 Each node has:
-
 - long-term Ed25519 identity keypair
 - fresh ephemeral X25519 keypair per session
 
 The Ed25519 key is used for authentication/signatures only.
-
 The X25519 key is used for key agreement only.
 
 Long-term identity keys must never be reused as X25519 private keys.
 
 ## Canonical handshake transcript
-
-The protocol domain is the ASCII byte string:
 
 ```text
 DOMAIN = "MeshChat-Handshake-v1"
@@ -32,41 +27,26 @@ ZERO32 = 32 zero bytes
 ```
 
 Let:
-
 ```text
-ID_A = 32-byte Ed25519 public key of the initiator
-ID_B = 32-byte Ed25519 public key of the responder
-E_A  = 32-byte X25519 public key of the initiator
-E_B  = 32-byte X25519 public key of the responder
+ID_A = 32-byte Ed25519 public key of initiator
+ID_B = 32-byte Ed25519 public key of responder
+E_A  = 32-byte X25519 public key of initiator
+E_B  = 32-byte X25519 public key of responder
 ```
 
 The canonical initiator transcript is:
 
 ```text
-T_INIT = DOMAIN ||
-         u8(PROTOCOL_VERSION) ||
-         ID_A ||
-         ID_B ||
-         E_A ||
-         ZERO32
+T_INIT = DOMAIN || u8(PROTOCOL_VERSION) || ID_A || ID_B || E_A || ZERO32
 ```
 
 The canonical responder transcript is:
 
 ```text
-T_RESP = DOMAIN ||
-         u8(PROTOCOL_VERSION) ||
-         ID_A ||
-         ID_B ||
-         E_A ||
-         E_B
+T_RESP = DOMAIN || u8(PROTOCOL_VERSION) || ID_A || ID_B || E_A || E_B
 ```
 
-Alice signs `T_INIT` with her Ed25519 identity private key.
-
-Bob verifies Alice's signature, then signs `T_RESP` with his Ed25519
-identity private key.
-
+Alice signs `T_INIT`. Bob verifies Alice's signature, then signs `T_RESP`.
 Alice verifies Bob's signature.
 
 The zero responder-ephemeral field in `T_INIT` makes the two signed
@@ -81,33 +61,20 @@ After successful signature validation:
 SS = X25519(ephemeral_private, peer_ephemeral_public)
 ```
 
-`SS` is 32 bytes. The implementation must reject invalid/low-order peer
-public keys according to the selected X25519 API's documented behavior,
-including any all-zero shared-secret condition required by that API.
+The implementation uses Go's `crypto/ecdh.X25519()` and rejects malformed or
+invalid/low-order peer public keys according to the API behavior.
 
-M3.1 must deliberately freeze the exact Go API/library used for X25519
-before implementation.
+The raw shared secret is passed to HKDF and is not used directly as an
+application encryption key.
 
 ## Session identifier and KDF
 
-The session identifier is:
-
 ```text
 session_id = SHA256(T_RESP)
-```
 
-The full 32-byte digest is used; it is not truncated.
-
-The KDF uses:
-
-```text
 salt = SHA256(T_RESP)
 PRK  = HKDF-Extract(salt, SS)
-```
 
-Directional keys are derived as:
-
-```text
 K_A_to_B = HKDF-Expand(
     PRK,
     "MeshChat-v1|session|initiator->responder",
@@ -121,47 +88,53 @@ K_B_to_A = HKDF-Expand(
 )
 ```
 
-The exact byte encoding of the HKDF `info` strings is their ASCII byte
-representation. Directional separation is mandatory.
+The full 32-byte transcript digest is used. HKDF `info` labels are their
+ASCII byte representation.
+
+## Session API boundary
+
+A successful handshake produces a session containing:
+- session identifier
+- directional send key
+- directional receive key
+- local role
+
+The session API internally derives the AEAD direction marker. Callers cannot
+select a direction independently of the established role.
 
 ## Trust model
 
 The Ed25519 public-key trust source is either:
-
 - a pre-shared/managed public-key directory, or
 - TOFU for first contact.
 
 TOFU alone does **not** authenticate first contact against an active MITM.
-The final implementation must make the selected trust mode explicit.
+The selected trust mode must remain explicit.
 
 ## Key lifecycle
 
 After a successful handshake:
+- ephemeral private keys are retired as soon as no longer required
+- session keys remain memory-only
+- restart invalidates old session state
+- fresh handshakes establish fresh session keys
+- rotation uses fresh ephemeral keys
 
-- retain only the session state required for operation
-- erase ephemeral private keys as soon as they are no longer required
-- never persist session keys by default
-- establish fresh session keys after restart
-- establish fresh session keys during rotation
+Forward secrecy is conditional on fresh ephemeral keys, appropriate private
+key erasure and uncompromised endpoints. No post-compromise security claim
+is made.
 
-Forward secrecy is conditional on fresh ephemeral keys, appropriate private-key
-erasure, and absence of endpoint compromise. The protocol does not claim
-post-compromise security.
+## Handshake state and replay
 
-## Handshake replay and state
+The handshake state machine rejects invalid ordering, duplicate processing
+and malformed transitions. This is distinct from application-message replay
+protection, which is enforced by the M3.3 session receive window.
 
-Handshake messages require their own duplicate/replay handling.
-
-A captured INIT or RESP must not silently replace a live session with
-attacker-controlled state. The implementation must define acceptable
-retransmission behavior and state transitions.
-
-Session rotation is planned after **2^16 application messages or 24 hours,
-whichever occurs first**, subject to M3 implementation and test evidence.
+A fresh ephemeral key does not by itself prove that an incoming handshake is
+new. Handshake retransmission/duplicate policy remains a protocol concern
+separate from application ciphertext replay.
 
 ## Failure states
-
-At minimum:
 
 ```mermaid
 stateDiagram-v2
@@ -178,14 +151,12 @@ stateDiagram-v2
 ```
 
 Invalid signatures, malformed messages, unexpected state transitions and
-timeouts must fail closed.
+timeouts fail closed.
 
-## M2 Dependency Status
+## M3 evidence
 
-The long-term Ed25519 identity primitive required by the authenticated
-session protocol is implemented and audited.
-
-The session-establishment implementation itself remains unimplemented and
-gated to M3.1. In particular, the X25519 API choice, ephemeral key lifecycle,
-shared-secret handling, and implementation-level error/zeroization behavior
-must be explicitly reviewed before code is written.
+M3.2 tests cover successful handshake, transcript tampering, identity
+substitution, ephemeral substitution, role confusion, state failures,
+session-ID derivation, transcript sensitivity, HKDF known-answer values,
+independent handshakes and malformed inputs. Containerized formatting,
+vetting, tests, race detection and build validation passed.

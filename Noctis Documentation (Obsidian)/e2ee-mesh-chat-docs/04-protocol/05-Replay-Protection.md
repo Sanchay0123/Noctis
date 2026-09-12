@@ -2,101 +2,81 @@
 
 ## Two independent replay mechanisms
 
-The protocol uses two different identifiers for two different layers.
+The protocol uses two identifiers for two different layers:
 
 ### Mesh PacketID
 
-Prevents repeated forwarding of the same network packet.
+`packet_id` prevents repeated forwarding of the same network packet.
 
 ### Session sequence number
 
-Prevents replay of an authenticated application message.
+The application sequence number prevents replay of an authenticated
+application message within a session.
 
 Neither mechanism replaces the other.
 
 ## Sequence numbers
 
-Each directional session key has an independent sequence space.
+Each directional session key has an independent sequence space. The sender
+begins at sequence `0` for a newly established session and increments once
+per successfully encrypted application message.
 
-The sender begins at sequence `0` for a newly established session and
-increments exactly once for each encrypted application message.
+The sender never wraps the sequence number. At `MaxUint64`, encryption
+returns `ErrSequenceExhausted`.
 
 ## Nonce
 
-The AEAD nonce is a deterministic 96-bit encoding of the sequence number:
+The ChaCha20-Poly1305 nonce is:
 
 ```text
 nonce = 0x00000000 || uint64_be(sequence_num)
 ```
 
-This construction is safe only under the `(key, nonce)` uniqueness
-invariant.
-
-## Nonce uniqueness invariant
-
-The implementation must guarantee:
-
-> A given ChaCha20-Poly1305 key is never used with the same nonce twice.
-
-This is achieved by:
-
-- separate directional keys
-- fresh X25519 ephemeral keys for every new session
-- in-memory-only session state
-- mandatory fresh handshake after restart
-- monotonic sequence numbers
-- session replacement before sequence exhaustion
+Nonce uniqueness is guaranteed by the directional key/sequence lifecycle:
+fresh session keys, fresh ephemeral handshakes, monotonic sequence state,
+restart invalidation and session rotation before the project threshold.
 
 ## Receiver sliding window
 
-The receiver maintains a bounded replay window.
+The receive window is **64 messages**.
 
-For each incoming sequence number:
+Let `highest` be the highest accepted sequence number:
+- bit 0 represents `highest`
+- bit N represents `highest-N`
+- a duplicate set bit is rejected
+- a sequence number exactly 64 below `highest` is outside the window and is
+  rejected
 
-1. reject if already accepted
-2. reject if too old for the window
-3. authenticate/decrypt according to the protocol state machine
-4. commit the sequence number as accepted only according to the defined
-   successful-authentication path
+Newer sequence numbers advance the window. Valid older sequence numbers
+inside the window are accepted once; duplicates are rejected.
 
-The window width is initially `64`.
+## Authentication ordering
 
-## Session rotation
+A packet is not allowed to consume replay state merely because its sequence
+number appears acceptable.
 
-Rotate/re-establish session keys before sequence-number exhaustion.
+The implementation:
+1. validates the ciphertext structure
+2. checks the current replay window without mutating it
+3. authenticates/decrypts with ChaCha20-Poly1305
+4. commits replay-window state only after successful authentication
 
-The initial policy is:
+This prevents forged or modified packets from poisoning receiver replay
+state. Concurrent duplicate arrivals are rechecked before replay-state
+commit.
 
-- maximum `2^16` application messages, or
-- maximum 24 hours
+## Session scope
 
-whichever occurs first.
+Application replay state belongs to one established session. It is not a
+network-wide replay mechanism.
 
-The implementation must not reuse the old key/nonce space.
-
-## Restart
-
-Session keys and sequence state are not persisted.
-
-After restart:
-
-```text
-old session state = invalid
-        ↓
-fresh X25519 handshake
-        ↓
-fresh session keys
-        ↓
-sequence starts at 0 under new keys
-```
-
-This is a security requirement, not merely a convenience.
+Session replacement creates fresh keys and fresh sequence/replay state.
+Session keys and sequence state are not persisted across restart.
 
 ## Handshake replay
 
-Handshake messages require their own duplicate/replay state.
-
-A fresh ephemeral key does not by itself prove that an incoming handshake
-is new.
+Handshake state handling is separate from application replay protection.
+Handshake state rejects invalid or duplicate state transitions, but it does
+not replace the application ciphertext replay window.
 
 See [[04-protocol/03-Session-Establishment]].

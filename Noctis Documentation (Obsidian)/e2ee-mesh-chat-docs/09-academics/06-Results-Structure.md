@@ -2,8 +2,9 @@
 
 > **Staged results document — final results remain incomplete.**
 >
-> M2 provides implementation and test evidence for the long-term Ed25519
-> identity component. Network, session, AEAD, replay, and mesh results remain TBD.
+> M2 and M3 provide implementation and test evidence for the long-term
+> identity and authenticated session/message-protection layers. Network and
+> mesh results remain TBD.
 
 ## Functional results
 
@@ -39,3 +40,15 @@ Possible metrics:
 -   memory usage
 
 Avoid presenting measurements without a reproducible method.
+
+
+## M3 preliminary results
+
+The M3 implementation provides evidence for authenticated session
+establishment and application-message protection. These results are
+implementation-layer results, not a claim of complete end-to-end network
+security.
+
+Mesh routing, direct network delivery, malicious-relay demonstrations,
+performance measurements and final deployment evidence remain to be
+collected in later milestones.

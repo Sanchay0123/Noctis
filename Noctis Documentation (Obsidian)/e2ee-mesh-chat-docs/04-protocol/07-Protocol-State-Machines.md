@@ -39,3 +39,20 @@ Invalid state transitions must:
 -   not expose secrets
 -   not corrupt state
 -   produce bounded diagnostic information
+
+
+## M3 session implementation boundary
+
+The session state machine is implemented for the M3 handshake/session layer.
+The implementation distinguishes:
+- handshake state transitions
+- established-session operation
+- rekey/rotation boundary
+- closed/failed states
+
+Invalid transitions fail closed and do not expose cryptographic secrets.
+
+The handshake state machine's duplicate/ordering checks are not a substitute
+for application-message replay protection. Application replay is enforced by
+the 64-message per-session receive window described in
+[[04-protocol/05-Replay-Protection]].

@@ -30,9 +30,10 @@ See [[02-architecture/01-System-Architecture]].
 
 Implement only established primitives through mature libraries.
 
-**Current evidence boundary:** the Ed25519 long-term identity primitive is
-implemented and audited. X25519, HKDF, AEAD, and the authenticated session
-protocol remain future implementation stages.
+**Current evidence boundary:** the Ed25519 long-term identity primitive and
+the M3 authenticated session/message-protection layer are implemented and
+audited within their approved scopes. Direct networking and mesh routing
+remain future implementation stages.
 
 Validate:
 
@@ -82,3 +83,11 @@ Compare:
 
 Record implementation decisions, evidence and limitations without
 upgrading unverified claims into facts.
+
+
+### M3 evidence boundary
+
+The cryptographic implementation was validated through unit, negative,
+known-answer and race-detector tests in the controlled containerized Go
+environment. The evidence establishes the implemented session-layer
+properties but does not establish end-to-end network or mesh behavior.

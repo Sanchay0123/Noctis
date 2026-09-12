@@ -2,7 +2,7 @@
 
 ## Status
 
-**Architecture approved with implementation gates.**
+**Architecture approved; M3 cryptographic/session layer implemented and verified.**
 
 The protocol separates:
 
@@ -57,22 +57,22 @@ responder_ephemeral_X25519_public_key
 Both identity keys remain Ed25519 keys. They are not reused as X25519
 keys.
 
-The final transcript construction must be documented in
-[[04-protocol/03-Session-Establishment]] before M3 implementation.
+The canonical transcript construction is frozen and implemented in
+[[04-protocol/03-Session-Establishment]].
 
 ## Encryption context
 
-The encrypted message authentication context must bind the message to:
+The encrypted message authentication context uses the canonical M3 AAD:
 
 ```text
-protocol_version
-sender_identity
-receiver_identity
-session_id
-sequence_number
+"MeshChat-AppData-v1" ||
+session_id ||
+uint64_be(sequence_number) ||
+direction
 ```
 
-The exact canonical AAD encoding is part of the protocol specification.
+The direction marker is derived from the established session role. Additional
+outer routing fields are not implicitly part of the M3 AAD construction.
 
 ## Versioning
 
@@ -98,10 +98,19 @@ It must never need:
 See [[02-architecture/07-Observability-and-Security-Telemetry]] for the
 telemetry boundary.
 
-## M2 Protocol Status
+## M3 Protocol Status
 
-M2 does not alter the frozen wire protocol. It supplies the long-term Ed25519
-identity primitive that later authenticated handshakes will use.
+M3 implements the authenticated session and application message-protection
+layer over the frozen protocol baseline.
 
-No X25519 ephemeral keys, handshake transcripts, session IDs, or session keys
-are implemented at this stage.
+Implemented:
+- fresh ephemeral X25519 key agreement
+- Ed25519-authenticated canonical handshake transcripts
+- SHA-256 session identifiers
+- HKDF-SHA-256 directional session keys
+- ChaCha20-Poly1305 application ciphertext
+- sequence-derived nonces
+- role-derived direction markers
+- 64-message authenticated replay window
+
+Direct networking and mesh forwarding remain future implementation stages.
