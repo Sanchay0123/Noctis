@@ -1,20 +1,47 @@
+
 services:
   node-alice:
     build: .
     environment:
-      - MESH_ROLE=initiator
-      - LOG_LEVEL=debug
-    # No private keys or secrets here. They would be mounted at runtime securely.
+      LOG_LEVEL: debug
+      MESH_ROLE: alice
+    volumes:
+      - shared_data:/shared
     networks:
       - meshnet
 
   node-bob:
     build: .
     environment:
-      - MESH_ROLE=responder
-      - LOG_LEVEL=debug
+      LOG_LEVEL: debug
+      MESH_ROLE: bob
+    volumes:
+      - shared_data:/shared
     networks:
       - meshnet
+
+  node-carol:
+    build: .
+    environment:
+      LOG_LEVEL: debug
+      MESH_ROLE: carol
+    volumes:
+      - shared_data:/shared
+    networks:
+      - meshnet
+      
+  node-dave:
+    build: .
+    environment:
+      LOG_LEVEL: debug
+      MESH_ROLE: dave
+    volumes:
+      - shared_data:/shared
+    networks:
+      - meshnet
+
+volumes:
+  shared_data:
 
 networks:
   meshnet:
