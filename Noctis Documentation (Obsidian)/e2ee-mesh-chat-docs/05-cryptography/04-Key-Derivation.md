@@ -2,8 +2,11 @@
 
 ## HKDF-SHA-256
 
-HKDF should convert authenticated shared secret material into
-purpose-specific session keys.
+**Accepted design — implementation gated to M3.**
+
+HKDF-SHA-256 converts authenticated X25519 shared secret material into
+purpose-specific directional session keys. The construction is frozen;
+the implementation is not yet present.
 
 ## Conceptual schedule
 
@@ -24,18 +27,33 @@ HKDF Expand + context
         +--> Bob→Alice encryption key
 ```
 
-## Domain separation
+## Frozen M3 schedule
 
-The derivation context should distinguish:
+The approved schedule is:
 
--   protocol
--   protocol version
--   session
--   direction
--   purpose
+```text
+salt = SHA256(T_RESP)
+PRK  = HKDF-Extract(salt, SS)
 
-This prevents accidental reuse of the same derived bytes for unrelated
-functions.
+K_A_to_B = HKDF-Expand(
+    PRK,
+    "MeshChat-v1|session|initiator->responder",
+    32
+)
+
+K_B_to_A = HKDF-Expand(
+    PRK,
+    "MeshChat-v1|session|responder->initiator",
+    32
+)
+```
+
+The transcript hash therefore binds the session context, while the
+directional labels provide key separation. The `info` labels are encoded
+as ASCII bytes.
+
+This schedule must be implemented exactly as specified unless a future
+technical-lead review explicitly changes the protocol.
 
 ## Requirements
 

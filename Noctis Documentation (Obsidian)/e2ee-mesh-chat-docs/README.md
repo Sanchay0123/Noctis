@@ -1,6 +1,6 @@
 # E2EE Mesh Chat --- Documentation Hub
 
-> **Status:** Architecture / Documentation phase\
+> **Status:** M2 complete / M3 gated\
 > **Project type:** Academic cybersecurity and networking prototype
 
 ## Purpose
@@ -150,3 +150,14 @@ Never silently convert a proposal into an implementation requirement.
 
 Observability is deliberately out-of-band. The mesh must continue to
 operate if monitoring is unavailable.
+
+## Current Implementation Status
+
+**M2 — Ed25519 Identity: 🟢 Complete**
+
+The repository now contains the audited long-term Ed25519 identity foundation.
+Session establishment, encrypted messaging, direct networking, and mesh routing
+remain future milestones.
+
+See [[00-governance/00-Project-State]] and
+[[08-implementation/01-Milestones]] for the current gate.

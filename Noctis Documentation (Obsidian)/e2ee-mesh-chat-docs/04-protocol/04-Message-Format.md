@@ -2,8 +2,12 @@
 
 ## Status
 
-**Draft — M1 schema work authorized; cryptographic fields must not be
-considered frozen until M3 review.**
+**M1.1 schema frozen and verified; M2 identity complete; M3 cryptographic
+implementation gated.**
+
+The Protobuf wire schema and runtime validation policy are frozen for the
+current protocol version. This does not mean that X25519, HKDF, or AEAD
+implementation exists yet.
 
 ## Protobuf schema
 

@@ -69,14 +69,20 @@ The test suite should distinguish between:
 3. **Telemetry independence** — does the mesh still work without the
    observability backend?
 
-## M1.1 Protocol Serialization Tests
+## M2 Security Test Coverage
 
-The M1.1 baseline includes regression coverage for:
+M2.1 testing covers:
 
-- Protobuf serialization/deserialization of valid packets
-- malformed serialized data rejection
-- unknown-field rejection
-- successful generated-code compilation
+- Ed25519 key generation and key-size invariants
+- public/private correspondence
+- deterministic signing
+- modified-message rejection
+- wrong-identity rejection
+- malformed key/signature handling
+- defensive copying of returned public keys
+- defensive copying during private-key loading
+- nil and empty-message behavior
+- race-detector validation
 
-These tests are prerequisites for later runtime packet validation and must
-remain passing as the protocol evolves.
+The tests use freshly generated runtime keys and do not commit or print private
+key material.

@@ -1,3 +1,18 @@
+# M2 Synchronization Note
+
+This document records the earlier M0 revised architecture review. Its
+historical M3 blockers have since been resolved at the specification level:
+the canonical handshake transcript, session identifier, and HKDF schedule
+are now frozen in [[04-protocol/03-Session-Establishment]].
+
+M3 implementation is still **blocked**, but the remaining gate is now
+implementation-level review and authorization, including the exact X25519
+API choice, low-order/all-zero handling, ephemeral-key lifecycle,
+zeroization expectations, and corresponding tests. Do not interpret the
+historical blocker list below as the current implementation task.
+
+---
+
 # M0 Revised Architecture Review — Antigravity Plan
 
 ## Review status

@@ -16,13 +16,17 @@ stateDiagram-v2
 
 ## Session keys
 
-Session keys should have an explicit:
+Session keys are not implemented in M2. The approved future design
+requires each session to have an explicit:
 
 -   creation event
 -   activation event
 -   lifetime
 -   rotation/rekey event
 -   destruction/retirement event
+
+The planned rotation threshold is 2^16 application messages or 24 hours,
+whichever occurs first, subject to implementation and M3 review evidence.
 
 ## Reconnection
 

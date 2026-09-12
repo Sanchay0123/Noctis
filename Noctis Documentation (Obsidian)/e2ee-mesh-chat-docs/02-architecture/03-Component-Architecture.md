@@ -2,7 +2,7 @@
 
 ## Components
 
-```
+```mermaid
 flowchart TB
     subgraph Endpoint
         UI[UI]
@@ -42,16 +42,11 @@ flowchart TB
 
 Displays:
 
-- peers
-    
-- connection state
-    
-- conversations
-    
-- messages
-    
-- limited network state
-    
+-   peers
+-   connection state
+-   conversations
+-   messages
+-   limited network state
 
 Must never display private keys or session keys.
 
@@ -69,7 +64,7 @@ Wraps mature cryptographic primitives.
 
 ### Protocol Codec
 
-Serializes/deserializes protocol objects and validates structural  
+Serializes/deserializes protocol objects and validates structural
 constraints.
 
 ### Peer Manager
@@ -90,32 +85,40 @@ Manages transport connections, timeouts and reconnection.
 
 ### Local State
 
-Stores persistent identity and other state subject to explicit storage  
+Stores persistent identity and other state subject to explicit storage
 policy.
 
 ## Anti-coupling rule
 
-No component should bypass the layer below it merely because doing so is  
+No component should bypass the layer below it merely because doing so is
 convenient.
+
 
 ## Observability / Telemetry
 
-Collects sanitized operational metrics, structured logs and  
+Collects sanitized operational metrics, structured logs and
 security-relevant events.
 
 It must not:
 
 - access private keys
-    
 - access session keys
-    
 - decrypt application messages
-    
 - alter routing decisions
-    
 - become a dependency of message delivery
-    
 
 Telemetry interfaces should be bounded and non-blocking where practical.
 
 See [[02-architecture/07-Observability-and-Security-Telemetry]].
+
+## M2 Component Status
+
+`internal/crypto` now contains the first implemented cryptographic component:
+the Ed25519 `NodeIdentity` abstraction.
+
+The component exposes identity generation, public-key retrieval, signing, and
+signature verification while keeping private key material encapsulated. No
+session-key or handshake API has been introduced.
+
+This component is the dependency boundary that the future M3
+session-establishment implementation will consume.

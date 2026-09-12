@@ -71,3 +71,21 @@ For milestone-level work:
 -   [ ] Repository status is clean or intentional changes are documented
 -   [ ] Commit represents the reviewed implementation state
 -   [ ] Canonical GitHub repository updated
+
+## M2 Completion Evidence
+
+M2 is considered complete for the current scope because the Ed25519 identity
+foundation has:
+
+- an approved implementation boundary
+- standard-library cryptography
+- secure randomness
+- explicit key ownership
+- defensive-copy guarantees
+- malformed-input handling
+- security-focused regression tests
+- containerized validation
+- race-detector validation
+- synchronized implementation documentation
+
+M2 completion does not constitute approval of M3 session establishment.

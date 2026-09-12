@@ -2,57 +2,61 @@
 
 ## Current phase
 
-**M1 implementation preparation / project skeleton**
+**M2 complete — post-milestone documentation synchronization / M3 gate**
 
 ## Status
 
-| Area | Status |
-|---|---|
-| Requirements | Documented |
-| Threat model | Documented |
-| Architecture | Approved for implementation foundation |
-| Cryptographic architecture | Approved design; implementation not started |
-| Protocol | Frozen at design level; implementation not started |
-| Networking | Designed; implementation not started |
-| Observability | Designed; implementation not started |
-| Containerization | **M0.1 skeleton implemented; validation pending** |
-| Repository structure | **M0.1 implemented** |
-| GitHub synchronization | Required / not yet verified |
-| Testing strategy | Documented; baseline tooling not yet executed |
-| Implementation | **M0.1 foundation started** |
-| Security verification | Not started |
-| UI | Not started |
-| Demo | Not started |
-| Final academic material | Draft |
+  Area                         Status
+  --------------------------- -------------
+  Requirements                 Documented
+  Threat model                 Documented
+  Architecture                 Approved baseline
+  Cryptographic architecture   Approved baseline
+  Protocol                     Frozen baseline / M3 implementation gated
+  Networking                   Proposed / not implemented
+  Observability                Approved supporting design / not implemented
+  Containerization             Required / foundation implemented
+  GitHub synchronization       Required / not yet verified in this gate
+  Testing strategy             Documented
+  Implementation               M2 identity scope implemented
+  Security verification        M2 identity scope verified
+  UI                           Not started
+  Demo                         Not started
+  Final academic material      Draft
 
 ## Current gate
 
-**M0.1 --- Repository & Architecture Initialization/Audit**
+**M2 --- Documentation Synchronization / Technical-Lead Review**
 
-Antigravity completed the repository foundation task. The implementation agent reported creation of the Go module, repository structure, Docker/Compose skeleton, `.gitignore`, CLI entrypoint stub, and skeleton test.
-
-The architecture review does **not** treat the M0.1 report alone as implementation approval. Actual repository validation is still required, particularly:
-
-- deterministic Go build/test execution
-- Dockerfile build
-- Compose configuration validation
-- inspection of the actual generated files
-- dependency/module consistency
-- confirmation that package boundaries are architectural boundaries rather than merely directories
-- confirmation that no protocol or cryptographic implementation was introduced early
+M0, M0.1, M1.1, and M2.1/M2.1-B/M2.1-C have been completed within their
+approved scopes. This synchronization aligns the vault with the completed
+M2 identity implementation and the frozen protocol decisions that govern
+future M3 work.
 
 ## Rule
 
 No implementation component becomes **Approved** without implementation
-evidence and relevant tests.
-
-Antigravity must not self-advance a milestone. The technical lead
-authorizes each subsequent task after review.
+evidence and relevant tests. A design being frozen or accepted does not
+mean its implementation exists.
 
 ## Next action
 
-Authorize the first M1 skeleton task only after M0.1 review.
+Complete the technical-lead consistency review of this synchronized
+documentation set. M3.1 remains unauthorized until that review explicitly
+opens the next implementation gate.
 
-The next task is to establish the Protobuf schema and generated-code workflow
-without implementing the cryptographic handshake, identity operations,
-encrypted messaging, routing, or application protocol behavior.
+## M2 Completion Gate
+
+**M2 — Cryptographic Primitives & Identity: 🟢 COMPLETE**
+
+M2.1 implemented the long-term Ed25519 node identity foundation using Go's
+standard `crypto/ed25519` and `crypto/rand`. M2.1-B audited the implementation,
+and M2.1-C completed the final key-ownership correction.
+
+Validated properties include secure key generation, 32-byte public identity
+representation, private-key encapsulation, defensive copies, safe
+malformed-input handling, deterministic Ed25519 signing, and successful
+race-detector validation.
+
+**M3 remains unauthorized until the post-M2 documentation synchronization and
+technical-lead gate are complete.**

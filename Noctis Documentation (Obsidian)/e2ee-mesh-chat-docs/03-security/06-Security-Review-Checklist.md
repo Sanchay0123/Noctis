@@ -1,5 +1,18 @@
 # Security Review Checklist
 
+## M2 reviewed scope
+
+-   [x] Established library primitives only for Ed25519
+-   [x] Ed25519 identity handling reviewed
+-   [x] Ed25519 malformed-input behavior reviewed
+-   [x] Ed25519 key ownership/defensive-copy behavior reviewed
+-   [x] Ed25519 concurrent-signing behavior tested
+
+The remaining unchecked items are future protocol, session, AEAD, replay,
+networking, and integration controls and must not be interpreted as
+completed by the M2 gate.
+
+
 ## Cryptography
 
 -   [ ] Established library primitives only

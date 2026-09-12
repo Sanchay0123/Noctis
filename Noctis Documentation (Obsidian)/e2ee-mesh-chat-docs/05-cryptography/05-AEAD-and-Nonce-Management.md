@@ -2,7 +2,9 @@
 
 ## Selected AEAD
 
-**ChaCha20-Poly1305** is the preferred single AEAD construction.
+**ChaCha20-Poly1305** is the accepted single AEAD construction for the
+prototype. Its implementation is gated to the later encrypted-messaging
+milestone.
 
 ## Security properties
 
@@ -18,19 +20,15 @@ AEAD provides:
 
 This must be enforced by architecture, not by developer memory.
 
-## Candidate strategy
+## Planned nonce strategy
 
-A session may use:
+Application messages use a monotonically increasing per-direction
+sequence number as protocol state. The exact mapping from sequence number
+to the 12-byte ChaCha20-Poly1305 nonce must be frozen before AEAD
+implementation.
 
-``` text
-session key
-+
-monotonically allocated message sequence
-+
-defined nonce construction
-```
-
-The exact nonce construction must be reviewed before implementation.
+A nonce must never repeat under the same directional key, including across
+reconnects or session rotation.
 
 ## Never do
 

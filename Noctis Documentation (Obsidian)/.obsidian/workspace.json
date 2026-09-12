@@ -99,7 +99,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "e2ee-mesh-chat-docs/00-governance/02-Architecture-Review-M0-Revised.md",
+                "file": "e2ee-mesh-chat-docs/02-architecture/02-Architecture-Decisions.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +118,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "e2ee-mesh-chat-docs/00-governance/02-Architecture-Review-M0-Revised.md",
+                "file": "e2ee-mesh-chat-docs/02-architecture/02-Architecture-Decisions.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +161,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "e2ee-mesh-chat-docs/00-governance/02-Architecture-Review-M0-Revised.md",
+                "file": "e2ee-mesh-chat-docs/02-architecture/02-Architecture-Decisions.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -190,7 +190,16 @@
   },
   "active": "342e6f0a0b369874",
   "lastOpenFiles": [
+    "e2ee-mesh-chat-docs/00-governance/01-Vault-Index.md",
+    "e2ee-mesh-chat-docs/00-governance/01-Architecture-Review-M0.md",
     "e2ee-mesh-chat-docs/00-governance/00-Project-State.md",
+    "00-governance/01-Architecture-Review-M0.md",
+    "00-governance",
+    "e2ee-mesh-chat-docs/02-architecture/02-Architecture-Decisions.md",
+    "e2ee-mesh-chat-docs/README.md",
+    "e2ee-mesh-chat-docs.zip",
+    "e2ee-mesh-chat-docs/02-architecture/01-System-Architecture.md",
+    "Prompts to Antigravity.md",
     "e2ee-mesh-chat-docs/00-governance/02-Architecture-Review-M0-Revised.md"
   ]
 }

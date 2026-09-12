@@ -30,6 +30,10 @@ See [[02-architecture/01-System-Architecture]].
 
 Implement only established primitives through mature libraries.
 
+**Current evidence boundary:** the Ed25519 long-term identity primitive is
+implemented and audited. X25519, HKDF, AEAD, and the authenticated session
+protocol remain future implementation stages.
+
 Validate:
 
 -   identity
