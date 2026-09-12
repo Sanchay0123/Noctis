@@ -2245,3 +2245,1817 @@ IMPORTANT:
 Do not begin M3.  
 Stop after this correction and wait for technical-lead approval.
 ```
+
+
+```
+You are implementing Milestone M3.1 of the E2EE Mesh Chat project.
+
+IMPORTANT GOVERNANCE:
+- M2 is complete and documentation has been synchronized.
+- You are NOT authorized to implement M3.2 or any later milestone.
+- Do not self-advance the project.
+- Implement ONLY the scope explicitly defined below.
+- Do not modify protocol wire format, networking, routing, UI, observability architecture, or session establishment beyond what is necessary to add the isolated X25519 primitive.
+- Do not implement HKDF, Ed25519 handshake signatures, canonical handshake transcripts, session IDs, AEAD, message encryption, or network handshake logic in this milestone.
+
+MILESTONE:
+M3.1 — X25519 Ephemeral Key Agreement Foundation
+
+OBJECTIVE:
+Implement and test a small, auditable X25519 abstraction that can later be used by the M3 handshake implementation.
+
+ARCHITECTURE REQUIREMENTS:
+
+1. CRYPTOGRAPHIC LIBRARY/API
+- Inspect the existing go.mod and architecture documentation before implementation.
+- Choose the X25519 implementation deliberately and document the exact choice.
+- Prefer a well-maintained standard/library implementation rather than implementing Curve25519/X25519 arithmetic manually.
+- Do NOT implement cryptographic primitives from scratch.
+- If the repository already specifies a library/API, follow that decision unless there is a concrete technical reason it is unsuitable; if you believe the existing decision must change, STOP and report the conflict instead of silently changing the architecture.
+
+2. EPHEMERAL KEY GENERATION
+Provide an API for generating a fresh X25519 ephemeral keypair.
+
+Requirements:
+- Private key must be generated using a cryptographically secure randomness source.
+- Public key must correspond exactly to the private key.
+- Generate a fresh keypair for each requested session/key exchange.
+- Never reuse the long-term Ed25519 identity key as an X25519 private key.
+- Do not derive X25519 private keys from Ed25519 keys.
+- Do not persist ephemeral private keys as project state.
+- Do not log private keys or public/private key material unnecessarily.
+
+3. KEY SIZES
+Enforce/document the X25519 sizes used by the implementation:
+- private key: 32 bytes
+- public key: 32 bytes
+- shared secret: 32 bytes
+
+Use the selected library's canonical representation/API rather than inventing a custom encoding.
+
+4. SHARED SECRET
+Provide an API that computes:
+
+    shared_secret = X25519(our_ephemeral_private_key, peer_ephemeral_public_key)
+
+Requirements:
+- Return exactly the raw 32-byte X25519 shared secret.
+- Do NOT run HKDF inside this API.
+- Do NOT hash, encode, truncate, expand, or otherwise transform the shared secret.
+- HKDF will be implemented in a later milestone.
+- Treat the shared secret as sensitive material.
+
+5. INVALID / LOW-ORDER PUBLIC KEYS
+Handle invalid peer public keys according to the guarantees and error semantics of the selected X25519 implementation.
+
+In particular:
+- Do not silently accept an invalid/low-order input if the selected API provides a way to detect/reject it.
+- Do not substitute an arbitrary shared secret on failure.
+- Do not convert cryptographic failure into a successful-looking zero/constant secret.
+- Explicitly test the failure behavior.
+- Document exactly what the chosen Go API guarantees regarding low-order/all-zero shared secrets.
+
+If the selected API requires explicit all-zero shared-secret rejection, implement that rejection.
+If the API already guarantees rejection, document and test that behavior rather than duplicating incompatible logic.
+
+6. KEY OWNERSHIP / MUTABILITY
+Follow the same defensive ownership principles established during M2.1-C.
+
+Requirements:
+- Do not retain mutable caller-owned byte slices without deliberate ownership semantics.
+- Do not expose internal private-key buffers directly.
+- Public/private key accessors must return defensive copies where appropriate.
+- Clearly document whether key objects are immutable after construction.
+- Avoid accidental aliasing between internal key state and caller-provided buffers.
+
+7. PRIVATE-KEY LIFETIME / ZEROIZATION
+Ephemeral private keys and shared secrets are sensitive.
+
+Implement reasonable best-effort cleanup semantics where practical in Go.
+
+IMPORTANT:
+- Do NOT claim that Go provides guaranteed memory zeroization.
+- Do NOT claim that garbage collection makes secrets securely erased.
+- Do NOT introduce unsafe memory tricks merely to claim "secure deletion."
+- If explicit zeroization is implemented, document its limitations clearly.
+- Ensure cleanup does not corrupt memory or cause races.
+- The API must make it clear which object owns sensitive key material and when it should no longer be used.
+
+8. ERROR HANDLING
+Cryptographic failures must be explicit.
+
+Requirements:
+- Invalid key lengths must fail.
+- Invalid/nil inputs must not cause panics in normal API usage.
+- X25519 computation failures must return an error.
+- Do not leak secret material through error messages.
+- Do not include private keys, shared secrets, or peer secret material in errors/logs.
+
+9. LOGGING / OBSERVABILITY
+No cryptographic secret material may enter:
+- application logs
+- structured logs
+- Prometheus metrics
+- tracing
+- debug output
+- test output committed as artifacts
+
+Do not add crypto secrets to telemetry labels or metric values.
+
+10. TESTS
+Add comprehensive tests for the X25519 abstraction.
+
+At minimum test:
+
+A. Key generation
+- key generation succeeds
+- private key is 32 bytes
+- public key is 32 bytes
+- two independently generated keypairs are not deterministically identical
+
+B. Public/private consistency
+- generated public key corresponds to its private key
+
+C. Shared-secret agreement
+Generate Alice and Bob keypairs and verify:
+
+    Alice(priv) × Bob(pub) == Bob(priv) × Alice(pub)
+
+The resulting shared secret must be exactly 32 bytes.
+
+D. Freshness
+- repeated key generation produces independent ephemeral keys
+- demonstrate that the API does not reuse one static ephemeral keypair
+
+E. Invalid input
+- wrong private-key length
+- wrong public-key length
+- nil inputs where applicable
+- malformed inputs must fail cleanly
+
+F. Low-order / invalid peer key behavior
+- include known test cases appropriate to the selected implementation
+- verify that invalid/low-order inputs are handled according to the API's documented security semantics
+- specifically test all-zero shared-secret handling if applicable
+
+G. Ownership
+- mutate caller buffers after passing them into the API and verify that internal state is not unexpectedly affected
+- mutate returned key material and verify internal state remains protected where the API promises defensive copies
+
+H. Cleanup
+- test cleanup behavior if an explicit cleanup API is implemented
+- verify cleanup does not panic
+- do not write tests that falsely claim cryptographic erasure is guaranteed by Go
+
+I. Concurrency
+- run relevant crypto object operations under the race detector
+- do not claim race-detector success proves mathematical thread safety; report precisely what was tested
+
+11. TEST VECTORS / INTEROPERABILITY
+Where practical, include at least one known-good X25519 test vector from a reputable public specification/reference or use a well-established library test vector.
+
+Do not copy large copyrighted material into the repository.
+
+The test should verify that the selected implementation agrees with an external/reference value, not merely that two calls to the same abstraction agree with each other.
+
+12. API DESIGN
+Keep the API small.
+
+Do not expose unnecessary cryptographic internals.
+
+Before implementing, inspect existing internal/crypto conventions and make the new X25519 API consistent with the existing Ed25519 identity implementation.
+
+Do not redesign NodeIdentity.
+
+Do not mix Ed25519 and X25519 into one key type.
+
+13. DOCUMENTATION
+Update only documentation directly required for M3.1.
+
+At minimum, update the relevant cryptography documentation to state:
+- X25519 is now implemented for ephemeral key agreement
+- exact library/API selected
+- key sizes
+- shared-secret semantics
+- invalid/low-order input behavior
+- ownership/lifetime expectations
+- zeroization limitations
+- explicit statement that HKDF/session establishment is NOT yet implemented
+
+Do not mark M3 complete.
+Do not mark the authenticated handshake complete.
+
+14. VALIDATION
+Run the complete applicable validation in the project's containerized environment.
+
+At minimum:
+- gofmt
+- go vet
+- go test
+- go test -race
+- go build
+- Docker image build
+- Docker Compose configuration validation
+- any relevant existing project tests
+
+Do not rely only on host tooling if the project is intended to be containerized.
+
+15. SECURITY REVIEW REPORT
+When finished, provide a concise implementation report containing:
+
+A. Files added
+B. Files modified
+C. Exact X25519 library/API selected and why
+D. Public API introduced
+E. Key generation behavior
+F. Shared-secret behavior
+G. Low-order/all-zero handling
+H. Ownership/defensive-copy behavior
+I. Cleanup/zeroization approach and limitations
+J. Tests added
+K. Validation commands and results
+L. Any unresolved security concerns
+M. Confirmation that no M3.2 functionality was implemented
+
+IMPORTANT:
+Do not report "secure", "production-ready", "unhackable", or equivalent absolute claims.
+
+STOP after M3.1 and report the result to the Project Overseer for review.
+```
+
+
+```
+M3.1 SECURITY REVIEW — CORRECTIONS REQUIRED
+
+The Project Overseer has reviewed the M3.1 report.
+
+M3.1 is NOT yet approved. Do not begin M3.2.
+
+Make the following corrections/clarifications only.
+
+1. EPHEMERAL FRESHNESS CLAIM
+
+The current implementation/report states that the absence of a private-key loading API "mathematically enforces freshness."
+
+This claim is incorrect.
+
+Do NOT claim that the API mathematically enforces one-time use merely because callers cannot load an arbitrary private key.
+
+The EphemeralKey abstraction may remain reusable at the primitive level unless there is a strong reason to make it single-use.
+
+Preferred design:
+- GenerateEphemeralKey() creates a fresh keypair.
+- The object represents one ephemeral keypair.
+- The primitive may compute X25519 with multiple peer public keys if the API permits it.
+- The FUTURE handshake/session layer is responsible for creating a fresh EphemeralKey for every handshake/session establishment.
+- Document this explicitly.
+- Do not implement session lifecycle enforcement in M3.1.
+
+2. DESTROY CONCURRENCY / LIFECYCLE
+
+Inspect the actual implementation of:
+- PublicKey()
+- ComputeSharedSecret()
+- Destroy()
+
+Determine whether concurrent calls involving Destroy() can access k.privateKey concurrently.
+
+There must be no unsynchronized read/write race on privateKey.
+
+Choose one clean design:
+
+OPTION A — synchronization:
+Use an appropriate synchronization primitive to make lifecycle access safe.
+
+OR
+
+OPTION B — explicit lifecycle contract:
+If the object is deliberately NOT concurrency-safe and must not be used concurrently with Destroy(), make that contract explicit and ensure the implementation does not falsely imply otherwise.
+
+Do not use a design that passes ordinary race tests but leaves Destroy() racing with cryptographic operations.
+
+Prefer the simplest auditable solution.
+
+3. DESTROY SECURITY CLAIM
+
+Keep the existing limitation that Destroy() is best-effort only.
+
+Do not claim:
+- guaranteed RAM zeroization
+- secure erasure
+- protection against core dumps
+- protection against swap analysis
+
+If Destroy() only removes the application's reference to the opaque *ecdh.PrivateKey, describe it accurately as an application-level lifecycle boundary.
+
+4. ACTUAL LOW-ORDER-POINT SEMANTICS
+
+Inspect the exact Go crypto/ecdh X25519 behavior used by this project.
+
+Verify:
+- malformed 32-byte public keys
+- invalid public keys
+- low-order public keys
+- all-zero public key
+- all-zero shared-secret behavior, if applicable
+
+Do not merely state that crypto/ecdh "mathematically rejects" these inputs.
+
+Document the exact behavior guaranteed by the selected Go API/version.
+
+If the API returns an error, preserve that error boundary and map it to the project's typed error without leaking secret material.
+
+5. TEST THE LIFECYCLE EDGE CASE
+
+Add a test covering the relevant Destroy/ComputeSharedSecret lifecycle behavior.
+
+If the API is synchronization-safe:
+- test concurrent lifecycle operations under `go test -race`.
+
+If the API explicitly forbids concurrent Destroy/use:
+- document the contract and test valid sequential lifecycle behavior.
+- Do not claim concurrency safety.
+
+6. RFC 7748 TEST VECTOR
+
+Inspect TestRFC7748TestVector carefully.
+
+Confirm that:
+- the scalar/private input is interpreted exactly as required by RFC 7748,
+- the peer public input is correct,
+- the expected output is the RFC reference output,
+- the test is genuinely an external known-answer test and not merely a round-trip generated by the same implementation.
+
+7. API REVIEW
+
+Re-review the API for unnecessary complexity.
+
+Current API:
+- EphemeralKey
+- GenerateEphemeralKey
+- PublicKey
+- ComputeSharedSecret
+- Destroy
+
+Keep it small unless a concrete issue requires change.
+
+Do not add:
+- HKDF
+- session state
+- Ed25519
+- handshake transcript
+- AEAD
+- packet handling
+- networking
+
+8. UPDATE DOCUMENTATION
+
+Correct any statement that implies:
+"the API mathematically enforces freshness."
+
+Replace it with an accurate lifecycle statement explaining that:
+- GenerateEphemeralKey creates a fresh keypair;
+- each handshake/session establishment must create a new ephemeral object;
+- enforcement of that protocol lifecycle belongs to the future session/handshake layer.
+
+9. RE-RUN VALIDATION
+
+Run:
+
+go fmt ./...
+go vet ./...
+go test -v ./...
+go test -race -v ./...
+go build ./...
+
+Also run the relevant Docker-based project validation.
+
+10. REPORT
+
+Return:
+
+A. Files changed
+B. Exact changes made
+C. Destroy concurrency/lifecycle semantics
+D. Exact crypto/ecdh invalid/low-order behavior verified
+E. RFC7748 vector verification
+F. Tests added/changed
+G. Validation results
+H. Confirmation that M3.2 remains unimplemented
+
+STOP after these corrections and return the report.
+
+Do not claim M3.1 is approved. The Project Overseer will make the gate decision.
+
+```
+
+
+```
+TASK: M3.2 — Authenticated Session Establishment
+
+PROJECT GOVERNANCE:
+- M0, M0.1, M1.1, M2.1, M2.1-B, M2.1-C, M2 documentation synchronization, and M3.1 are COMPLETE.
+- M3.1 X25519 ephemeral key agreement is APPROVED.
+- You are now authorized to implement ONLY M3.2.
+- Do NOT implement M3.3 or any later milestone.
+- Do NOT implement AEAD application-message encryption yet.
+- Do NOT implement mesh routing changes.
+- Do NOT implement application messaging.
+- Do NOT modify the frozen wire-format decisions unless a blocking inconsistency is discovered. If one is discovered, STOP and report it rather than silently changing the architecture.
+
+MILESTONE:
+M3.2 — Authenticated Session Establishment
+
+OBJECTIVE:
+Build the authenticated cryptographic session-establishment layer on top of:
+- existing Ed25519 NodeIdentity
+- existing M3.1 X25519 EphemeralKey
+
+The result must allow two authenticated peers to derive the same directional session keys from an exact, canonical handshake transcript.
+
+This milestone is about HANDSHAKE AND SESSION KEY ESTABLISHMENT ONLY.
+
+==================================================
+1. FROZEN CRYPTOGRAPHIC CONSTRUCTION
+==================================================
+
+Do not reinterpret or simplify the following construction.
+
+All concatenation below is raw byte concatenation.
+
+DOMAIN:
+
+    "MeshChat-Handshake-v1"
+
+encoded as ASCII bytes.
+
+PROTOCOL_VERSION:
+
+    0x01
+
+ZERO32:
+
+    exactly 32 zero bytes.
+
+IDENTITIES:
+
+    ID_A = exactly 32-byte Ed25519 public key of initiator
+    ID_B = exactly 32-byte Ed25519 public key of responder
+
+EPHEMERALS:
+
+    E_A = exactly 32-byte X25519 public key generated by initiator
+    E_B = exactly 32-byte X25519 public key generated by responder
+
+INITIATOR TRANSCRIPT:
+
+    T_INIT =
+        DOMAIN
+        || u8(PROTOCOL_VERSION)
+        || ID_A
+        || ID_B
+        || E_A
+        || ZERO32
+
+RESPONDER TRANSCRIPT:
+
+    T_RESP =
+        DOMAIN
+        || u8(PROTOCOL_VERSION)
+        || ID_A
+        || ID_B
+        || E_A
+        || E_B
+
+SIGNATURES:
+
+    Alice/initiator signs T_INIT using her Ed25519 identity private key.
+
+    Bob/responder signs T_RESP using his Ed25519 identity private key.
+
+Verification:
+
+    Initiator verifies responder signature over T_RESP using ID_B.
+
+    Responder verifies initiator signature over T_INIT using ID_A.
+
+IMPORTANT:
+- Do not sign only the ephemeral key.
+- Do not sign only the identity.
+- Do not sign serialized protobuf messages as a substitute.
+- Do not change field ordering.
+- Do not use T_RESP for the initiator signature.
+- Do not use T_INIT for the responder signature.
+- Do not omit ZERO32 from T_INIT.
+- Do not add timestamps, packet IDs, TTL, route metadata, or other fields to these transcripts.
+
+SESSION ID:
+
+    session_id = SHA256(T_RESP)
+
+The full 32-byte SHA-256 digest is the session ID.
+
+Do not truncate it.
+
+==================================================
+2. X25519 SHARED SECRET
+==================================================
+
+Use the approved M3.1 EphemeralKey abstraction.
+
+For initiator:
+
+    SS = X25519(E_A_private, E_B_public)
+
+For responder:
+
+    SS = X25519(E_B_private, E_A_public)
+
+Both sides must obtain the identical 32-byte shared secret.
+
+Do not:
+- hash SS before HKDF
+- truncate SS
+- concatenate SS with other secrets
+- use Ed25519 private keys in X25519
+- reuse long-term Ed25519 keys as ephemeral DH keys
+
+Every handshake must generate a fresh X25519 ephemeral keypair.
+
+==================================================
+3. HKDF
+==================================================
+
+Use HKDF-SHA-256.
+
+Do not implement HKDF from scratch.
+
+Construction:
+
+    salt = SHA256(T_RESP)
+
+    PRK = HKDF-Extract(
+        salt,
+        SS
+    )
+
+Initiator-to-responder key:
+
+    K_A_to_B =
+        HKDF-Expand(
+            PRK,
+            "MeshChat-v1|session|initiator->responder",
+            32
+        )
+
+Responder-to-initiator key:
+
+    K_B_to_A =
+        HKDF-Expand(
+            PRK,
+            "MeshChat-v1|session|responder->initiator",
+            32
+        )
+
+The labels above are exact ASCII byte strings.
+
+Do not modify capitalization, punctuation, arrows, separators, or spacing.
+
+The two directional keys MUST be distinct.
+
+Do not derive both directions from separate independent DH computations.
+
+==================================================
+4. LIBRARY CHOICE
+==================================================
+
+Use the existing approved crypto implementations.
+
+X25519:
+- existing internal/crypto/EphemeralKey abstraction
+- ultimately Go crypto/ecdh.X25519()
+
+Ed25519:
+- existing NodeIdentity abstraction
+- Go crypto/ed25519
+
+SHA-256:
+- Go standard crypto/sha256
+
+HKDF:
+- use a maintained implementation.
+- Prefer the Go standard-library-supported/approved implementation available to the project.
+- Do not implement HKDF manually.
+
+Before adding a dependency, inspect go.mod and existing architecture decisions.
+
+If the selected HKDF API conflicts with the documented architecture, STOP and report the conflict instead of silently changing the architecture.
+
+==================================================
+5. SESSION API
+==================================================
+
+Design a small, auditable API.
+
+The session-establishment layer should conceptually provide:
+
+INITIATOR:
+    create handshake state
+    generate ephemeral X25519 key
+    construct T_INIT
+    sign T_INIT
+    produce initiator handshake material
+
+RESPONDER:
+    receive initiator material
+    validate identities/ephemeral key
+    construct T_RESP
+    verify initiator signature
+    generate fresh responder ephemeral key
+    sign T_RESP
+    derive session keys
+
+INITIATOR:
+    receive responder material
+    reconstruct T_RESP
+    verify responder signature
+    derive session keys
+
+Do not unnecessarily expose:
+- private Ed25519 keys
+- X25519 private keys
+- raw shared secrets
+- HKDF PRK
+
+The final session object should expose only what the later authenticated-encryption layer will actually need, such as:
+- session ID
+- local/remote identity public keys where appropriate
+- directional key material through controlled internal access
+
+Avoid returning secret byte slices without clear ownership semantics.
+
+==================================================
+6. KEY OWNERSHIP
+==================================================
+
+Follow M2.1-C defensive ownership principles and M3.1 lifecycle principles.
+
+Requirements:
+- no caller-owned mutable slice may unexpectedly alias internal cryptographic state
+- public identity values returned to callers must use defensive copies where appropriate
+- session secret material must not be directly exposed unnecessarily
+- ephemeral private keys must have a clear lifecycle
+- ephemeral keys must not be reused across separate handshake instances
+- Destroy ephemeral state after successful or failed handshake when no longer required, according to the existing M3.1 lifecycle contract
+
+Do not claim guaranteed zeroization.
+
+==================================================
+7. AUTHENTICATION / TRUST MODEL
+==================================================
+
+The existing architecture uses Ed25519 identity keys.
+
+Verification must use the supplied peer identity public key.
+
+Do NOT introduce a new authentication mechanism.
+
+TOFU/pre-shared identity directory remains an architectural trust decision:
+- cryptographic signatures authenticate possession of the corresponding Ed25519 private key
+- TOFU does NOT magically make first contact resistant to an active MITM
+- do not claim first-contact authentication unless a trusted key directory is actually present
+
+Do not implement certificate authorities, passwords, OAuth, or other identity systems in M3.2.
+
+==================================================
+8. TRANSCRIPT BINDING SECURITY
+==================================================
+
+The implementation must ensure that signatures authenticate the exact intended transcript.
+
+The following changes MUST cause verification failure:
+
+- changing ID_A
+- changing ID_B
+- changing E_A
+- changing E_B
+- changing protocol version
+- changing DOMAIN
+- changing T_INIT/T_RESP field ordering
+- replacing ZERO32
+- swapping initiator/responder identities
+- substituting a different responder ephemeral key
+- modifying any signed transcript byte
+
+The session ID must also change when T_RESP changes.
+
+==================================================
+9. ROLE / DIRECTION BINDING
+==================================================
+
+The directional keys must be role-bound.
+
+Initiator derives:
+
+    send_key = K_A_to_B
+    receive_key = K_B_to_A
+
+Responder derives:
+
+    send_key = K_B_to_A
+    receive_key = K_A_to_B
+
+Do not simply assign the same key to both directions.
+
+The two derived keys must not be equal.
+
+A reflected message must not automatically become valid in the opposite direction.
+
+Do not implement application-message encryption yet; only establish the directional key separation required by the future AEAD layer.
+
+==================================================
+10. SESSION ID
+==================================================
+
+Session ID must be:
+
+    SHA256(T_RESP)
+
+exactly 32 bytes.
+
+It must be identical on both sides after successful authentication.
+
+It must change if any byte of T_RESP changes.
+
+Do not use:
+- random session IDs
+- packet IDs
+- timestamps
+- identity hashes alone
+- ephemeral public keys alone
+
+==================================================
+11. FAILURE HANDLING
+==================================================
+
+Handshake failure must be explicit and fail closed.
+
+Reject:
+- malformed identities
+- wrong identity length
+- malformed ephemeral keys
+- wrong ephemeral key length
+- unsupported protocol version
+- invalid initiator signature
+- invalid responder signature
+- transcript mismatch
+- X25519 failure
+- HKDF failure if applicable
+- inconsistent role/state
+- unexpected handshake message
+- missing required fields
+
+Do not continue to session establishment after authentication failure.
+
+Do not generate session keys for an unauthenticated peer.
+
+Do not return partially established sessions.
+
+Do not expose secret material in errors.
+
+==================================================
+12. STATE MACHINE
+==================================================
+
+Implement explicit handshake states.
+
+At minimum distinguish:
+
+Initiator:
+    NEW
+    INIT_SENT
+    ESTABLISHED
+    FAILED
+
+Responder:
+    NEW
+    INIT_RECEIVED
+    RESP_SENT
+    ESTABLISHED
+    FAILED
+
+Invalid state transitions must fail.
+
+Examples:
+- responder cannot receive RESP before INIT
+- initiator cannot process RESP before INIT was sent
+- established session cannot be silently reset by an unexpected handshake message
+- failed session cannot continue deriving keys
+
+Keep the state machine local to M3.2.
+
+Do not build the networking transport state machine yet.
+
+==================================================
+13. REPLAY / DUPLICATE HANDSHAKE CONSIDERATIONS
+==================================================
+
+M3.2 is not yet responsible for complete network-level replay protection.
+
+However:
+- handshake state must reject unexpected duplicate/out-of-order messages
+- a completed handshake must not blindly accept an old RESP as a new successful state transition
+- do not introduce timestamps as a substitute for cryptographic transcript binding
+- do not claim network-level replay resistance is complete until the later networking/protocol work implements it
+
+Document this boundary clearly.
+
+==================================================
+14. PROTOCOL MESSAGE INTEGRATION
+==================================================
+
+The existing MeshPacket protobuf schema contains:
+
+    PACKET_TYPE_INIT
+    PACKET_TYPE_RESP
+
+and:
+
+    InitPayload {
+        bytes ephemeral_key
+        bytes signature
+    }
+
+    RespPayload {
+        bytes ephemeral_key
+        bytes signature
+    }
+
+M3.2 may add the necessary handshake construction/parsing helpers around these existing payloads.
+
+Do NOT redesign the frozen protobuf schema unless absolutely necessary.
+
+The existing outer packet fields remain conceptually separate from the cryptographic transcript.
+
+The canonical cryptographic transcript MUST NOT be derived implicitly from protobuf serialization.
+
+Construct T_INIT and T_RESP explicitly from their specified fields.
+
+If packet construction is not yet appropriate because transport is not implemented, keep packet integration at a clean helper/API boundary and do not implement networking.
+
+==================================================
+15. TESTS — REQUIRED SECURITY CASES
+==================================================
+
+Add comprehensive tests.
+
+A. COMPLETE SUCCESSFUL HANDSHAKE
+- Alice initiates
+- Bob responds
+- both authenticate each other
+- both derive the same session ID
+- both derive matching directional keys
+
+B. KEY DIRECTION
+Verify:
+
+    Alice.send == Bob.receive
+    Alice.receive == Bob.send
+    Alice.send != Alice.receive
+
+C. TRANSCRIPT TAMPERING
+For every field below, modify exactly one value and verify signature verification fails:
+
+- protocol version
+- ID_A
+- ID_B
+- E_A
+- E_B
+- ZERO32
+- DOMAIN
+
+D. IDENTITY SWAP
+- swap initiator/responder identities
+- verify authentication fails
+
+E. EPHEMERAL KEY SUBSTITUTION
+- replace E_A
+- replace E_B
+- verify authentication/session establishment fails
+
+F. SIGNATURE SUBSTITUTION
+- replace signature with random bytes
+- verify failure
+- use valid signature from a different identity
+- verify failure
+
+G. SESSION ID
+- verify session_id == SHA256(T_RESP)
+- modify one T_RESP byte
+- verify session ID changes
+
+H. KEY SEPARATION
+- verify K_A_to_B != K_B_to_A
+- verify changing transcript input causes derived keys to change
+
+I. ROLE CONFUSION / REFLECTION
+- attempt to process initiator material as responder material and vice versa
+- verify state/authentication failure
+- ensure directional labels prevent key-role confusion
+
+J. WRONG PROTOCOL VERSION
+- verify handshake rejects unsupported version
+
+K. MALFORMED LENGTHS
+Test malformed:
+- identity
+- ephemeral key
+- signature
+- session-related values
+
+L. STATE MACHINE
+Test invalid ordering:
+- RESP before INIT
+- duplicate RESP
+- processing messages after FAILED
+- invalid transitions after ESTABLISHED
+
+M. FRESH EPHEMERALS
+Perform two independent handshakes between the same identities and verify:
+- ephemeral public keys differ with overwhelming probability
+- session IDs differ
+- directional session keys differ
+
+N. REPLAY-LIKE OLD RESPONSE
+Attempt to use an old responder response with a new initiator handshake state.
+Verify authentication/session establishment fails.
+
+O. KNOWN-ANSWER / CROSS-CHECK
+Where practical, verify the exact transcript hash/session ID and HKDF outputs using independently computed expected values rather than relying exclusively on the implementation under test.
+
+Do not copy large copyrighted test vectors.
+
+==================================================
+16. NEGATIVE CRYPTOGRAPHIC TESTING
+==================================================
+
+Specifically ensure that:
+- no session object is returned after signature failure
+- no session keys are exposed after handshake failure
+- failed X25519 computation cannot continue into HKDF
+- invalid peer public keys fail closed
+- malformed signatures fail closed
+
+==================================================
+17. SECRET MATERIAL AND OBSERVABILITY
+==================================================
+
+Never log:
+- Ed25519 private keys
+- X25519 private keys
+- X25519 shared secret
+- HKDF PRK
+- directional session keys
+
+Do not place secret material into:
+- Prometheus labels
+- metrics
+- structured logs
+- tracing
+- error strings
+- debug output
+
+Telemetry architecture must remain out-of-band.
+
+==================================================
+18. CONCURRENCY
+==================================================
+
+Do not claim the handshake state machine is concurrency-safe unless it actually is.
+
+If handshake objects are intentionally single-threaded:
+- document the lifecycle contract.
+
+If synchronization is introduced:
+- test it under `go test -race`.
+
+Avoid unnecessary synchronization complexity.
+
+==================================================
+19. DOCUMENTATION
+==================================================
+
+Update the relevant documentation required by M3.2.
+
+At minimum ensure the cryptography/session-establishment documentation records:
+
+- M3.2 implemented status
+- exact T_INIT
+- exact T_RESP
+- signature roles
+- SHA256(T_RESP) session ID
+- X25519 shared-secret input
+- HKDF-SHA-256 construction
+- exact directional labels
+- role-to-key mapping
+- authentication/trust boundary
+- handshake state machine
+- failure semantics
+- replay boundary
+- ephemeral lifecycle
+- zeroization limitations
+
+Do not mark AEAD/application-message encryption complete.
+
+Do not mark the entire E2EE messaging system complete.
+
+==================================================
+20. VALIDATION
+==================================================
+
+Run all relevant containerized validation:
+
+    gofmt / gofmt -w as appropriate
+    go vet ./...
+    go test -v ./...
+    go test -race -v ./...
+    go build ./...
+
+Also verify:
+- protobuf generation remains intact
+- existing M0-M3.1 tests remain green
+- Docker build remains green
+- Docker Compose configuration remains valid
+
+If a failure is caused by pre-existing unrelated infrastructure, report it explicitly rather than hiding it.
+
+==================================================
+21. CODE REVIEW REQUIREMENT
+==================================================
+
+Before reporting completion, inspect the actual generated/implemented code for:
+
+- transcript byte construction
+- signature input
+- identity binding
+- role binding
+- HKDF labels
+- session ID calculation
+- key ownership
+- state transitions
+- failure paths
+
+Do not rely solely on tests.
+
+==================================================
+22. REPORT FORMAT
+==================================================
+
+When complete, report:
+
+A. Files added
+B. Files modified
+C. Exact public/internal APIs introduced
+D. Exact handshake construction
+E. Exact signature construction/verification
+F. Exact session-ID construction
+G. Exact HKDF construction
+H. Directional key mapping
+I. Authentication/trust semantics
+J. State machine
+K. Error/failure behavior
+L. Tests added
+M. Security-negative tests
+N. Validation commands/results
+O. Documentation changes
+P. Any unresolved security concerns
+Q. Explicit confirmation that:
+   - AEAD is NOT implemented
+   - application messaging encryption is NOT implemented
+   - networking handshake is NOT implemented
+   - M3.3+ is NOT implemented
+
+STOP after M3.2.
+
+Do not claim the milestone is approved.
+Return the report to the Project Overseer for independent security review.
+
+```
+
+```
+M3.2 ARCHITECTURE CONFLICT RESOLUTION — AUTHORIZATION GRANTED
+
+The Project Overseer has reviewed the reported HKDF architecture conflict.
+
+DECISION:
+Choose OPTION A.
+
+You are explicitly authorized to add:
+
+    golang.org/x/crypto/hkdf
+
+to go.mod and use its maintained HKDF implementation.
+
+DO NOT implement HKDF manually.
+
+==================================================
+ARCHITECTURE AMENDMENT
+==================================================
+
+The previous wording:
+
+    "No external cryptographic libraries; strictly standard library (crypto/*)."
+
+was too restrictive because the required HKDF primitive is not provided by the Go standard library.
+
+The governing cryptography rule is now:
+
+    "Use Go's standard library cryptographic primitives
+    (crypto/*) and approved Go cryptographic sub-repositories
+    such as golang.org/x/crypto/* where the standard library
+    does not provide the required primitive. Do not implement
+    cryptographic primitives manually. Avoid arbitrary or
+    unnecessary
+    third-party cryptographic dependencies."
+
+For the currently approved architecture:
+
+    Ed25519       -> crypto/ed25519
+    X25519        -> crypto/ecdh
+    SHA-256       -> crypto/sha256
+    HKDF-SHA-256  -> golang.org/x/crypto/hkdf
+
+Future ChaCha20-Poly1305 may use:
+
+    golang.org/x/crypto/chacha20poly1305
+
+but that is NOT authorization to implement M3.3 now.
+
+==================================================
+DEPENDENCY REQUIREMENTS
+==================================================
+
+Add the smallest appropriate version of:
+
+    golang.org/x/crypto
+
+required by the selected hkdf API.
+
+Do not add unrelated dependencies.
+
+Record the dependency in go.mod/go.sum.
+
+Verify the dependency is reproducible in the containerized build.
+
+Do not use a random third-party HKDF package.
+
+==================================================
+M3.2 RESUMPTION
+==================================================
+
+Resume M3.2 implementation from the exact task specification previously provided.
+
+In particular, implement:
+
+    salt = SHA256(T_RESP)
+
+    PRK = HKDF-Extract(
+        salt,
+        SS
+    )
+
+    K_A_to_B =
+        HKDF-Expand(
+            PRK,
+            "MeshChat-v1|session|initiator->responder",
+            32
+        )
+
+    K_B_to_A =
+        HKDF-Expand(
+            PRK,
+            "MeshChat-v1|session|responder->initiator",
+            32
+        )
+
+Do not alter any transcript, label, ordering, or length.
+
+==================================================
+IMPORTANT SCOPE
+==================================================
+
+This authorization ONLY resolves the HKDF dependency conflict.
+
+It does NOT authorize:
+- M3.3
+- AEAD
+- application message encryption
+- mesh networking
+- routing changes
+- session rotation
+- application messaging
+- UI changes
+
+Continue with M3.2 only.
+
+==================================================
+DOCUMENTATION
+==================================================
+
+Update the relevant architecture/cryptography documentation to reflect
+the amended cryptographic dependency policy.
+
+Explicitly state that:
+- Go standard crypto/* is preferred;
+- approved golang.org/x/crypto/* modules may be used when required;
+- arbitrary third-party cryptographic libraries are not permitted;
+- cryptographic primitives must not be implemented manually.
+
+Record HKDF as:
+
+    golang.org/x/crypto/hkdf
+
+Do not claim that x/crypto is part of the standard library.
+
+==================================================
+VALIDATION
+==================================================
+
+After implementation run:
+
+    gofmt
+    go vet ./...
+    go test -v ./...
+    go test -race -v ./...
+    go build ./...
+
+and the project's containerized validation.
+
+Verify:
+- go.mod is reproducible
+- go.sum is present/consistent
+- existing M0-M3.1 tests remain green
+- protobuf generation remains intact
+- Docker build remains green
+- Docker Compose configuration remains valid
+
+==================================================
+REPORT
+==================================================
+
+Return the normal M3.2 implementation report.
+
+Additionally report:
+
+    - exact golang.org/x/crypto version selected
+    - why that version/API was selected
+    - exact files modified because of the architecture amendment
+    - confirmation that HKDF was NOT manually implemented
+    - confirmation that no M3.3 functionality was implemented
+
+STOP after M3.2.
+
+Do not claim M3.2 is approved.
+Return the implementation for independent Project Overseer security review.
+
+```
+
+
+```
+
+M3.2 SECURITY REVIEW — SOURCE AUDIT REQUIRED
+
+The Project Overseer has completed the first review of the M3.2 report.
+
+M3.2 is NOT yet approved.
+
+Do not modify the implementation unless required by the additional test requirements below.
+
+The Project Overseer requires the actual source for independent security audit.
+
+Provide the COMPLETE contents of:
+
+    internal/crypto/session.go
+    internal/crypto/session_test.go
+    go.mod
+    internal/crypto/doc.go
+
+Do not provide excerpts or summaries.
+
+Additionally, audit the existing M3.2 tests and add any missing tests from the following list:
+
+1. SESSION ID KNOWN CONSTRUCTION
+Verify explicitly:
+
+    session_id == SHA256(T_RESP)
+
+using the exact bytes constructed by the implementation.
+
+2. SESSION ID TRANSCRIPT SENSITIVITY
+Modify exactly one byte of T_RESP and verify:
+
+    SHA256(T_RESP_modified) != original_session_id
+
+3. HKDF KNOWN-ANSWER
+Add an independently calculated known-answer test for the M3.2 HKDF construction.
+
+The test must verify the exact:
+- salt
+- PRK
+- K_A_to_B
+- K_B_to_A
+
+Do not merely verify that Alice and Bob derive equal keys.
+
+The expected values must be independently established rather than generated by calling the same session implementation being tested.
+
+4. TWO-INDEPENDENT-HANDSHAKES TEST
+Perform two complete handshakes using the same identities.
+
+Verify:
+- fresh ephemeral keys are generated
+- session IDs differ
+- initiator->responder keys differ
+- responder->initiator keys differ
+
+5. MALFORMED INPUT TESTS
+Explicitly test:
+- wrong ID_A length
+- wrong ID_B length
+- wrong E_A length
+- wrong E_B length
+- wrong signature length
+- unsupported protocol version
+
+All must fail closed.
+
+6. DIFFERENT-IDENTITY SIGNATURE
+Create a valid Ed25519 signature using an unrelated identity and present it where the expected peer signature is required.
+
+Verify authentication fails.
+
+7. OLD RESPONSE / NEW INIT TEST
+Perform:
+- handshake A -> response A
+- create a new initiator handshake with fresh E_A
+- attempt to process old response A
+
+Verify the new handshake does NOT establish a session.
+
+8. DUPLICATE / INVALID STATE TESTS
+Explicitly test:
+- RESP before INIT
+- duplicate RESP
+- processing after FAILED
+- processing after ESTABLISHED
+- duplicate/invalid handshake progression
+
+9. SECRET EXPOSURE REVIEW
+Inspect the source for:
+- raw shared secret returned unnecessarily
+- PRK exposed publicly
+- session keys exposed through mutable internal slices
+- secret material in error strings
+- secret material in logs
+- secret material in tests/output
+
+10. DO NOT CHANGE THE CRYPTOGRAPHIC CONSTRUCTION
+
+The following remain frozen:
+
+    T_INIT =
+        DOMAIN
+        || 0x01
+        || ID_A
+        || ID_B
+        || E_A
+        || ZERO32
+
+    T_RESP =
+        DOMAIN
+        || 0x01
+        || ID_A
+        || ID_B
+        || E_A
+        || E_B
+
+    session_id = SHA256(T_RESP)
+
+    salt = SHA256(T_RESP)
+
+    PRK = HKDF-Extract(salt, SS)
+
+    K_A_to_B =
+        HKDF-Expand(
+            PRK,
+            "MeshChat-v1|session|initiator->responder",
+            32
+        )
+
+    K_B_to_A =
+        HKDF-Expand(
+            PRK,
+            "MeshChat-v1|session|responder->initiator",
+            32
+        )
+
+11. VALIDATION
+
+After any test additions run:
+
+    gofmt
+    go vet ./...
+    go test -v ./...
+    go test -race -v ./...
+    go build ./...
+
+Use the containerized project environment.
+
+12. REPORT
+
+Return:
+- complete source files requested above
+- tests added
+- exact known-answer values
+- validation results
+- any discovered issues
+
+STOP.
+
+Do not proceed to M3.3.
+Do not claim M3.2 approval.
+
+```
+
+```
+M3.2 has been reviewed by the Project Overseer and is APPROVED.
+
+Proceed to M3.3 ONLY.
+
+Before writing code, inspect the current frozen protocol and cryptographic documentation and preserve all existing M0–M3.2 decisions.
+
+M3.3 objective:  
+Define and implement the authenticated-encryption message-layer construction using the already-established directional session keys.
+
+Requirements:
+
+1. Use ChaCha20-Poly1305 through the approved Go cryptographic dependency policy. Do NOT implement any cryptographic primitive manually.
+    
+2. Freeze and document the exact nonce construction before implementation. It MUST guarantee that a nonce is never reused with the same directional key.
+    
+3. Bind the following authenticated data exactly as specified by the protocol design:
+    
+    - protocol/version context
+        
+    - session_id
+        
+    - direction/context
+        
+    - sequence number
+        
+    - any other fields explicitly frozen by the protocol  
+        Do not invent fields silently.
+        
+4. Use the existing Session object and directional keys. Do not expose raw private keys, X25519 shared secrets, PRKs, or internal mutable secret state.
+    
+5. Implement:
+    
+    - EncryptMessage(...)
+        
+    - DecryptMessage(...)  
+        or an equivalent minimal API with the same security properties.  
+        Keep the API small and fail-closed.
+        
+6. Sequence handling:
+    
+    - reject malformed sequence values
+        
+    - reject replayed sequence numbers according to the frozen replay model
+        
+    - do not rely solely on timestamps
+        
+    - make the receive-side replay state explicit
+        
+    - do not claim network-wide replay protection yet
+        
+7. Nonce handling:
+    
+    - explicitly document ownership and uniqueness guarantees
+        
+    - test boundary values
+        
+    - test that a nonce cannot accidentally repeat for the same key
+        
+    - test that opposite directions cannot collide through the construction
+        
+8. Negative/security tests MUST include at minimum:
+    
+    - ciphertext modification
+        
+    - AAD modification
+        
+    - wrong session ID
+        
+    - wrong direction
+        
+    - wrong key
+        
+    - wrong sequence number
+        
+    - truncated ciphertext/tag
+        
+    - malformed nonce
+        
+    - replayed message
+        
+    - cross-session ciphertext
+        
+    - cross-direction ciphertext
+        
+    - sequence boundary behavior
+        
+9. Add an independently computed known-answer test for the complete AEAD construction, including nonce, AAD, plaintext, ciphertext, and authentication tag.
+    
+10. Verify that plaintext, keys, nonces, and authentication failures are never logged or emitted through observability.
+    
+11. Run:
+    
+
+- gofmt
+    
+- go vet ./...
+    
+- go test -v ./...
+    
+- go test -race -v ./...
+    
+- go build ./...  
+    inside the existing containerized Go 1.21 environment.
+    
+
+12. Update only the documentation directly affected by M3.3.
+    
+13. Do NOT begin M4, networking, mesh routing, UI, or observability implementation.
+    
+14. At the end, stop and report:
+    
+
+- exact source files changed
+    
+- complete relevant source files
+    
+- exact nonce construction
+    
+- exact AAD construction
+    
+- exact sequence/replay rules
+    
+- known-answer values
+    
+- negative tests
+    
+- validation results
+    
+- any unresolved security concerns
+    
+
+Important:  
+The Project Overseer will independently audit the source. Do not report “secure” or “replay protected” in absolute terms. State precisely what the implementation guarantees and what remains outside M3.3 scope.
+
+```
+
+
+```
+M3.3 is CONDITIONALLY APPROVED. Implement it, but freeze the following corrections before coding.
+
+1. ChaCha20-Poly1305:
+    
+    - Use golang.org/x/crypto/chacha20poly1305.
+        
+    - Never implement cryptographic primitives manually.
+        
+    - Use the existing 32-byte directional session keys.
+        
+2. Nonce construction is FROZEN:  
+    nonce = 4 zero bytes || uint64(sequence_number) encoded big-endian.  
+    Total nonce length = 12 bytes.
+    
+    Sequence numbering:
+    
+    - First outbound sequence = 0.
+        
+    - Increment by exactly 1 after successful allocation of the current sequence.
+        
+    - NEVER wrap from math.MaxUint64 to 0.
+        
+    - If the sender has exhausted the uint64 sequence space, return a permanent sequence-exhausted error.
+        
+    - Nonce uniqueness depends on this no-wrap rule plus fresh session keys.
+        
+3. Direction marker is FROZEN:
+    
+    - 0x01 = Initiator -> Responder
+        
+    - 0x00 = Responder -> Initiator
+        
+    
+    EncryptMessage must derive its direction internally from the Session role.  
+    DecryptMessage must expect the opposite direction internally.  
+    The caller must not supply the direction marker.
+    
+4. AAD is FROZEN:  
+    ASCII bytes:  
+    "MeshChat-AppData-v1"  
+    followed by:  
+    session_id (32 bytes)  
+    sequence_number (8-byte big-endian)  
+    direction_marker (1 byte)
+    
+    Do not silently add, remove, reorder, or reinterpret fields.
+    
+5. Replay window is FROZEN:
+    
+    - 64-message sliding window.
+        
+    - highest_received = greatest successfully authenticated sequence.
+        
+    - bitmap bit 0 represents highest_received.
+        
+    - bit N represents highest_received - N.
+        
+    - Therefore the currently accepted historical window is:  
+        highest_received-63 through highest_received.
+        
+    - A sequence < highest_received-63 is too old.
+        
+    - A sequence already represented by a set bitmap bit is a replay.
+        
+    - A sequence greater than highest_received advances the window.
+        
+    - Handle startup explicitly because no highest_received exists before the first authenticated message.
+        
+    - Do not use uint64 arithmetic that can underflow at low sequence numbers.
+        
+6. CRITICAL AUTHENTICATION ORDER:  
+    Never mutate replay state before AEAD authentication succeeds.
+    
+    Correct DecryptMessage order:  
+    a. Validate ciphertext minimum length.  
+    b. Validate sequence against replay-window policy without mutating state.  
+    c. Construct nonce and AAD.  
+    d. Call AEAD.Open().  
+    e. If authentication fails, return error and DO NOT mutate replay state.  
+    f. If authentication succeeds, update highest_received/replay bitmap.  
+    g. Return plaintext.
+    
+    An unauthenticated packet must never consume a sequence number.
+    
+7. Concurrency:  
+    Session methods must be safe for concurrent use.  
+    Prefer:
+    
+    - sendMu protecting send sequence state
+        
+    - receiveMu protecting highest_received and replay bitmap
+        
+    
+    Do not serialize sending and receiving through one unnecessary global mutex.
+    
+8. Minimal API:  
+    EncryptMessage(plaintext []byte) (seq uint64, ciphertext []byte, err error)  
+    DecryptMessage(seq uint64, ciphertext []byte) ([]byte, error)
+    
+9. Defensive security behavior:
+    
+    - Do not expose session keys.
+        
+    - Do not log plaintext, ciphertext contents, keys, nonces, or authentication secrets.
+        
+    - Authentication failures must use bounded/generic errors and must not leak secret material.
+        
+    - Do not claim network-wide replay protection. This is per-session message-layer replay protection.
+        
+10. Required negative tests:
+    
+
+- ciphertext modification
+    
+- tag modification
+    
+- wrong session ID in AAD
+    
+- wrong sequence in AAD
+    
+- wrong direction
+    
+- wrong key
+    
+- wrong protocol context
+    
+- truncated ciphertext
+    
+- duplicate/replayed packet
+    
+- packet outside the 64-message window
+    
+- valid out-of-order packet inside the window
+    
+- bitmap advancement
+    
+- authenticated packet followed by duplicate
+    
+- unauthenticated packet MUST NOT consume replay-window state
+    
+- cross-session ciphertext
+    
+- cross-direction ciphertext
+    
+- sequence 0
+    
+- low sequence-number boundary without underflow
+    
+- math.MaxUint64 exhaustion behavior
+    
+- concurrent EncryptMessage calls
+    
+- concurrent DecryptMessage calls
+    
+- concurrent send and receive operations
+    
+
+11. Known-answer test:  
+    Produce an independently generated test vector containing:
+    
+
+- session key
+    
+- session ID
+    
+- sequence number
+    
+- direction
+    
+- exact nonce
+    
+- exact AAD
+    
+- plaintext
+    
+- ciphertext including authentication tag
+    
+
+Verify the implementation against those values.
+
+12. Documentation:  
+    Freeze the exact nonce, AAD, direction, sequence, and replay-window constructions in the appropriate protocol/cryptography documentation.
+    
+13. Run the complete validation inside the existing containerized Go 1.21 environment:
+    
+
+- gofmt
+    
+- go vet ./...
+    
+- go test -v ./...
+    
+- go test -race -v ./...
+    
+- go build ./...
+    
+
+14. Do NOT proceed to networking, mesh routing, UI, or M4.
+    
+
+At completion, stop and provide:
+
+- complete changed source files
+    
+- exact nonce construction
+    
+- exact AAD bytes/layout
+    
+- exact sequence rules
+    
+- exact replay-window algorithm
+    
+- exact direction semantics
+    
+- known-answer vector
+    
+- all security/negative tests
+    
+- validation output
+    
+- unresolved security concerns
+    
+
+The Project Overseer will independently audit the implementation before M3.3 is approved.
+
+```
+
+
+
+```
+
+
+```
