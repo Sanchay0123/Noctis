@@ -122,26 +122,24 @@ func (s *Session) DecryptMessage(seq uint64, ciphertext []byte) ([]byte, error) 
 	}
 
 	s.receiveMu.Lock()
+	defer s.receiveMu.Unlock()
+
 	highest := s.highestReceived
 	bitmap := s.replayBitmap
 
 	if seq < highest {
 		diff := highest - seq
 		if diff >= 64 {
-			s.receiveMu.Unlock()
 			return nil, ErrReplayDetected
 		}
 		if (bitmap & (1 << diff)) != 0 {
-			s.receiveMu.Unlock()
 			return nil, ErrReplayDetected
 		}
 	} else if seq == highest {
 		if (bitmap & 1) != 0 {
-			s.receiveMu.Unlock()
 			return nil, ErrReplayDetected
 		}
 	}
-	s.receiveMu.Unlock()
 
 	nonce := make([]byte, 12)
 	binary.BigEndian.PutUint64(nonce[4:], seq)
@@ -169,23 +167,11 @@ func (s *Session) DecryptMessage(seq uint64, ciphertext []byte) ([]byte, error) 
 		return nil, ErrDecryptFailed
 	}
 
-	s.receiveMu.Lock()
-	defer s.receiveMu.Unlock()
-
 	if seq < s.highestReceived {
 		diff := s.highestReceived - seq
-		if diff >= 64 {
-			return nil, ErrReplayDetected
-		}
-		if (s.replayBitmap & (1 << diff)) != 0 {
-			return nil, ErrReplayDetected
-		}
 		s.replayBitmap |= (1 << diff)
 	} else {
 		if seq == s.highestReceived {
-			if (s.replayBitmap & 1) != 0 {
-				return nil, ErrReplayDetected
-			}
 			s.replayBitmap |= 1
 		} else {
 			diff := seq - s.highestReceived

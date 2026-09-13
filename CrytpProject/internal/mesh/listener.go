@@ -26,17 +26,17 @@ func (c *replayConn) Read(b []byte) (int, error) {
 }
 
 type Listener struct {
-	pm                   *peerManager
-	listener             net.Listener
-	
+	pm       *peerManager
+	listener net.Listener
+
 	maxActivePeers       int
 	maxPendingHandshakes int
 	handshakeTimeout     time.Duration
-	
-	pendingSem           chan struct{}
-	
-	mu                   sync.Mutex
-	closed               bool
+
+	pendingSem chan struct{}
+
+	mu     sync.Mutex
+	closed bool
 }
 
 func NewListener(pm *peerManager) *Listener {
@@ -105,7 +105,7 @@ func (l *Listener) handleInbound(conn net.Conn) {
 		conn.Close()
 		return
 	}
-	
+
 	// Validate length BEFORE allocation
 	length := binary.BigEndian.Uint32(lenBuf[:])
 	if length == 0 || length > MaxFrameSize {
@@ -121,6 +121,11 @@ func (l *Listener) handleInbound(conn net.Conn) {
 
 	var pkt protocol.MeshPacket
 	if err := proto.Unmarshal(data, &pkt); err != nil {
+		conn.Close()
+		return
+	}
+
+	if err := transport.ValidatePacket(&pkt); err != nil {
 		conn.Close()
 		return
 	}
@@ -150,7 +155,7 @@ func (l *Listener) handleInbound(conn net.Conn) {
 	if err != nil {
 		ch.Close()
 		l.pm.enqueueTelemetry(func() {
-			l.pm.telemetry.RecordHandshakeFailed(expectedID, err)
+			l.pm.telemetry.RecordHandshakeFailed(err)
 		})
 		return
 	}

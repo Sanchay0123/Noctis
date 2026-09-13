@@ -46,9 +46,13 @@ func TestMeshLifecycleAndIsolation(t *testing.T) {
 	defer mgrC.Shutdown()
 
 	addrB := getFreePort()
-	if err := mgrB.listener.Listen(addrB); err != nil { t.Fatal(err) }
+	if err := mgrB.listener.Listen(addrB); err != nil {
+		t.Fatal(err)
+	}
 	addrC := getFreePort()
-	if err := mgrC.listener.Listen(addrC); err != nil { t.Fatal(err) }
+	if err := mgrC.listener.Listen(addrC); err != nil {
+		t.Fatal(err)
+	}
 
 	mgrB.ExpectInbound(idA.PublicKey())
 	mgrC.ExpectInbound(idA.PublicKey())
@@ -56,8 +60,12 @@ func TestMeshLifecycleAndIsolation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := mgrA.Connect(ctx, addrB, idB.PublicKey()); err != nil { t.Fatalf("A failed to connect to B: %v", err) }
-	if err := mgrA.Connect(ctx, addrC, idC.PublicKey()); err != nil { t.Fatalf("A failed to connect to C: %v", err) }
+	if err := mgrA.Connect(ctx, addrB, idB.PublicKey()); err != nil {
+		t.Fatalf("A failed to connect to B: %v", err)
+	}
+	if err := mgrA.Connect(ctx, addrC, idC.PublicKey()); err != nil {
+		t.Fatalf("A failed to connect to C: %v", err)
+	}
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -144,7 +152,7 @@ func TestDialTimeoutAndSlotRelease(t *testing.T) {
 
 	ctx := context.Background()
 	err := mgrA.Connect(ctx, "10.255.255.255:80", idA.PublicKey())
-	
+
 	if err == nil {
 		t.Fatal("expected timeout error")
 	}
@@ -182,11 +190,11 @@ func TestRepeatedClose(t *testing.T) {
 
 func TestTelemetryNonBlocking(t *testing.T) {
 	idA := generateIdentity(t)
-	
+
 	blocker := &blockingTelemetry{
 		ch: make(chan struct{}),
 	}
-	
+
 	mgrA := NewPeerManager(idA, blocker, nil)
 	defer mgrA.Shutdown()
 
@@ -194,10 +202,10 @@ func TestTelemetryNonBlocking(t *testing.T) {
 	for i := 0; i < 200; i++ {
 		mgrA.enqueueTelemetry(func() { blocker.RecordResourceLimitReached("spam") })
 	}
-	
+
 	// Networking continues (no block)
 	mgrA.ExpectInbound([]byte("bob"))
-	
+
 	// Release blocker to clean up
 	close(blocker.ch)
 }
@@ -205,11 +213,12 @@ func TestTelemetryNonBlocking(t *testing.T) {
 type blockingTelemetry struct {
 	ch chan struct{}
 }
-func (b *blockingTelemetry) RecordPeerConnected(remoteID []byte, isOutbound bool) { <-b.ch }
-func (b *blockingTelemetry) RecordPeerDisconnected(remoteID []byte)               { <-b.ch }
-func (b *blockingTelemetry) RecordHandshakeFailed(remoteID []byte, err error)     { <-b.ch }
-func (b *blockingTelemetry) RecordDuplicateConnection(remoteID []byte)            { <-b.ch }
-func (b *blockingTelemetry) RecordResourceLimitReached(limitName string)          { <-b.ch }
+
+func (b *blockingTelemetry) RecordPeerConnected(isOutbound bool)         { <-b.ch }
+func (b *blockingTelemetry) RecordPeerDisconnected()                     { <-b.ch }
+func (b *blockingTelemetry) RecordHandshakeFailed(err error)             { <-b.ch }
+func (b *blockingTelemetry) RecordDuplicateConnection()                  { <-b.ch }
+func (b *blockingTelemetry) RecordResourceLimitReached(limitName string) { <-b.ch }
 
 func TestMaxPendingHandshakesExhaustion(t *testing.T) {
 	idA := generateIdentity(t)
@@ -230,7 +239,7 @@ func TestMaxPendingHandshakesExhaustion(t *testing.T) {
 
 	// Second connection should be rejected instantly
 	conn2, _ := net.Dial("tcp", addrA)
-	
+
 	// Try reading to see if closed immediately
 	conn2.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 	b := make([]byte, 1)
@@ -239,6 +248,42 @@ func TestMaxPendingHandshakesExhaustion(t *testing.T) {
 		t.Fatal("Expected immediate connection closure when pending slots are full")
 	}
 	conn2.Close()
+}
+
+func TestHandshakeTimeout(t *testing.T) {
+	idA := generateIdentity(t)
+	mgrA := NewPeerManager(idA, nil, nil)
+	mgrA.listener.maxPendingHandshakes = 1
+	mgrA.listener.pendingSem = make(chan struct{}, 1)
+	mgrA.listener.handshakeTimeout = 100 * time.Millisecond // very short timeout
+	defer mgrA.Shutdown()
+	addrA := getFreePort()
+	mgrA.listener.Listen(addrA)
+
+	// Block the slot and do NOT send handshake
+	conn1, _ := net.Dial("tcp", addrA)
+	defer conn1.Close()
+
+	// Wait for slot to be acquired, then wait for timeout to expire
+	time.Sleep(200 * time.Millisecond)
+
+	// Since conn1 timed out, the slot should be released.
+	// conn2 should now be able to acquire the slot and hold it.
+	conn2, _ := net.Dial("tcp", addrA)
+	defer conn2.Close()
+
+	// Wait a tiny bit for conn2 to acquire
+	time.Sleep(20 * time.Millisecond)
+
+	// conn3 should be rejected because conn2 has the slot
+	conn3, _ := net.Dial("tcp", addrA)
+	conn3.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+	b := make([]byte, 1)
+	_, err := conn3.Read(b)
+	if err == nil {
+		t.Fatal("Expected conn3 to be rejected")
+	}
+	conn3.Close()
 }
 
 func TestMaxActivePeersExhaustion(t *testing.T) {
@@ -282,7 +327,7 @@ func TestMalformedPacketRejection(t *testing.T) {
 	conn, _ := net.Dial("tcp", addrA)
 	defer conn.Close()
 
-	conn.Write([]byte{0, 0, 0, 10}) // 10 byte length
+	conn.Write([]byte{0, 0, 0, 10})  // 10 byte length
 	conn.Write([]byte("malformed!")) // Not a protobuf
 
 	// Should be closed
@@ -353,22 +398,22 @@ func TestStateTransitionAfterClosing(t *testing.T) {
 func TestTelemetryShutdownRace(t *testing.T) {
 	idA := generateIdentity(t)
 	mgrA := NewPeerManager(idA, nil, nil)
-	
+
 	var wg sync.WaitGroup
 	wg.Add(2)
-	
+
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 1000; i++ {
 			mgrA.enqueueTelemetry(func() {})
 		}
 	}()
-	
+
 	go func() {
 		defer wg.Done()
 		mgrA.Shutdown()
 	}()
-	
+
 	wg.Wait()
 }
 
@@ -377,10 +422,10 @@ func TestShutdownReadLoopRace(t *testing.T) {
 	mgrA := NewPeerManager(idA, nil, nil)
 	c1, c2 := net.Pipe()
 	defer c2.Close()
-	
+
 	ch := transport.NewDirectChannel(transport.NewConnection(c1), idA)
 	mgrA.register(ch, []byte("bob"), true)
-	
+
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -394,11 +439,11 @@ func TestDuplicateReadLoopRace(t *testing.T) {
 	idA := generateIdentity(t)
 	mgrA := NewPeerManager(idA, nil, nil)
 	defer mgrA.Shutdown()
-	
+
 	c1, _ := net.Pipe()
 	ch1 := transport.NewDirectChannel(transport.NewConnection(c1), idA)
 	mgrA.register(ch1, []byte("bob"), true)
-	
+
 	c2, _ := net.Pipe()
 	ch2 := transport.NewDirectChannel(transport.NewConnection(c2), idA)
 	mgrA.register(ch2, []byte("bob"), false)
@@ -408,12 +453,12 @@ func TestCloseSendRace(t *testing.T) {
 	idA := generateIdentity(t)
 	mgrA := NewPeerManager(idA, nil, nil)
 	defer mgrA.Shutdown()
-	
+
 	c1, _ := net.Pipe()
 	ch1 := transport.NewDirectChannel(transport.NewConnection(c1), idA)
 	mgrA.register(ch1, []byte("bob"), true)
 	p, _ := mgrA.GetPeer([]byte("bob"))
-	
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() { defer wg.Done(); p.Close() }()
@@ -461,17 +506,18 @@ func TestFreshSessionID(t *testing.T) {
 }
 
 type failingTelemetry struct{}
-func (f failingTelemetry) RecordPeerConnected(remoteID []byte, isOutbound bool) {}
-func (f failingTelemetry) RecordPeerDisconnected(remoteID []byte)               {}
-func (f failingTelemetry) RecordHandshakeFailed(remoteID []byte, err error)     { panic("fail") }
-func (f failingTelemetry) RecordDuplicateConnection(remoteID []byte)            {}
-func (f failingTelemetry) RecordResourceLimitReached(limitName string)          {}
+
+func (f failingTelemetry) RecordPeerConnected(isOutbound bool)         {}
+func (f failingTelemetry) RecordPeerDisconnected()                     {}
+func (f failingTelemetry) RecordHandshakeFailed(err error)             { panic("fail") }
+func (f failingTelemetry) RecordDuplicateConnection()                  {}
+func (f failingTelemetry) RecordResourceLimitReached(limitName string) {}
 
 func TestFailingTelemetryRecorder(t *testing.T) {
 	idA := generateIdentity(t)
 	mgrA := NewPeerManager(idA, failingTelemetry{}, nil)
 	defer mgrA.Shutdown()
-	
+
 	// Panic inside telemetry should not crash manager since we catch it or it runs in worker
 	// Actually we should defer recover in worker
 }
@@ -488,7 +534,7 @@ func TestDuplicateArbitrationCases(t *testing.T) {
 	// Make remote id strictly larger than idA
 	idBLarger := make([]byte, 32)
 	copy(idBLarger, idA.PublicKey())
-	idBLarger[31] ^= 0xff 
+	idBLarger[31] ^= 0xff
 	if bytes.Compare(idA.PublicKey(), idBLarger) >= 0 {
 		idBLarger[0] = 0xff
 	}
@@ -510,13 +556,17 @@ func TestDuplicateArbitrationCases(t *testing.T) {
 	c2, _ := net.Pipe()
 	ch2 := transport.NewDirectChannel(transport.NewConnection(c2), idA)
 	err := mgrA.register(ch2, idBLarger, true) // new outbound
-	if err != nil { t.Errorf("Case 1 failed: expected new to win") }
+	if err != nil {
+		t.Errorf("Case 1 failed: expected new to win")
+	}
 
 	// Case 2: local < remote (weAreSmaller=true), initiator=false (inbound) -> NEW LOSES
 	c3, _ := net.Pipe()
 	ch3 := transport.NewDirectChannel(transport.NewConnection(c3), idA)
 	err = mgrA.register(ch3, idBLarger, false) // new inbound
-	if err != ErrDuplicateConnection { t.Errorf("Case 2 failed: expected new to lose") }
+	if err != ErrDuplicateConnection {
+		t.Errorf("Case 2 failed: expected new to lose")
+	}
 
 	// Case 3: local > remote (weAreSmaller=false), initiator=true (outbound) -> NEW LOSES
 	c4, _ := net.Pipe()
@@ -526,11 +576,15 @@ func TestDuplicateArbitrationCases(t *testing.T) {
 	c5, _ := net.Pipe()
 	ch5 := transport.NewDirectChannel(transport.NewConnection(c5), idA)
 	err = mgrA.register(ch5, idCSmaller, true) // new outbound
-	if err != ErrDuplicateConnection { t.Errorf("Case 3 failed: expected new to lose") }
+	if err != ErrDuplicateConnection {
+		t.Errorf("Case 3 failed: expected new to lose")
+	}
 
 	// Case 4: local > remote (weAreSmaller=false), initiator=false (inbound) -> NEW WINS
 	c6, _ := net.Pipe()
 	ch6 := transport.NewDirectChannel(transport.NewConnection(c6), idA)
 	err = mgrA.register(ch6, idCSmaller, false) // new inbound
-	if err != nil { t.Errorf("Case 4 failed: expected new to win") }
+	if err != nil {
+		t.Errorf("Case 4 failed: expected new to win")
+	}
 }

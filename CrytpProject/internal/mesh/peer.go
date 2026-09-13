@@ -113,12 +113,15 @@ func (p *peer) EnqueueForward(packet []byte) bool {
 		return false
 	}
 
+	p.queuedCount++
+	p.queuedBytes += len(packet)
+
 	select {
 	case p.queue <- packet:
-		p.queuedCount++
-		p.queuedBytes += len(packet)
 		return true
 	default:
+		p.queuedCount--
+		p.queuedBytes -= len(packet)
 		return false
 	}
 }

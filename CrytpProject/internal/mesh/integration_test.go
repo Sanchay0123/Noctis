@@ -1,0 +1,282 @@
+package mesh_test
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/sanchayjain/meshchat/internal/crypto"
+	"github.com/sanchayjain/meshchat/internal/mesh"
+	"github.com/sanchayjain/meshchat/internal/routing"
+	"github.com/sanchayjain/meshchat/internal/session"
+)
+
+func TestRelayCannotDecryptEndpointSession(t *testing.T) {
+	// 1. Establish Alice <-> Bob <-> Carol topology locally
+	aliceIdent, _ := crypto.GenerateIdentity()
+	bobIdent, _ := crypto.GenerateIdentity()
+	carolIdent, _ := crypto.GenerateIdentity()
+
+	aliceSM := session.NewManager()
+	bobSM := session.NewManager()
+	carolSM := session.NewManager()
+
+	aliceOnMsg := func(sid [32]byte, msg []byte) {}
+	bobOnMsg := func(sid [32]byte, msg []byte) {}
+	carolOnMsg := func(sid [32]byte, msg []byte) {
+		if string(msg) != "Hello Carol" {
+			t.Errorf("carol received wrong message")
+		}
+	}
+
+	aliceRouter := routing.NewRouter(aliceIdent, nil, aliceSM, nil, aliceOnMsg)
+	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil, bobOnMsg)
+	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil, carolOnMsg)
+
+	alicePM := mesh.NewPeerManager(aliceIdent, nil, aliceRouter.OnMessage)
+	bobPM := mesh.NewPeerManager(bobIdent, nil, bobRouter.OnMessage)
+	carolPM := mesh.NewPeerManager(carolIdent, nil, carolRouter.OnMessage)
+
+	aliceRouter.SetPeerManager(alicePM)
+	bobRouter.SetPeerManager(bobPM)
+	carolRouter.SetPeerManager(carolPM)
+
+	bobPM.Listen("127.0.0.1:8100")
+	carolPM.Listen("127.0.0.1:8101")
+
+	time.Sleep(100 * time.Millisecond)
+
+	alicePM.ExpectInbound(bobIdent.PublicKey())
+	bobPM.ExpectInbound(aliceIdent.PublicKey())
+	bobPM.ExpectInbound(carolIdent.PublicKey())
+	carolPM.ExpectInbound(bobIdent.PublicKey())
+
+	alicePM.Connect(context.Background(), "127.0.0.1:8100", bobIdent.PublicKey())
+	bobPM.Connect(context.Background(), "127.0.0.1:8101", carolIdent.PublicKey())
+
+	time.Sleep(200 * time.Millisecond)
+
+	// Alice initiates handshake to Carol
+	aliceRouter.StartInitiator(carolIdent.PublicKey())
+	time.Sleep(500 * time.Millisecond)
+
+	// Verify Alice and Carol have endpoint sessions, Bob does NOT have Alice<->Carol session
+	if _, _, ok := aliceSM.GetFirstSession(); !ok {
+		t.Errorf("Alice SM has no session")
+	}
+	if _, _, ok := carolSM.GetFirstSession(); !ok {
+		t.Errorf("Carol SM has no session")
+	}
+	if _, _, ok := bobSM.GetFirstSession(); ok {
+		t.Errorf("Bob should have NO endpoint sessions")
+	}
+
+	// Send APP_DATA
+	aliceRouter.BroadcastAppData(carolIdent.PublicKey(), []byte("Hello Carol"))
+	time.Sleep(200 * time.Millisecond)
+
+	alicePM.Shutdown()
+	bobPM.Shutdown()
+	carolPM.Shutdown()
+}
+
+func TestPeerLossDoesNotInvalidateEndpointSession(t *testing.T) {
+	aliceIdent, _ := crypto.GenerateIdentity()
+	bobIdent, _ := crypto.GenerateIdentity()
+	carolIdent, _ := crypto.GenerateIdentity()
+
+	aliceSM := session.NewManager()
+	bobSM := session.NewManager()
+	carolSM := session.NewManager()
+
+	aliceOnMsg := func(sid [32]byte, msg []byte) {}
+	bobOnMsg := func(sid [32]byte, msg []byte) {}
+	carolOnMsg := func(sid [32]byte, msg []byte) {}
+
+	aliceRouter := routing.NewRouter(aliceIdent, nil, aliceSM, nil, aliceOnMsg)
+	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil, bobOnMsg)
+	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil, carolOnMsg)
+
+	alicePM := mesh.NewPeerManager(aliceIdent, nil, aliceRouter.OnMessage)
+	bobPM := mesh.NewPeerManager(bobIdent, nil, bobRouter.OnMessage)
+	carolPM := mesh.NewPeerManager(carolIdent, nil, carolRouter.OnMessage)
+
+	aliceRouter.SetPeerManager(alicePM)
+	bobRouter.SetPeerManager(bobPM)
+	carolRouter.SetPeerManager(carolPM)
+
+	bobPM.Listen("127.0.0.1:8200")
+	carolPM.Listen("127.0.0.1:8201")
+
+	time.Sleep(100 * time.Millisecond)
+
+	alicePM.ExpectInbound(bobIdent.PublicKey())
+	bobPM.ExpectInbound(aliceIdent.PublicKey())
+	bobPM.ExpectInbound(carolIdent.PublicKey())
+	carolPM.ExpectInbound(bobIdent.PublicKey())
+
+	alicePM.Connect(context.Background(), "127.0.0.1:8200", bobIdent.PublicKey())
+	bobPM.Connect(context.Background(), "127.0.0.1:8201", carolIdent.PublicKey())
+
+	time.Sleep(200 * time.Millisecond)
+
+	aliceRouter.StartInitiator(carolIdent.PublicKey())
+	time.Sleep(500 * time.Millisecond)
+
+	if _, _, ok := aliceSM.GetFirstSession(); !ok {
+		t.Fatalf("Session failed to establish on Alice")
+	}
+	if _, _, ok := carolSM.GetFirstSession(); !ok {
+		t.Fatalf("Session failed to establish on Carol")
+	}
+
+	// Close Bob
+	bobPM.Shutdown()
+	time.Sleep(200 * time.Millisecond)
+
+	// Confirm SessionManager still has Alice <-> Carol
+	if _, _, ok := aliceSM.GetFirstSession(); !ok {
+		t.Errorf("Alice SM lost session after peer loss")
+	}
+	if _, _, ok := carolSM.GetFirstSession(); !ok {
+		t.Errorf("Carol SM lost session after peer loss")
+	}
+
+	alicePM.Shutdown()
+	carolPM.Shutdown()
+}
+
+type spyPM struct {
+	mesh.PeerManager
+	capturedAfter chan []byte
+}
+
+func (s *spyPM) GetActivePeersSnapshot() []mesh.Peer {
+	peers := s.PeerManager.GetActivePeersSnapshot()
+	var spied []mesh.Peer
+	for _, p := range peers {
+		spied = append(spied, &spyPeer{Peer: p, pm: s})
+	}
+	return spied
+}
+
+type spyPeer struct {
+	mesh.Peer
+	pm *spyPM
+}
+
+func (s *spyPeer) EnqueueForward(packet []byte) bool {
+	select {
+	case s.pm.capturedAfter <- append([]byte(nil), packet...):
+	default:
+	}
+	return s.Peer.EnqueueForward(packet)
+}
+
+func TestRelayCiphertextBoundary(t *testing.T) {
+	aliceIdent, _ := crypto.GenerateIdentity()
+	bobIdent, _ := crypto.GenerateIdentity()
+	carolIdent, _ := crypto.GenerateIdentity()
+
+	aliceSM := session.NewManager()
+	bobSM := session.NewManager()
+	carolSM := session.NewManager()
+
+	aliceOnMsg := func(sid [32]byte, msg []byte) {}
+
+	capturedBeforeBob := make(chan []byte, 100)
+
+	carolOnMsg := func(sid [32]byte, msg []byte) {}
+
+	aliceRouter := routing.NewRouter(aliceIdent, nil, aliceSM, nil, aliceOnMsg)
+	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil, func(s [32]byte, m []byte) {})
+	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil, carolOnMsg)
+
+	alicePM := mesh.NewPeerManager(aliceIdent, nil, aliceRouter.OnMessage)
+
+	bobInterceptor := func(sender []byte, msg []byte) {
+		select {
+		case capturedBeforeBob <- append([]byte(nil), msg...):
+		default:
+		}
+		bobRouter.OnMessage(sender, msg)
+	}
+
+	baseBobPM := mesh.NewPeerManager(bobIdent, nil, bobInterceptor)
+	bobSpyPM := &spyPM{PeerManager: baseBobPM, capturedAfter: make(chan []byte, 100)}
+
+	carolPM := mesh.NewPeerManager(carolIdent, nil, carolRouter.OnMessage)
+
+	aliceRouter.SetPeerManager(alicePM)
+	bobRouter.SetPeerManager(bobSpyPM)
+	carolRouter.SetPeerManager(carolPM)
+
+	baseBobPM.Listen("127.0.0.1:8300")
+	carolPM.Listen("127.0.0.1:8301")
+	time.Sleep(100 * time.Millisecond)
+
+	alicePM.ExpectInbound(bobIdent.PublicKey())
+	baseBobPM.ExpectInbound(aliceIdent.PublicKey())
+	baseBobPM.ExpectInbound(carolIdent.PublicKey())
+	carolPM.ExpectInbound(bobIdent.PublicKey())
+
+	alicePM.Connect(context.Background(), "127.0.0.1:8300", bobIdent.PublicKey())
+	baseBobPM.Connect(context.Background(), "127.0.0.1:8301", carolIdent.PublicKey())
+	time.Sleep(200 * time.Millisecond)
+
+	aliceRouter.StartInitiator(carolIdent.PublicKey())
+	time.Sleep(500 * time.Millisecond)
+
+	// Drain channels before sending APP_DATA
+	for len(capturedBeforeBob) > 0 {
+		<-capturedBeforeBob
+	}
+	for len(bobSpyPM.capturedAfter) > 0 {
+		<-bobSpyPM.capturedAfter
+	}
+
+	// Send APP_DATA
+	aliceRouter.BroadcastAppData(carolIdent.PublicKey(), []byte("SECRET_RELAY_TEST"))
+	time.Sleep(200 * time.Millisecond)
+
+	if len(capturedBeforeBob) == 0 {
+		t.Fatalf("Bob never received anything")
+	}
+	if len(bobSpyPM.capturedAfter) == 0 {
+		t.Fatalf("Bob never forwarded anything")
+	}
+
+	// The last message is the APP_DATA
+	var lastBeforeBob []byte
+	for len(capturedBeforeBob) > 0 {
+		lastBeforeBob = <-capturedBeforeBob
+	}
+	var capturedAfterBob []byte
+	for len(bobSpyPM.capturedAfter) > 0 {
+		capturedAfterBob = <-bobSpyPM.capturedAfter
+	}
+
+	// They must match exactly except for TTL byte which is at index 21 (assuming standard proto serialization)
+	// We can just verify lengths are equal, and if we flip the TTL back, bytes are equal.
+	if len(lastBeforeBob) != len(capturedAfterBob) {
+		t.Fatalf("Ciphertext length changed during relay")
+	}
+
+	diffCount := 0
+	for i := 0; i < len(lastBeforeBob); i++ {
+		if lastBeforeBob[i] != capturedAfterBob[i] {
+			diffCount++
+		}
+	}
+	if diffCount > 1 {
+		t.Fatalf("Ciphertext altered in more than 1 byte (TTL). Diffs: %d", diffCount)
+	}
+
+	if _, _, ok := bobSM.GetFirstSession(); ok {
+		t.Fatalf("Bob possesses endpoint M4 session state")
+	}
+
+	alicePM.Shutdown()
+	baseBobPM.Shutdown()
+	carolPM.Shutdown()
+}

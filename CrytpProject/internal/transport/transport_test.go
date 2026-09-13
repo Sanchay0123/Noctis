@@ -3,10 +3,10 @@ package transport
 import (
 	"crypto/ed25519"
 	"encoding/binary"
+	"errors"
 	"io"
 	"net"
 	"sync"
-	"errors"
 	"testing"
 
 	"github.com/sanchayjain/meshchat/internal/crypto"

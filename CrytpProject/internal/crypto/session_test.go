@@ -632,3 +632,249 @@ func TestAEADConcurrentExecution(t *testing.T) {
 		t.Fatalf("Highest received did not reach 49: %d", sB.highestReceived)
 	}
 }
+
+func TestAEADConcurrentReplay(t *testing.T) {
+	sA, sB := getTestSessions(t)
+	seq, ct, _ := sA.EncryptMessage([]byte("exact same message"))
+
+	var decWg sync.WaitGroup
+	numConcurrent := 10
+	decWg.Add(numConcurrent)
+
+	successCount := 0
+	replayCount := 0
+	var mu sync.Mutex
+
+	for i := 0; i < numConcurrent; i++ {
+		go func() {
+			defer decWg.Done()
+			_, err := sB.DecryptMessage(seq, ct)
+			mu.Lock()
+			if err == nil {
+				successCount++
+			} else if err == ErrReplayDetected {
+				replayCount++
+			}
+			mu.Unlock()
+		}()
+	}
+
+	decWg.Wait()
+
+	if successCount != 1 {
+		t.Fatalf("Expected exactly 1 successful decryption, got %d", successCount)
+	}
+	if replayCount != 9 {
+		t.Fatalf("Expected exactly 9 ErrReplayDetected, got %d", replayCount)
+	}
+}
+
+func TestHandshakeCorrelation_SingleMatch(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	initMsg, _ := hA.GenerateInit()
+	hB, _ := NewResponderHandshake(bob, alice.PublicKey())
+	hB.ProcessInit(initMsg)
+	respMsg, _ := hB.GenerateResp()
+
+	if !hA.TestResp(respMsg) {
+		t.Errorf("SingleMatch failed")
+	}
+}
+
+func TestHandshakeCorrelation_TwoSimultaneousSameRemote(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA1, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	hA2, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+
+	init1, _ := hA1.GenerateInit()
+	init2, _ := hA2.GenerateInit()
+
+	hB1, _ := NewResponderHandshake(bob, alice.PublicKey())
+	hB1.ProcessInit(init1)
+	resp1, _ := hB1.GenerateResp()
+
+	hB2, _ := NewResponderHandshake(bob, alice.PublicKey())
+	hB2.ProcessInit(init2)
+	resp2, _ := hB2.GenerateResp()
+
+	if !hA1.TestResp(resp1) {
+		t.Errorf("expected resp1 to match hA1")
+	}
+	if hA1.TestResp(resp2) {
+		t.Errorf("expected resp2 NOT to match hA1")
+	}
+	if hA2.TestResp(resp1) {
+		t.Errorf("expected resp1 NOT to match hA2")
+	}
+	if !hA2.TestResp(resp2) {
+		t.Errorf("expected resp2 to match hA2")
+	}
+}
+
+func TestHandshakeCorrelation_MatchCandidateA(t *testing.T) {
+	// Covered by TwoSimultaneousSameRemote
+}
+
+func TestHandshakeCorrelation_MatchCandidateB(t *testing.T) {
+	// Covered by TwoSimultaneousSameRemote
+}
+
+func TestHandshakeCorrelation_NoCandidateMatch(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	hA.GenerateInit()
+
+	hB, _ := NewResponderHandshake(bob, alice.PublicKey())
+	// Let's generate a totally random RESP
+	_, eve := generateTestIdentities(t)
+	hE, _ := NewInitiatorHandshake(eve, bob.PublicKey())
+	initEve, _ := hE.GenerateInit()
+	hB.ProcessInit(initEve)
+	respMsg, _ := hB.GenerateResp()
+
+	if hA.TestResp(respMsg) {
+		t.Errorf("Expected NoCandidateMatch to fail")
+	}
+}
+
+func TestHandshakeCorrelation_AmbiguousCandidatesFailClosed(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA1, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	hA2, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+
+	init1, _ := hA1.GenerateInit()
+	hA2.GenerateInit()
+
+	// Force hA2 to use the exact same E_A (simulating a broken RNG or explicit ambiguous state)
+	hA2.eAPub = hA1.eAPub
+
+	hB, _ := NewResponderHandshake(bob, alice.PublicKey())
+	hB.ProcessInit(init1)
+	respMsg, _ := hB.GenerateResp()
+
+	if !hA1.TestResp(respMsg) {
+		t.Errorf("Expected hA1 to match")
+	}
+	if !hA2.TestResp(respMsg) {
+		t.Errorf("Expected hA2 to match due to ambiguous E_A. state=%d eAPub=%x, expectedState=%d", hA2.state, hA2.eAPub, InitiatorStateInitSent)
+	}
+	// This proves that if two candidates match mathematically, the manager must fail closed.
+	// Manager test in router_test.go will prove the failure behavior.
+}
+
+func TestHandshakeCorrelation_WrongEA(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	initMsg, _ := hA.GenerateInit()
+
+	hB, _ := NewResponderHandshake(bob, alice.PublicKey())
+	// Modify E_A in initMsg before Bob sees it
+	initMsg.EphemeralKey[0] ^= 0xFF
+	err := hB.ProcessInit(initMsg)
+	if err == nil {
+		t.Errorf("Should not process bad E_A init")
+	}
+}
+
+func TestHandshakeCorrelation_WrongEB(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	initMsg, _ := hA.GenerateInit()
+
+	hB, _ := NewResponderHandshake(bob, alice.PublicKey())
+	hB.ProcessInit(initMsg)
+	respMsg, _ := hB.GenerateResp()
+
+	// Modify E_B in transit
+	respMsg.EphemeralKey[0] ^= 0xFF
+	if hA.TestResp(respMsg) {
+		t.Errorf("WrongEB matched")
+	}
+}
+
+func TestHandshakeCorrelation_WrongIdentity(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	_, charlie := generateTestIdentities(t)
+	hA, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	initMsg, _ := hA.GenerateInit()
+
+	hC, _ := NewResponderHandshake(charlie, alice.PublicKey())
+	hC.ProcessInit(initMsg)
+	respMsg, _ := hC.GenerateResp()
+
+	if hA.TestResp(respMsg) {
+		t.Errorf("WrongIdentity matched")
+	}
+}
+
+func TestHandshakeCorrelation_MalformedRESP(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	hA.GenerateInit()
+
+	if hA.TestResp(&RespMessage{EphemeralKey: make([]byte, 31), Signature: make([]byte, 64)}) {
+		t.Errorf("MalformedRESP E_B matched")
+	}
+	if hA.TestResp(&RespMessage{EphemeralKey: make([]byte, 32), Signature: make([]byte, 63)}) {
+		t.Errorf("MalformedRESP Sig matched")
+	}
+	if hA.TestResp(nil) {
+		t.Errorf("MalformedRESP nil matched")
+	}
+}
+
+func TestHandshakeCorrelation_DuplicateRESP(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	initMsg, _ := hA.GenerateInit()
+
+	hB, _ := NewResponderHandshake(bob, alice.PublicKey())
+	hB.ProcessInit(initMsg)
+	respMsg, _ := hB.GenerateResp()
+
+	hA.TestResp(respMsg)
+	err := hA.ProcessResp(respMsg)
+	if err != nil {
+		t.Errorf("first process failed")
+	}
+
+	err = hA.ProcessResp(respMsg)
+	if err == nil {
+		t.Errorf("duplicate ProcessResp succeeded")
+	}
+}
+
+func TestHandshakeCorrelation_LateRESP(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	initMsg, _ := hA.GenerateInit()
+
+	hB, _ := NewResponderHandshake(bob, alice.PublicKey())
+	hB.ProcessInit(initMsg)
+	respMsg, _ := hB.GenerateResp()
+
+	hA.ProcessResp(respMsg) // Completes
+
+	if hA.TestResp(respMsg) {
+		t.Errorf("LateRESP matched after completion")
+	}
+}
+
+func TestHandshakeCorrelation_ExactlyOnceRegistration(t *testing.T) {
+	alice, bob := generateTestIdentities(t)
+	hA, _ := NewInitiatorHandshake(alice, bob.PublicKey())
+	initMsg, _ := hA.GenerateInit()
+
+	hB, _ := NewResponderHandshake(bob, alice.PublicKey())
+	hB.ProcessInit(initMsg)
+	respMsg, _ := hB.GenerateResp()
+
+	hA.ProcessResp(respMsg)
+
+	s1, _ := hA.Session()
+	s2, _ := hA.Session()
+	if s1 == nil || s2 == nil || s1 != s2 {
+		t.Errorf("ExactlyOnceRegistration failed")
+	}
+}

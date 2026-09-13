@@ -1,8 +1,8 @@
 package routing
 
 import (
-	"crypto/sha256"
 	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"sync"
@@ -12,6 +12,7 @@ import (
 	"github.com/sanchayjain/meshchat/internal/mesh"
 	"github.com/sanchayjain/meshchat/internal/protocol"
 	"github.com/sanchayjain/meshchat/internal/session"
+	"github.com/sanchayjain/meshchat/internal/transport"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -24,8 +25,8 @@ type Router struct {
 
 	pendingInits map[[32]byte]map[[32]byte]*crypto.InitiatorHandshake // map[remoteID]map[PendingHandshakeKey]
 	telemetry    mesh.TelemetryRecorder
-	
-	onAppData    func(sessionID [32]byte, plaintext []byte)
+
+	onAppData func(sessionID [32]byte, plaintext []byte)
 }
 
 func NewRouter(localIdent *crypto.NodeIdentity, pm mesh.PeerManager, sm *session.Manager, t mesh.TelemetryRecorder, onAppData func([32]byte, []byte)) *Router {
@@ -43,7 +44,7 @@ func NewRouter(localIdent *crypto.NodeIdentity, pm mesh.PeerManager, sm *session
 func (r *Router) RecordTelemetry(stat string) {
 	if r.telemetry != nil {
 		r.telemetry.RecordResourceLimitReached(stat) // Reusing this for generic counters if needed, or better define new ones.
-		// Wait, the project says "out-of-band metrics" mesh_packets_received_total etc. 
+		// Wait, the project says "out-of-band metrics" mesh_packets_received_total etc.
 		// For simplicity, we just use the telemetry if it supports it, else silently drop.
 	}
 }
@@ -65,19 +66,13 @@ func (r *Router) OnMessage(incomingPeerID []byte, rawMsg []byte) {
 
 	r.RecordTelemetry("mesh_packets_received_total")
 
-	if pkt.Version != 1 {
+	if err := transport.ValidatePacket(&pkt); err != nil {
+		fmt.Printf("Router OnMessage: dropped invalid packet: %v\n", err)
 		r.RecordTelemetry("mesh_packets_dropped_total")
 		return
 	}
 
-
-	if len(pkt.PacketId) != 16 || len(pkt.SourceNode) != 32 || len(pkt.DestNode) != 32 {
-		fmt.Printf("Router OnMessage: dropped due to lengths: pid %d, src %d, dst %d\n", len(pkt.PacketId), len(pkt.SourceNode), len(pkt.DestNode))
-		r.RecordTelemetry("mesh_packets_dropped_total")
-		return
-	}
 	fmt.Printf("Router OnMessage: parsed type %d TTL %d local=unknown\n", pkt.Type, pkt.Ttl)
-
 
 	var cacheKey PacketCacheKey
 	copy(cacheKey.Source[:], pkt.SourceNode)
@@ -88,6 +83,11 @@ func (r *Router) OnMessage(incomingPeerID []byte, rawMsg []byte) {
 		return
 	}
 
+	if pkt.Ttl > 32 {
+		r.RecordTelemetry("mesh_packets_dropped_total")
+		return
+	}
+
 	if pkt.Ttl == 0 {
 		r.RecordTelemetry("mesh_packets_expired_total")
 		return
@@ -95,11 +95,9 @@ func (r *Router) OnMessage(incomingPeerID []byte, rawMsg []byte) {
 
 	isLocal := bytes.Equal(pkt.DestNode, r.localIdent.PublicKey())
 
-	if pkt.Ttl == 1 {
-		if !isLocal {
-			r.RecordTelemetry("mesh_packets_expired_total")
-			return
-		}
+	if pkt.Ttl == 1 && !isLocal {
+		r.RecordTelemetry("mesh_packets_expired_total")
+		return
 	}
 
 	if isLocal {
@@ -107,13 +105,8 @@ func (r *Router) OnMessage(incomingPeerID []byte, rawMsg []byte) {
 		return
 	}
 
-	if pkt.Ttl > 32 {
-		r.RecordTelemetry("mesh_packets_dropped_total")
-		return
-	}
-
 	pkt.Ttl--
-	
+
 	// Repackage modified TTL
 	fwdBytes, err := proto.Marshal(&pkt)
 	if err != nil {
@@ -121,7 +114,7 @@ func (r *Router) OnMessage(incomingPeerID []byte, rawMsg []byte) {
 	}
 
 	// Fanout
-	// The PeerManager interface in Noctis does not expose ActivePeersSnapshot. 
+	// The PeerManager interface in Noctis does not expose ActivePeersSnapshot.
 	// But it has ActivePeers() int. I need to add Snapshot to manager.go.
 	peers := r.peerManager.GetActivePeersSnapshot()
 	for _, p := range peers {
@@ -175,8 +168,8 @@ func (r *Router) handleInit(sourceID []byte, payload *protocol.InitPayload) {
 
 	// Send back RESP
 	respPkt := &protocol.MeshPacket{
-		Version:    1,
-		Type:       protocol.PacketType_PACKET_TYPE_RESP,
+		Version:  1,
+		Type:     protocol.PacketType_PACKET_TYPE_RESP,
 		PacketId: genPID(),
 
 		Ttl:        16,
@@ -255,7 +248,7 @@ func (r *Router) handleAppData(payload *protocol.AppDataPayload) {
 	if err != nil {
 		return
 	}
-	
+
 	if r.onAppData != nil {
 		r.onAppData(sid, plaintext)
 	}
@@ -277,7 +270,7 @@ func (r *Router) StartInitiator(dest []byte) error {
 
 	// Internal state key = SHA256(T_INIT)
 	// We have to build T_INIT here or retrieve it.
-	// We can just use the ephemeral key as a unique local key instead of strictly T_INIT, 
+	// We can just use the ephemeral key as a unique local key instead of strictly T_INIT,
 	// wait, Project Overseer mandated SHA256(T_INIT). We can use a random nonce if T_INIT isn't exposed,
 	// but let's just hash the initMsg.EphemeralKey as an approximation if we can't access T_INIT,
 	// NO, Project overseer said explicitly: PendingHandshakeKey = SHA256(T_INIT).
@@ -309,8 +302,8 @@ func (r *Router) StartInitiator(dest []byte) error {
 	}()
 
 	pkt := &protocol.MeshPacket{
-		Version:    1,
-		Type:       protocol.PacketType_PACKET_TYPE_INIT,
+		Version:  1,
+		Type:     protocol.PacketType_PACKET_TYPE_INIT,
 		PacketId: genPID(),
 
 		Ttl:        16,
@@ -323,7 +316,7 @@ func (r *Router) StartInitiator(dest []byte) error {
 			},
 		},
 	}
-	
+
 	r.routeOut(pkt)
 	return nil
 }
@@ -339,8 +332,8 @@ func (r *Router) SendAppData(dest []byte, sessionID [32]byte, plaintext []byte) 
 	}
 
 	pkt := &protocol.MeshPacket{
-		Version:    1,
-		Type:       protocol.PacketType_PACKET_TYPE_APP_DATA,
+		Version:  1,
+		Type:     protocol.PacketType_PACKET_TYPE_APP_DATA,
 		PacketId: genPID(),
 
 		Ttl:        16,
@@ -366,7 +359,7 @@ func (r *Router) routeOut(pkt *protocol.MeshPacket) {
 	copy(cacheKey.Source[:], pkt.SourceNode)
 	copy(cacheKey.PacketID[:], pkt.PacketId)
 	r.cache.IsDuplicateOrAdd(cacheKey)
-	
+
 	pktBytes, err := proto.Marshal(pkt)
 	if err != nil {
 		return
@@ -386,9 +379,9 @@ func (r *Router) SetPeerManager(pm mesh.PeerManager) {
 }
 
 func (r *Router) BroadcastAppData(dest []byte, plaintext []byte) error {
-	
-	
-	s, id, ok := r.sessionManager.GetFirstSession(); if ok {
+
+	s, id, ok := r.sessionManager.GetFirstSession()
+	if ok {
 		// Just send to first session that we are initiator of? Or we don't have dest info in session easily.
 		// Actually, we can just look up by iterating.
 		// Wait, a quick hack for main.go:
@@ -396,7 +389,7 @@ func (r *Router) BroadcastAppData(dest []byte, plaintext []byte) error {
 		if err != nil {
 			return err
 		}
-		
+
 		pkt := &protocol.MeshPacket{
 			Version:    1,
 			Type:       protocol.PacketType_PACKET_TYPE_APP_DATA,

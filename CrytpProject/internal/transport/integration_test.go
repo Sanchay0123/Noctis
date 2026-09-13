@@ -135,7 +135,7 @@ func TestE2ESecurityBoundaryTamper(t *testing.T) {
 	errChan := make(chan error, 2)
 	go func() { errChan <- chA.InitiateHandshake(idB.PublicKey()) }()
 	go func() { errChan <- chB.AcceptHandshake(idA.PublicKey()) }()
-	
+
 	for i := 0; i < 2; i++ {
 		if err := <-errChan; err != nil {
 			t.Fatalf("Handshake failed: %v", err)

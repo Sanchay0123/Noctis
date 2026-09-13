@@ -13,8 +13,8 @@ type Dialer struct {
 	maxConcurrentDials int
 	dialTimeout        time.Duration
 	handshakeTimeout   time.Duration
-	
-	dialSem            chan struct{}
+
+	dialSem chan struct{}
 }
 
 func NewDialer(pm *peerManager) *Dialer {
@@ -66,7 +66,7 @@ func (d *Dialer) Dial(ctx context.Context, endpoint string, expectedIdentity []b
 	if err != nil {
 		ch.Close()
 		d.pm.enqueueTelemetry(func() {
-			d.pm.telemetry.RecordHandshakeFailed(expectedIdentity, err)
+			d.pm.telemetry.RecordHandshakeFailed(err)
 		})
 		return err
 	}

@@ -22,30 +22,30 @@ type PeerManager interface {
 }
 
 type peerManager struct {
-	mu             sync.RWMutex
-	peers          map[string]*peer
+	mu              sync.RWMutex
+	peers           map[string]*peer
 	expectedInbound map[string]struct{}
-	
-	localIdent     *crypto.NodeIdentity
-	telemetry      TelemetryRecorder
-	
-	dialer         *Dialer
-	listener       *Listener
-	
-	onMsg          func(sender []byte, msg []byte)
-	
-	shuttingDown   atomic.Bool
-	wg             sync.WaitGroup
-	
-	telemetryQ     chan func()
-	quitTelemetry  chan struct{}
+
+	localIdent *crypto.NodeIdentity
+	telemetry  TelemetryRecorder
+
+	dialer   *Dialer
+	listener *Listener
+
+	onMsg func(sender []byte, msg []byte)
+
+	shuttingDown atomic.Bool
+	wg           sync.WaitGroup
+
+	telemetryQ    chan func()
+	quitTelemetry chan struct{}
 }
 
 func NewPeerManager(localIdent *crypto.NodeIdentity, telemetry TelemetryRecorder, onMsg func([]byte, []byte)) *peerManager {
 	if telemetry == nil {
 		telemetry = noopTelemetry{}
 	}
-	
+
 	pm := &peerManager{
 		peers:           make(map[string]*peer),
 		expectedInbound: make(map[string]struct{}),
@@ -55,12 +55,12 @@ func NewPeerManager(localIdent *crypto.NodeIdentity, telemetry TelemetryRecorder
 		telemetryQ:      make(chan func(), 100), // Bounded non-blocking queue
 		quitTelemetry:   make(chan struct{}),
 	}
-	
+
 	pm.dialer = NewDialer(pm)
 	pm.listener = NewListener(pm)
-	
+
 	go pm.telemetryWorker()
-	
+
 	return pm
 }
 
@@ -114,13 +114,15 @@ func (pm *peerManager) Connect(ctx context.Context, endpoint string, expectedIde
 func (pm *peerManager) removeIfCurrent(identity []byte, p *peer) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	
+
 	idStr := string(identity)
 	if existing, ok := pm.peers[idStr]; ok && existing == p {
 		delete(pm.peers, idStr)
-		pm.enqueueTelemetry(func() {
-			pm.telemetry.RecordPeerDisconnected(identity)
-		})
+		if pm.telemetry != nil {
+			pm.enqueueTelemetry(func() {
+				pm.telemetry.RecordPeerDisconnected()
+			})
+		}
 	}
 }
 
@@ -132,14 +134,14 @@ func (pm *peerManager) Disconnect(identity []byte) error {
 	if !ok {
 		return ErrPeerNotFound
 	}
-	
+
 	return p.Close()
 }
 
 func (pm *peerManager) GetPeer(identity []byte) (Peer, error) {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
-	
+
 	if p, ok := pm.peers[string(identity)]; ok {
 		return p, nil
 	}
@@ -156,20 +158,20 @@ func (pm *peerManager) Shutdown() error {
 	if !pm.shuttingDown.CompareAndSwap(false, true) {
 		return nil // already shutting down
 	}
-	
+
 	pm.listener.Close()
-	
+
 	pm.mu.RLock()
 	peersToClose := make([]*peer, 0, len(pm.peers))
 	for _, p := range pm.peers {
 		peersToClose = append(peersToClose, p)
 	}
 	pm.mu.RUnlock()
-	
+
 	for _, p := range peersToClose {
 		p.Close()
 	}
-	
+
 	close(pm.quitTelemetry)
 	pm.wg.Wait()
 	return nil
@@ -207,7 +209,7 @@ func (pm *peerManager) register(ch *transport.DirectChannel, remoteID []byte, in
 			pm.mu.Unlock()
 			ch.Close()
 			pm.enqueueTelemetry(func() {
-				pm.telemetry.RecordDuplicateConnection(remoteID)
+				pm.telemetry.RecordDuplicateConnection()
 			})
 			return ErrDuplicateConnection
 		} else {
@@ -216,10 +218,9 @@ func (pm *peerManager) register(ch *transport.DirectChannel, remoteID []byte, in
 			pm.peers[idStr] = newP
 			pm.wg.Add(1)
 			pm.mu.Unlock()
-			
+
 			// Close incumbent OUTSIDE registry lock
 			existing.Close()
-			
 
 			pm.wg.Add(1)
 			go func() {
@@ -232,7 +233,7 @@ func (pm *peerManager) register(ch *transport.DirectChannel, remoteID []byte, in
 			}()
 
 			pm.enqueueTelemetry(func() {
-				pm.telemetry.RecordPeerConnected(remoteID, initiator)
+				pm.telemetry.RecordPeerConnected(initiator)
 			})
 			return nil
 		}
@@ -240,9 +241,8 @@ func (pm *peerManager) register(ch *transport.DirectChannel, remoteID []byte, in
 
 	newP := newPeer(ch, remoteID, initiator, pm, pm.onMsg)
 	pm.peers[idStr] = newP
-			pm.wg.Add(1)
+	pm.wg.Add(1)
 	pm.mu.Unlock()
-
 
 	pm.wg.Add(1)
 	go func() {
@@ -255,7 +255,7 @@ func (pm *peerManager) register(ch *transport.DirectChannel, remoteID []byte, in
 	}()
 
 	pm.enqueueTelemetry(func() {
-		pm.telemetry.RecordPeerConnected(remoteID, initiator)
+		pm.telemetry.RecordPeerConnected(initiator)
 	})
 	return nil
 }
