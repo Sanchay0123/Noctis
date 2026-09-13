@@ -15,3 +15,12 @@ Potential future extensions, only if justified by the final results:
 -   mobile deployment
 
 Future work should not be described as if it already exists.
+
+## M6 Follow-on Work
+
+Possible future work includes route discovery and route selection, stronger congestion/rate controls, QoS or priority queues, acknowledgements/reliability, richer peer discovery, metadata/privacy improvements, and stronger defenses against malicious routing behavior. These are outside the frozen M6 scope.
+
+
+## M6 Reference
+
+- [[00-governance/04-Architecture-Review-M6]] — authoritative M6 architecture and acceptance record

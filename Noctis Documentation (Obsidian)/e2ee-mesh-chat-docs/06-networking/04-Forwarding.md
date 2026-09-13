@@ -36,3 +36,11 @@ Possible outcomes:
 -   connection unavailable
 -   duplicate
 -   malformed packet
+
+## M6 Forwarding Rules
+
+Forwarding is best-effort and bounded. A packet is structurally validated before routing, duplicate-suppressed using `(source_node, packet_id)`, evaluated against TTL and destination, then enqueued to all eligible active peers except the incoming peer.
+
+The forwarding queue is limited to 1,000 packets and 2 MiB per peer. Enqueue is non-blocking; either limit being reached causes a drop. The router does not perform network writes itself.
+
+**Status: 🟢 COMPLETE / VERIFIED**

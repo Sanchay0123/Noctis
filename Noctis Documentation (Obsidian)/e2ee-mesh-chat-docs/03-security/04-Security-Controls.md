@@ -140,3 +140,17 @@ construction:
 
 M5 evidence establishes direct-network runtime controls; it does not establish
 resistance to all routing attacks or network-wide metadata analysis.
+
+## M6 Mesh Security Controls
+
+- Strict Protobuf and frame validation before routing.
+- Exactly 16-byte PacketIDs.
+- Duplicate suppression keyed by `(source_node, packet_id)`.
+- 10,000-entry / 2-minute bounded duplicate cache.
+- Maximum accepted TTL of 32; default initial TTL 16.
+- Incoming-peer exclusion during flooding.
+- Per-peer queues capped at 1,000 packets / 2 MiB.
+- Non-blocking router enqueue path.
+- Endpoint session state independent from relay transport state.
+- Exact M3 transcript correlation for multi-hop RESP messages.
+- No relay decryption of endpoint APP_DATA.

@@ -50,3 +50,12 @@ only after successful AEAD authentication.
 - cross-direction ciphertext rejected
 - restart invalidates old session replay state
 - mesh PacketID duplicate handling remains independent of session replay
+
+## M6 Network Duplicate Suppression vs M4 Replay Protection
+
+M6 duplicate suppression and M4 cryptographic replay protection solve different problems.
+
+- **M6:** short-lived network duplicate cache, keyed by `(source_node, packet_id)`, used to terminate flooding loops and repeated propagation.
+- **M4/M3:** authenticated sequence numbers and a 64-message replay window, bound to the endpoint E2EE session, used to reject cryptographic replays.
+
+Neither mechanism replaces the other.

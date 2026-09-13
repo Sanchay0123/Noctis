@@ -162,3 +162,21 @@ manager shutdown.
 
 M5 remains strictly a direct-networking layer. Routing, forwarding, TTL, route
 discovery and network-wide duplicate suppression remain M6 responsibilities.
+
+## M6 Components
+
+### Mesh Router
+
+Validates envelopes, suppresses duplicates, applies TTL semantics, performs local delivery decisions, selects eligible peers and enqueues remote forwarding.
+
+### Endpoint Session Manager
+
+Owns endpoint E2EE sessions independently from transport peers. M3 cryptographic establishment remains the authority for authentication and key creation.
+
+### Per-Peer Forwarding Queue
+
+Provides non-blocking bounded buffering between the router and M5 peer writer. Both packet count and bytes are limited.
+
+### M6 Security Boundary
+
+The router can process routing metadata but cannot decrypt APP_DATA. A relay is therefore a forwarding participant, not an E2EE endpoint.

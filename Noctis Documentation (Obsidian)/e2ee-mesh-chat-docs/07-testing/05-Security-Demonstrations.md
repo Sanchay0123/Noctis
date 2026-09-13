@@ -129,3 +129,17 @@ private/session keys absent
 
 A dashboard screenshot is supporting evidence only. Automated tests and
 direct protocol behavior remain authoritative.
+
+## M6 Security Demonstrations
+
+### Relay-blind E2EE
+
+Use topology `A → B → C`. A encrypts a message for C. B can inspect and forward the MeshPacket but does not possess the A-C E2EE session keys and therefore cannot decrypt the application ciphertext. C successfully decrypts the message.
+
+### Multi-hop handshake
+
+Use the same topology to demonstrate that INIT and RESP traverse B while the endpoint M3 session is established between A and C. The relay does not terminate the endpoint cryptographic session.
+
+### Loop prevention
+
+Use a cyclic topology and demonstrate that PacketID duplicate suppression plus TTL exhaustion prevents indefinite propagation.

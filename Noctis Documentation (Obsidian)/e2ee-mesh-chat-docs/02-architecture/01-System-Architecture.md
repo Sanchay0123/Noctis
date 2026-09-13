@@ -144,3 +144,25 @@ ownership remain encapsulated within `internal/crypto`.
 The X25519 session layer is intentionally not implemented yet. This preserves
 the architectural separation between long-term identity authentication and
 ephemeral session key agreement.
+
+## M6 Mesh Layer
+
+M6 adds a routing layer above the M5 peer runtime. The resulting hierarchy is:
+
+```text
+Application
+  ↓
+Endpoint E2EE Session Manager
+  ↓
+Mesh Router / Bounded Flooding
+  ↓
+Per-Peer Bounded TX Queues
+  ↓
+M5 Peer Manager / Direct Channels
+  ↓
+M4 Framed TCP Transport
+```
+
+The endpoint E2EE session is independent of the direct transport path. Intermediate relays forward ciphertext-bearing packets without possessing the endpoint session keys.
+
+M6 is implemented and verified. It does not introduce DHT, route discovery, anonymity, or guaranteed delivery.

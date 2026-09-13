@@ -1,8 +1,17 @@
 # Project State
 
+## Current Authoritative Status
+
+> **M6 — Mesh Routing / Multi-Hop E2EE: COMPLETE / VERIFIED / APPROVED**
+>
+> M0–M5 remain part of the project history and architectural baseline. M6 extends that baseline with bounded managed flooding, TTL propagation control, PacketID duplicate suppression, bounded per-peer forwarding queues, endpoint-session separation from transport peers, multi-hop handshake correlation, and relay-blind E2EE.
+>
+> The M6 acceptance record is the authoritative source for the milestone's verification status. Historical review documents may describe earlier states and decisions; those descriptions are not the current project status.
+
+
 ## Current phase
 
-**M5 complete — post-milestone documentation synchronization / M6 architecture gate**
+**M6 complete — post-milestone documentation synchronization**
 
 ## Status
 
@@ -13,13 +22,13 @@
 | Architecture | Approved baseline |
 | Cryptographic architecture | M3 implemented / verified for session crypto scope |
 | Protocol | Frozen baseline / M3 implementation verified |
-| Networking | M5 direct networking hardening / multi-peer runtime integration complete and verified |
+| Networking | M6 bounded mesh routing / multi-hop runtime complete and verified |
 | Observability | Approved supporting design / M5 bounded telemetry lifecycle integrated as supporting runtime facility |
 | Containerization | Required / foundation implemented |
 | GitHub synchronization | Required / not yet verified in this gate |
 | Testing strategy | Documented / M3 crypto evidence added |
-| Implementation | M5 direct networking hardening / runtime integration implemented |
-| Security verification | M5 networking lifecycle, resource-boundary and arbitration evidence verified |
+| Implementation | M6 mesh routing and multi-hop runtime implemented |
+| Security verification | M6 routing, handshake-correlation, relay-boundary and resource-boundary evidence verified |
 | UI | Not started |
 | Demo | Not started |
 | Final academic material | Draft |
@@ -97,7 +106,6 @@ M3 completion does **not** imply that direct networking, mesh routing,
 observability, UI, or production-grade metadata/privacy protection is
 complete.
 
-**M4 has been authorized, implemented, independently reviewed, and approved. M5 has subsequently been authorized, implemented, independently reviewed, and approved. M6 remains gated pending architecture review.**
 
 
 ## M4 Completion Gate
@@ -142,7 +150,6 @@ M4 establishes direct secure messaging integration but does not establish
 mesh routing, multi-hop forwarding, anonymity, metadata hiding, or endpoint
 compromise resistance.
 
-**M5 has been authorized, implemented, independently reviewed, and approved. M6 remains gated pending architecture review.**
 
 
 ## M5 Completion Gate
@@ -180,3 +187,23 @@ The reported validation includes `go test -race ./internal/mesh`, repeated `go t
 M5 does not establish multi-hop routing, route discovery, forwarding, TTL processing, routing tables, DHT, flooding algorithms, anonymity, metadata hiding, or production-grade network resilience. Those remain future scope.
 
 **M5 is formally closed. M6 requires a separate architecture/design review before implementation.**
+
+
+## M6 Completion Gate
+
+**M6 — Mesh Routing / Multi-Hop E2EE: 🟢 COMPLETE / APPROVED**
+
+M6 implemented bounded managed flooding above the M5 peer runtime. It added TTL propagation control, 16-byte PacketID duplicate suppression, bounded per-peer forwarding queues, multi-hop INIT/RESP forwarding with exact cryptographic correlation, and endpoint E2EE session management independent of transport peers.
+
+Frozen bounds are: 10,000 cache entries with 2-minute lifetime; maximum accepted TTL 32; default initial TTL 16; 1,000 queued packets or 2 MiB per peer; and 50 maximum active peers.
+
+The final acceptance record reports passing handshake-correlation, TTL, packet-validation, cache, queue, one-/two-/three-hop, cyclic-routing, relay-confidentiality, peer-loss/session-separation, sustained-flood, race, build and Docker multi-hop evidence.
+
+M6 remains deliberately limited to bounded managed flooding. DHT, route discovery, route selection, anonymity, complete metadata hiding and guaranteed delivery remain out of scope.
+
+See [[00-governance/04-Architecture-Review-M6]] and [[07-testing/08-M6-Acceptance-Evidence]].
+
+## Governance Reviews
+
+- [[00-governance/03-Architecture-Review-M5]] — M5 architecture review
+- [[00-governance/04-Architecture-Review-M6]] — M6 architecture review

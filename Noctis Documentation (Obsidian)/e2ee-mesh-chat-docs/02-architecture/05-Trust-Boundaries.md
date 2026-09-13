@@ -67,3 +67,9 @@ processing. The transport does not receive plaintext or session secrets.
 `DirectChannel` is the integration boundary between the application-facing
 message API and the protocol/crypto layers. It must not expose plaintext from
 a failed authentication or decryption attempt.
+
+## M6 Relay Trust Boundary
+
+The relay trust boundary is intentionally weak: a relay is trusted to forward packets according to protocol rules, but it is **not** trusted with application confidentiality.
+
+The relay may observe routing metadata, packet type, PacketID, TTL and ciphertext. It must not obtain endpoint session keys or plaintext. A malicious relay can drop, delay, reorder, duplicate or selectively forward packets; M6 does not claim to prevent those availability attacks.

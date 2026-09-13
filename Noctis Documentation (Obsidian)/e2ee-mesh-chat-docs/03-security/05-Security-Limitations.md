@@ -68,3 +68,9 @@ Forbidden claims unless independently demonstrated:
 -   "completely secure"
 
 See [[03-security/06-Security-Review-Checklist]].
+
+## M6 Limitations
+
+M6 provides bounded flooding, not a full routing-security protocol. Unique-packet floods can still cause CPU, bandwidth and cache churn. Shared per-peer queues provide no QoS priority, so routed flooding can compete with application traffic. Delivery is best-effort without end-to-end acknowledgements at this layer.
+
+Routing metadata remains visible to relays. The design therefore does not provide anonymity, strong traffic-analysis resistance or complete metadata hiding. Malicious relays can also drop or selectively forward packets.

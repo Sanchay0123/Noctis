@@ -76,4 +76,4 @@ nonce construction. M6 routing and multi-hop forwarding are not implemented.
 
 **M5: 🟢 APPROVED AND FROZEN**
 
-**Next gate:** M6 architecture/design review.
+**Next gate:** [[00-governance/04-Architecture-Review-M6]]

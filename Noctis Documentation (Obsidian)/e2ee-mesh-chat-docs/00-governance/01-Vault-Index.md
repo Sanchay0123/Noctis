@@ -1,5 +1,7 @@
 # Obsidian Vault Index
 
+-   [[00-governance/04-Architecture-Review-M6]]
+-   [[00-governance/03-Architecture-Review-M5]]
 -   [[01-project/01-Project-Overview]]
 -   [[01-project/02-Requirements]]
 -   [[01-project/03-Goals-and-Non-Goals]]
@@ -37,12 +39,15 @@
 -   [[06-networking/04-Forwarding]]
 -   [[06-networking/05-TTL-and-Loop-Prevention]]
 -   [[06-networking/06-Connection-Management]]
+-   [[06-networking/07-M6-Handshake-Correlation]]
+-   [[06-networking/08-M6-Resource-Bounds]]
 -   [[07-testing/01-Testing-Strategy]]
 -   [[07-testing/02-Cryptographic-Test-Matrix]]
 -   [[07-testing/03-Protocol-Test-Matrix]]
 -   [[07-testing/04-Network-Test-Matrix]]
 -   [[07-testing/05-Security-Demonstrations]]
 -   [[07-testing/06-Test-Evidence-Standard]]
+-   [[07-testing/08-M6-Acceptance-Evidence]]
 -   [[08-implementation/01-Milestones]]
 -   [[08-implementation/02-Task-Template]]
 -   [[08-implementation/03-Code-Review-Checklist]]

@@ -54,3 +54,8 @@ If a test does not exist, documentation must say:
 > **Not yet verified.**
 
 rather than implying security.
+
+
+## M6 Reference
+
+- [[00-governance/04-Architecture-Review-M6]] — authoritative M6 architecture and acceptance record

@@ -88,3 +88,13 @@ Required tests:
 - malformed Protobuf
 - cache saturation
 - forwarding queue pressure
+
+## M6 Final Implementation
+
+M6 freezes the routing strategy as **bounded managed flooding**. The cache key is the pair `(source_node, packet_id)` where `packet_id` is exactly 16 bytes. The cache is bounded to 10,000 entries with a 2-minute lifetime.
+
+The default initial TTL is 16 and the maximum accepted TTL is 32. TTL 0 is dropped; TTL 1 is deliverable only when the local node is the destination; TTL greater than 1 is delivered locally or decremented exactly once before remote forwarding.
+
+Forwarding is to eligible active peers except the incoming peer. The router performs no network I/O directly and uses bounded per-peer queues. See [[06-networking/07-M6-Handshake-Correlation]] and [[06-networking/08-M6-Resource-Bounds]].
+
+**Status: 🟢 COMPLETE / VERIFIED / APPROVED**

@@ -51,3 +51,11 @@ ordinary Protobuf serialization.
 
 Runtime validation remains mandatory for fixed-width fields, packet-type
 and `oneof` consistency, protocol version, unknown fields, and frame limits.
+
+## M6 Routing Envelope Rules
+
+M6 uses the existing version-1 Protobuf envelope as the routable outer structure. Routing metadata includes packet type, PacketID, source/destination node identifiers and TTL. The relay can inspect this envelope for forwarding but must not gain access to endpoint plaintext or E2EE session keys.
+
+PacketID is exactly 16 bytes. Incoming frames remain subject to the M4 64 KiB frame bound and strict structural validation, including protocol version, oneof consistency, fixed-width fields and unknown-field rejection.
+
+The routing envelope and endpoint cryptographic session are deliberately separate: routing fields identify where a packet should be propagated, while M3 authentication and AEAD protect the application content.

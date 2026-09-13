@@ -1,6 +1,6 @@
 # E2EE Mesh Chat --- Documentation Hub
 
-> **Status:** Architecture / Documentation phase\
+> **Status:** M6 complete / verified\
 > **Project type:** Academic cybersecurity and networking prototype
 
 ## Purpose
@@ -28,8 +28,8 @@ No component is considered secure merely because an implementation agent
 reports that it is complete. Security claims require implementation
 evidence and tests.
 
-
 ## Start here
+
 -   [[01-project/01-Project-Overview]]
 -   [[01-project/02-Requirements]]
 -   [[03-security/01-Threat-Model]]
@@ -41,6 +41,13 @@ evidence and tests.
 -   [[08-implementation/01-Milestones]]
 
 ## Documentation map
+
+### Governance
+
+-   [[00-governance/00-Project-State]]
+-   [[00-governance/01-Vault-Index]]
+-   [[00-governance/03-Architecture-Review-M5]]
+-   [[00-governance/04-Architecture-Review-M6]]
 
 ### Project
 
@@ -96,6 +103,8 @@ evidence and tests.
 -   [[06-networking/04-Forwarding]]
 -   [[06-networking/05-TTL-and-Loop-Prevention]]
 -   [[06-networking/06-Connection-Management]]
+-   [[06-networking/07-M6-Handshake-Correlation]]
+-   [[06-networking/08-M6-Resource-Bounds]]
 
 ### Testing
 
@@ -105,6 +114,7 @@ evidence and tests.
 -   [[07-testing/04-Network-Test-Matrix]]
 -   [[07-testing/05-Security-Demonstrations]]
 -   [[07-testing/06-Test-Evidence-Standard]]
+-   [[07-testing/08-M6-Acceptance-Evidence]]
 
 ### Implementation
 
@@ -150,3 +160,19 @@ Never silently convert a proposal into an implementation requirement.
 
 Observability is deliberately out-of-band. The mesh must continue to
 operate if monitoring is unavailable.
+
+## Current Implementation Status
+
+**M6 — Mesh Routing / Multi-Hop E2EE: 🟢 Complete / Approved**
+
+The repository has completed and verified the long-term Ed25519 identity,
+fresh X25519 session establishment, transcript-bound HKDF-SHA-256 key
+derivation, ChaCha20-Poly1305 application message protection, sequence-based
+replay control, and direct TCP secure messaging integration.
+
+M4 provides the bounded direct secure channel, M5 provides authenticated multi-peer runtime networking, and M6 provides bounded multi-hop forwarding while preserving endpoint E2EE. Relays can route ciphertext but cannot decrypt endpoint application data.
+
+**M6 is complete and approved.**
+
+See [[00-governance/00-Project-State]] and
+[[08-implementation/01-Milestones]] for the current gate.

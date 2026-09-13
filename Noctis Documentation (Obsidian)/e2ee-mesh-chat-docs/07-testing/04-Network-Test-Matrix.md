@@ -35,3 +35,22 @@
 
 M6-only behaviors such as multi-hop forwarding, route discovery, TTL forwarding
 and network-wide PacketID suppression remain intentionally untested here.
+
+## M6 Network Test Matrix
+
+| Area | Required evidence | Result |
+|---|---|---|
+| Handshake correlation | simultaneous same-remote candidates; wrong/late/duplicate RESP | PASS |
+| TTL | 0, 1, 2, 16, 32 and >32 boundaries | PASS |
+| Routing | one-, two- and three-hop delivery | PASS |
+| Cycles | cyclic flooding terminates | PASS |
+| Packet validation | malformed, oversized, unknown fields | PASS |
+| Duplicate cache | first, duplicate, source separation, capacity, expiration, concurrency | PASS |
+| Forward queue | count/byte bounds and rollback accounting | PASS |
+| Relay confidentiality | relay cannot decrypt endpoint ciphertext | PASS |
+| Peer loss | transport loss does not invalidate endpoint session | PASS |
+| Flood bound | sustained unique-packet load remains bounded | PASS |
+| Race safety | repository race-detector validation | PASS |
+| Container demo | Docker multi-hop E2EE delivery | PASS |
+
+Detailed evidence: [[07-testing/08-M6-Acceptance-Evidence]].

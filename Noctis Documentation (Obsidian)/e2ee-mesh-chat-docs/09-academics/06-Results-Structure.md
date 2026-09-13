@@ -81,3 +81,14 @@ active peer.
 
 These results establish direct-network runtime hardening, not multi-hop mesh
 routing. M6 must provide separate routing evidence.
+
+## M6 Results
+
+M6 provides the project's demonstrated multi-hop capability. Report the bounded managed-flooding design, TTL controls, PacketID duplicate suppression, bounded forwarding queues, endpoint/transport session separation, and relay-blind E2EE boundary.
+
+The acceptance record reports successful one-, two- and three-hop routing, cyclic-routing termination, multi-hop handshake correlation, resource-bound tests, relay confidentiality tests, race validation and Docker multi-hop operation.
+
+
+## M6 Reference
+
+- [[00-governance/04-Architecture-Review-M6]] — authoritative M6 architecture and acceptance record

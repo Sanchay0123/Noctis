@@ -144,21 +144,23 @@ M5 does not implement M6 routing or multi-hop forwarding.
 
 ## M6 --- Mesh routing
 
-**Status:** 🔒 ARCHITECTURE REVIEW REQUIRED / NOT STARTED
+**Status:** 🟢 COMPLETE / APPROVED / VERIFIED
 
-M6 is the next implementation milestone and must first receive a separate
-Project Overseer architecture/design approval.
+M6 extends M5 into a bounded multi-hop mesh. The implementation uses managed flooding with TTL termination, PacketID duplicate suppression, bounded per-peer forwarding queues, and endpoint E2EE sessions independent from transport peers.
 
-Planned scope:
-- peer discovery
-- routing / next-hop decisions
-- multi-hop forwarding
-- TTL / hop limits
-- network-wide PacketID duplicate suppression
-- forwarding failure handling
+Frozen parameters:
+- PacketID: 16 bytes
+- duplicate cache: 10,000 entries / 2 minutes
+- default TTL: 16
+- maximum accepted TTL: 32
+- per-peer forwarding queue: 1,000 packets / 2 MiB
+- maximum active peers: 50
 
-**Gate:** M6 architecture approval before implementation; implementation gate
-will require reproducible multi-hop evidence.
+Multi-hop INIT/RESP messages are correlated using remote identity plus `SHA256(T_INIT)` and exact M3 response reconstruction. Relays forward ciphertext but do not terminate endpoint E2EE sessions.
+
+Validation evidence includes one-, two- and three-hop routing, cyclic-loop termination, handshake correlation, malformed/oversized input rejection, cache and queue bounds, relay-blind E2EE, peer-loss/session separation, sustained flood bounds, race validation and Docker multi-hop operation.
+
+See [[00-governance/04-Architecture-Review-M6]] and [[07-testing/08-M6-Acceptance-Evidence]].
 
 ## M7 --- Security hardening
 

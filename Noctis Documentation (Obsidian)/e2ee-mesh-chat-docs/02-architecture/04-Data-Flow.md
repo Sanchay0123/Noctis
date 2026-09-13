@@ -79,3 +79,21 @@ Responder: receive INIT -> ProcessInit -> GenerateResp -> send RESP -> Session
 ```
 
 APP_DATA is rejected until the session is established.
+
+## M6 Multi-Hop Data Flow
+
+```text
+A encrypts APP_DATA for C
+        ↓
+A creates MeshPacket
+        ↓
+B validates envelope + PacketID + TTL
+        ↓
+B decrements TTL and queues packet
+        ↓
+C receives the same endpoint ciphertext
+        ↓
+C authenticates/decrypts with the A-C E2EE session
+```
+
+For handshake traffic, INIT and RESP are similarly forwarded through relays, while the endpoint transcript and X25519-derived session remain between the actual initiator and responder.

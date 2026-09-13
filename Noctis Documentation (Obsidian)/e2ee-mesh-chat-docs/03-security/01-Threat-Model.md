@@ -121,3 +121,9 @@ Not guaranteed:
 
 See [[03-security/02-Security-Goals]] and
 [[03-security/05-Security-Limitations]].
+
+## M6 Threat-Model Extension
+
+M6 explicitly considers malicious relays and network-level abuse: forged routing metadata, duplicate propagation, malformed packets, TTL abuse, cache churn, forwarding-queue exhaustion, packet dropping and multi-hop handshake confusion.
+
+The security response is bounded processing, strict validation, duplicate suppression, TTL termination, exact cryptographic handshake correlation, and preservation of the endpoint E2EE boundary. These controls do not provide anonymity or guaranteed availability.
