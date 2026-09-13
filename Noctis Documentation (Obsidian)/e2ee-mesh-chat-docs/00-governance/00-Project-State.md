@@ -2,7 +2,7 @@
 
 ## Current Authoritative Status
 
-> **M6 — Mesh Routing / Multi-Hop E2EE: COMPLETE / VERIFIED / APPROVED**
+> **M7 — Security Hardening: COMPLETE / VERIFIED / APPROVED**
 >
 > M0–M5 remain part of the project history and architectural baseline. M6 extends that baseline with bounded managed flooding, TTL propagation control, PacketID duplicate suppression, bounded per-peer forwarding queues, endpoint-session separation from transport peers, multi-hop handshake correlation, and relay-blind E2EE.
 >
@@ -11,7 +11,7 @@
 
 ## Current phase
 
-**M6 complete — post-milestone documentation synchronization**
+**M7 complete — post-milestone documentation synchronization**
 
 ## Status
 
@@ -23,19 +23,19 @@
 | Cryptographic architecture | M3 implemented / verified for session crypto scope |
 | Protocol | Frozen baseline / M3 implementation verified |
 | Networking | M6 bounded mesh routing / multi-hop runtime complete and verified |
-| Observability | Approved supporting design / M5 bounded telemetry lifecycle integrated as supporting runtime facility |
+| Observability | Approved supporting design / runtime telemetry hooks; concrete Prometheus exporter deferred to M8 |
 | Containerization | Required / foundation implemented |
 | GitHub synchronization | Required / not yet verified in this gate |
 | Testing strategy | Documented / M3 crypto evidence added |
-| Implementation | M6 mesh routing and multi-hop runtime implemented |
-| Security verification | M6 routing, handshake-correlation, relay-boundary and resource-boundary evidence verified |
+| Implementation | M7 security hardening implemented and verified above M6 runtime |
+| Security verification | M7 hardening verified; M6 routing, handshake-correlation, relay-boundary and resource-boundary evidence retained |
 | UI | Not started |
 | Demo | Not started |
 | Final academic material | Draft |
 
 ## Current gate
 
-**M5 — Direct Networking Hardening / Runtime Integration: COMPLETE / APPROVED**
+**M7 — Security Hardening: COMPLETE / APPROVED**
 
 M0, M0.1, M1.1, M2.1/M2.1-B/M2.1-C, M3.1, M3.2 and M3.3 have been
 completed within their approved scopes.
@@ -62,8 +62,9 @@ that its implementation exists.
 
 ## Next action
 
-Complete the technical-lead documentation synchronization for M5, then open
-M6 architecture separately. M6 implementation must not begin merely because M5 is complete.
+M7 documentation synchronization is complete. M8 — Observability and UI — is
+the next milestone and requires its own architecture/design and implementation
+gates.
 
 ## M3 Completion Gate
 
@@ -207,3 +208,43 @@ See [[00-governance/04-Architecture-Review-M6]] and [[07-testing/08-M6-Acceptanc
 
 - [[00-governance/03-Architecture-Review-M5]] — M5 architecture review
 - [[00-governance/04-Architecture-Review-M6]] — M6 architecture review
+
+
+## M7 --- Security hardening
+
+**Status:** 🟢 COMPLETE / APPROVED / VERIFIED
+
+M7 hardened the approved M6 runtime without changing the frozen M3, M4 or M6
+architecture.
+
+### M7 Completion Record
+
+The concurrent replay race was closed by serializing replay-window validation,
+AEAD authentication and replay-state commitment under the receive mutex.
+`TestAEADConcurrentReplay` verifies exactly one successful decryption and nine
+replay rejections for ten concurrent attempts.
+
+`Router.OnMessage` now rejects malformed and oversized input at the routing
+boundary before normal cache/routing processing. The final boundary evidence
+covers malformed Protobuf, unknown protocol version, unknown fields,
+type/oneof mismatch, invalid fixed-width fields and oversized input.
+
+Telemetry was hardened by removing arbitrary remote peer identities from the
+`TelemetryRecorder` interface. The current repository contains telemetry
+hooks/no-op behavior but no active Prometheus exporter or metric-vector
+implementation. Future M8 metrics must use fixed, bounded label vocabularies
+and must not use attacker-controlled peer identities as arbitrary labels.
+
+Handshake deadlines and deferred pending-slot cleanup were verified, including
+timeout and subsequent slot reuse. Authentication regressions and failure
+paths were reviewed.
+
+Final validation passed `go vet ./...`, `go test ./...`,
+`go test -race ./...` and `go build ./...`.
+
+See [[00-governance/05-Architecture-Review-M7]] and
+[[07-testing/09-M7-Acceptance-Evidence]].
+
+M7 does not provide anonymity, complete metadata hiding, global Sybil/flood
+resistance, endpoint compromise resistance or guaranteed delivery.
+

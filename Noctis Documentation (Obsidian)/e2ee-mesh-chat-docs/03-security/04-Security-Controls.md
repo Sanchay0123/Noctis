@@ -154,3 +154,32 @@ resistance to all routing attacks or network-wide metadata analysis.
 - Endpoint session state independent from relay transport state.
 - Exact M3 transcript correlation for multi-hop RESP messages.
 - No relay decryption of endpoint APP_DATA.
+
+
+## M7 Security Controls
+
+The following hardening controls were implemented and verified:
+
+1. Router input is structurally validated before cache insertion or routing.
+2. Raw router input above the 64 KiB boundary is rejected at the router entry
+   boundary.
+3. Concurrent replay verification, AEAD authentication and replay-state
+   commitment are serialized under the receive mutex.
+4. Replay state is committed only after successful AEAD authentication.
+5. Authentication and identity-binding regressions remain passing after
+   hardening.
+6. Handshake deadlines bound stalled authentication attempts.
+7. Pending-handshake slots are released on timeout/failure through deferred
+   cleanup.
+8. Telemetry no longer propagates arbitrary remote peer identities through the
+   runtime recorder interface.
+9. The current repository has no active Prometheus metric exporter or
+   metric-vector implementation.
+10. Future concrete metrics must use fixed, bounded label vocabularies and
+    must not use attacker-controlled peer identities as labels.
+11. Telemetry remains out-of-band and must not become a dependency of routing,
+    encryption, authentication or delivery.
+12. Full repository tests, race detection, vetting and build validation pass.
+
+M7 does not add anonymity, metadata hiding or global network-wide DoS
+protection.

@@ -130,7 +130,7 @@ decryption.
 
 ## Architecture status
 
-**Proposed --- not yet approved for implementation.**
+**Implemented / verified for the current milestone scope.**
 
 See [[02-architecture/02-Architecture-Decisions]] and
 [[02-architecture/07-Observability-and-Security-Telemetry]].
@@ -166,3 +166,19 @@ M4 Framed TCP Transport
 The endpoint E2EE session is independent of the direct transport path. Intermediate relays forward ciphertext-bearing packets without possessing the endpoint session keys.
 
 M6 is implemented and verified. It does not introduce DHT, route discovery, anonymity, or guaranteed delivery.
+
+
+## M7 Security-Hardening Boundary
+
+M7 hardens the M6 runtime without changing the established architectural
+layering. Security validation is enforced before routing/cache processing,
+replay-state transitions are concurrency-safe, and handshake/resource cleanup
+is bounded.
+
+Telemetry remains an out-of-band supporting subsystem. At the M7 gate the
+runtime exposes telemetry hooks and a no-op implementation; an active
+Prometheus exporter is not part of the current implementation. Arbitrary peer
+identities are not propagated through the telemetry interface.
+
+M7 is complete and approved. M8 may introduce concrete observability and UI
+work only through its own milestone gates.

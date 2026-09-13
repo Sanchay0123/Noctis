@@ -54,3 +54,23 @@ and network-wide PacketID suppression remain intentionally untested here.
 | Container demo | Docker multi-hop E2EE delivery | PASS |
 
 Detailed evidence: [[07-testing/08-M6-Acceptance-Evidence]].
+
+
+## M7 Security-Hardening Matrix
+
+| Scenario | Expected behavior | Evidence |
+|---|---|---|
+| Router malformed Protobuf | Dropped before routing | PASS |
+| Unknown protocol version | Dropped before routing | PASS |
+| Unknown Protobuf fields | Dropped before routing | PASS |
+| Type / oneof mismatch | Dropped before routing | PASS |
+| Invalid fixed-width fields | Dropped before routing | PASS |
+| Oversized router input | Dropped at router boundary | PASS |
+| Concurrent replay | Exactly one success; duplicates rejected | PASS |
+| Stalled handshake | Deadline expires; pending slot released | PASS |
+| Pending handshake exhaustion | Excess connections rejected/bounded | PASS |
+| Authentication regression | Invalid identity/handshake rejected | PASS |
+| Telemetry identity cardinality | Arbitrary peer IDs absent from telemetry interface | PASS |
+| Full race validation | No race reported | PASS |
+
+Detailed evidence: [[07-testing/09-M7-Acceptance-Evidence]].

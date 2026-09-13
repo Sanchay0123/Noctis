@@ -74,3 +74,19 @@ See [[03-security/06-Security-Review-Checklist]].
 M6 provides bounded flooding, not a full routing-security protocol. Unique-packet floods can still cause CPU, bandwidth and cache churn. Shared per-peer queues provide no QoS priority, so routed flooding can compete with application traffic. Delivery is best-effort without end-to-end acknowledgements at this layer.
 
 Routing metadata remains visible to relays. The design therefore does not provide anonymity, strong traffic-analysis resistance or complete metadata hiding. Malicious relays can also drop or selectively forward packets.
+
+
+## M7 Security-Hardening Limitations
+
+M7 hardens local runtime security but does not provide a complete network-wide
+availability solution.
+
+Telemetry at the M7 gate consists of runtime hooks/no-op behavior rather than
+a concrete Prometheus exporter. M8 is responsible for implementing dashboards
+and concrete metrics under the bounded-cardinality rule.
+
+The system still exposes routing identities and other traffic metadata to
+relays. No anonymity or complete metadata hiding is claimed.
+
+Global Sybil attacks, large-scale flood traffic, malicious packet dropping and
+endpoint compromise remain outside the guarantees of the prototype.

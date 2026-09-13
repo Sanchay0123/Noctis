@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed supporting subsystem**
+**Approved supporting design; runtime hooks implemented; concrete Prometheus exporter deferred to M8**
 
 Observability is an out-of-band supporting subsystem. It is not part of
 the E2EE message-routing or cryptographic trust path.
@@ -135,8 +135,14 @@ cpu_usage
 event_loop_latency
 ```
 
-Metric names and labels are provisional and must be finalized before
-implementation.
+At the M7 gate, no active Prometheus metric exporter or metric-vector
+implementation exists in the repository. M8 must finalize concrete metric
+definitions before introducing the exporter.
+
+Security requirement: attacker-controlled peer identities must not become
+arbitrary Prometheus label values. Metric labels, when implemented, must use
+fixed, bounded vocabularies. Peer identity may be represented in bounded
+structured logs only when necessary and safely encoded.
 
 ## Structured logs
 
@@ -358,3 +364,24 @@ worker lifecycle is controlled independently through its quit signal.
 
 M5 telemetry remains out-of-band and must never contain application plaintext,
 private keys, session keys, passwords or other secret cryptographic material.
+
+
+## M7 Telemetry Security Decision
+
+M7 removed remote peer identity parameters from the `TelemetryRecorder`
+interface. The current runtime therefore cannot propagate arbitrary peer
+identities through telemetry hooks into a future metric implementation.
+
+The current codebase contains no active Prometheus metric-vector construction.
+This closes the M7 cardinality risk for the current implementation while
+placing an explicit constraint on M8: concrete metrics must use fixed,
+bounded label vocabularies and must never use attacker-controlled peer
+identities as arbitrary labels.
+
+Telemetry remains out-of-band, bounded/non-blocking, and isolated from the
+E2EE critical path.
+
+**Status: 🟢 M7 VERIFIED**
+
+**M8 requirement:** implement concrete Prometheus/Grafana telemetry only after
+the metric-label/cardinality design is explicitly reviewed.

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "e2ee-mesh-chat-docs/07-testing/08-M6-Acceptance-Evidence.md",
+                "file": "Prompts to Antigravity.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "08-M6-Acceptance-Evidence"
+              "title": "Prompts to Antigravity"
             }
           }
         ]
@@ -190,6 +190,12 @@
   },
   "active": "137f5e29fb543bcb",
   "lastOpenFiles": [
+    "e2ee-mesh-chat-docs/README.md",
+    "Prompts to Antigravity.md",
+    "e2ee-mesh-chat-docs/07-testing/09-M7-Acceptance-Evidence.md",
+    "e2ee-mesh-chat-docs/00-governance/05-Architecture-Review-M7.md",
+    "e2ee-mesh-chat-docs.zip",
+    "e2ee-mesh-chat-docs/07-testing/08-M6-Acceptance-Evidence.md",
     "e2ee-mesh-chat-docs/07-testing/06-Test-Evidence-Standard.md",
     "e2ee-mesh-chat-docs/07-testing/05-Security-Demonstrations.md",
     "e2ee-mesh-chat-docs/07-testing/04-Network-Test-Matrix.md",
@@ -202,21 +208,15 @@
     "e2ee-mesh-chat-docs/00-governance/00-Project-State.md",
     "e2ee-mesh-chat-docs/00-governance/03-Architecture-Review-M5.md",
     "e2ee-mesh-chat-docs/00-governance/04-Architecture-Review-M6.md",
-    "Prompts to Antigravity.md",
-    "e2ee-mesh-chat-docs/07-testing/08-M6-Acceptance-Evidence.md",
     "e2ee-mesh-chat-docs/06-networking/07-M6-Handshake-Correlation.md",
     "e2ee-mesh-chat-docs/06-networking/08-M6-Resource-Bounds.md",
-    "e2ee-mesh-chat-docs.zip",
     "e2ee-mesh-chat-docs/04-protocol/06-Replay-Protection.md",
-    "e2ee-mesh-chat-docs/README.md",
     "e2ee-mesh-chat-docs/09-academics/08-Future-Work.md",
     "e2ee-mesh-chat-docs/09-academics/09-Viva-Question-Bank.md",
     "e2ee-mesh-chat-docs/09-academics/07-Limitations.md",
     "e2ee-mesh-chat-docs/09-academics/06-Results-Structure.md",
     "e2ee-mesh-chat-docs/09-academics/05-Security-Analysis-Structure.md",
     "e2ee-mesh-chat-docs/09-academics/04-Methodology.md",
-    "e2ee-mesh-chat-docs/09-academics/03-Objectives.md",
-    "e2ee-mesh-chat-docs/09-academics/02-Problem-Statement.md",
     "00-governance"
   ]
 }

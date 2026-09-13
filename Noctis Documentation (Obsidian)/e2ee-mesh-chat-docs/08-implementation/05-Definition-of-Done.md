@@ -113,3 +113,23 @@ M4 approval does not constitute approval of mesh routing, multi-hop forwarding,
 anonymity, metadata hiding or production-grade endpoint security.
 
 **Next milestone:** M6 — Mesh routing architecture/design review.
+
+
+## M7 Completion Evidence
+
+M7 is complete and approved because the security-hardening gate verified:
+
+- malformed and oversized input rejection at the router boundary
+- concurrency-safe replay validation and AEAD processing
+- authentication regression coverage
+- bounded handshake timeout and pending-slot cleanup
+- bounded runtime resource behavior
+- telemetry identity/cardinality hardening
+- failure-path and panic-risk source audit
+- full `go vet`, `go test`, `go test -race` and build validation
+
+M7 approval does not imply anonymity, complete metadata hiding, global DoS
+resistance, endpoint compromise resistance or guaranteed delivery.
+
+See [[00-governance/05-Architecture-Review-M7]] and
+[[07-testing/09-M7-Acceptance-Evidence]].

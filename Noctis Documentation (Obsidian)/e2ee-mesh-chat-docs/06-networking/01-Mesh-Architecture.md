@@ -50,3 +50,13 @@ The mesh layer must be tested against:
 -   malicious dropping
 -   malformed routing fields
 -   excessive route state
+
+
+## M7 Hardening Boundary
+
+M7 adds security hardening at the mesh input and lifecycle boundaries without
+changing the M6 managed-flooding architecture. Raw router input is bounded and
+validated before routing/cache processing. Endpoint E2EE remains independent
+of relay transport state.
+
+**Status: 🟢 M7 HARDENED / VERIFIED**

@@ -173,8 +173,50 @@ See [[00-governance/04-Architecture-Review-M6]] and [[07-testing/08-M6-Acceptanc
 -   telemetry leakage
 -   telemetry/log injection
 -   telemetry resource bounds
+-   panic/failure safety
+-   concurrency/resource lifecycle
 
-**Gate:** security test review.
+**Status:** 🟢 COMPLETE / APPROVED / VERIFIED
+
+**Gate:** Project Overseer final security evidence review — PASSED.
+
+### M7 Completion Record
+
+M7 hardened the approved M6 implementation without changing the frozen M3,
+M4 or M6 architecture.
+
+The concurrent replay race was closed by serializing replay validation, AEAD
+authentication and replay-state commitment.
+
+Router input is validated at the routing boundary before cache insertion or
+forwarding. Final adversarial coverage includes malformed Protobuf, unknown
+protocol version, unknown fields, type/oneof mismatch, invalid fixed-width
+fields and oversized input.
+
+Telemetry was reviewed for leakage, injection and metric cardinality. Peer
+identity was removed from the `TelemetryRecorder` interface. The current
+repository contains telemetry hooks/no-op behavior but no active Prometheus
+metric exporter or metric-vector implementation. Future M8 metrics must not
+introduce attacker-controlled peer identities as labels.
+
+Handshake deadlines and pending-slot release were verified under timeout.
+Authentication regressions, failure paths, concurrency behavior and resource
+bounds were reviewed.
+
+Final validation passed:
+
+```text
+go vet ./...
+go test ./...
+go test -race ./...
+go build ./...
+```
+
+See [[00-governance/05-Architecture-Review-M7]] and
+[[07-testing/09-M7-Acceptance-Evidence]].
+
+M7 does not establish anonymity, complete metadata hiding, global Sybil/flood
+resistance, endpoint compromise resistance or guaranteed delivery.
 
 ## M8 --- Observability and UI
 

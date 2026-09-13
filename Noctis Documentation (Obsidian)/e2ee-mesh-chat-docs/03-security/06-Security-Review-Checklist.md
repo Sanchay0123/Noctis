@@ -80,3 +80,37 @@ The following remain future review scope: direct-network integration,
 multi-node behavior, mesh forwarding/routing controls, basic DoS resistance,
 telemetry leakage under the integrated runtime, and end-to-end security
 demonstrations.
+
+
+## M7 Security-Hardening Review
+
+- [x] Established cryptographic primitives remain unchanged and library-backed
+- [x] X25519 session construction remains frozen and reviewed
+- [x] Identity binding regression tested
+- [x] Transcript binding remains frozen
+- [x] HKDF context separation remains frozen
+- [x] ChaCha20-Poly1305 usage remains frozen and reviewed
+- [x] Nonce/sequence exhaustion behavior remains bounded
+- [x] Concurrent replay state is serialized
+- [x] Invalid cryptographic inputs fail safely
+- [x] Protocol version checked at runtime boundary
+- [x] Message types and oneof relationships validated
+- [x] Field lengths bounded
+- [x] Unknown Protobuf fields rejected
+- [x] Router validates before cache/routing
+- [x] Oversized router input rejected
+- [x] TTL enforced
+- [x] Routing loops bounded
+- [x] Duplicate packet state bounded
+- [x] Connection and handshake limits exist
+- [x] Handshake timeouts verified
+- [x] Malformed packets cannot crash the node in tested paths
+- [x] Local resource use bounded
+- [x] Peer identities removed from the telemetry recorder interface
+- [x] No active dynamic Prometheus label implementation exists at M7
+- [x] Telemetry remains out-of-band
+- [x] Full repository race validation passed
+- [x] M7 acceptance evidence recorded
+
+See [[00-governance/05-Architecture-Review-M7]] and
+[[07-testing/09-M7-Acceptance-Evidence]].

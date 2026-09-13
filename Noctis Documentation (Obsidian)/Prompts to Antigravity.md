@@ -14830,6 +14830,2545 @@ This is the final evidence request before the Project Overseer makes the M6 gate
 
 
 ```
+PROJECT OVERSEER — M7 SECURITY HARDENING
+STATUS: IMPLEMENTATION AUTHORIZED
+M7 SCOPE: SECURITY HARDENING ONLY
+
+You are now authorized to begin M7 implementation.
+
+The authoritative project documentation vault is:
+
+    e2ee-mesh-chat-docs/
+
+Its directory structure MUST be preserved exactly:
+
+    00-governance/
+    01-project/
+    02-architecture/
+    03-security/
+    04-protocol/
+    05-cryptography/
+    06-networking/
+    07-testing/
+    08-implementation/
+    09-academics/
+
+Do NOT create a replacement documentation hierarchy.
+
+============================================================
+1. AUTHORITATIVE BASELINE
+============================================================
+
+M0–M6 are COMPLETE / VERIFIED / APPROVED.
+
+M6 is APPROVED AND FROZEN.
+
+The existing M3/M4/M6 cryptographic and protocol decisions remain frozen.
+
+DO NOT modify them unless you discover an actual security defect that makes the
+current approved construction unsafe. If such a defect is discovered:
+
+    STOP
+    report it
+    do not silently redesign the protocol
+
+Frozen areas include:
+
+- Ed25519 identity
+- X25519 ephemeral key agreement
+- canonical M3 handshake transcripts
+- SHA256(T_RESP) session ID
+- HKDF labels
+- ChaCha20-Poly1305
+- nonce construction
+- directional keys
+- replay window semantics
+- protobuf schema
+- PacketID = 16 bytes
+- maximum TTL = 32
+- default TTL = 16
+- PacketID cache = 10,000 / 2 minutes
+- forwarding queue = 1,000 packets / 2 MiB per peer
+- endpoint-session / transport-peer separation
+- relay-blind E2EE boundary
+
+Read the existing implementation and documentation before changing code.
+
+============================================================
+2. M7 OBJECTIVE
+============================================================
+
+M7 is SECURITY HARDENING.
+
+The project documentation defines M7 around:
+
+- malformed input
+- replay
+- impersonation
+- packet tampering
+- malicious relay behavior
+- basic denial of service
+- telemetry leakage
+- telemetry/log injection
+- telemetry resource bounds
+
+The priority order is:
+
+    Security
+        >
+    Correctness
+        >
+    Simplicity
+        >
+    Performance
+        >
+    Features
+
+Do not add unrelated functionality.
+
+============================================================
+3. REQUIRED FIRST ACTION — SECURITY GAP AUDIT
+============================================================
+
+Before writing implementation code, inspect the existing repository.
+
+Audit at minimum:
+
+    internal/crypto/
+    internal/transport/
+    internal/mesh/
+    internal/routing/
+    internal/protocol/
+    internal/app/
+    tests/
+
+Also inspect existing M7-related documentation in:
+
+    03-security/
+    04-protocol/
+    06-networking/
+    07-testing/
+    08-implementation/
+
+Do NOT assume that a control is missing simply because it is not obvious.
+
+Produce a short internal implementation plan identifying:
+
+    A. Existing controls
+    B. Missing controls
+    C. Controls that are incomplete
+    D. Tests required
+    E. Files expected to change
+
+Then implement only the justified M7 gaps.
+
+============================================================
+4. MALFORMED INPUT HARDENING
+============================================================
+
+Audit every externally influenced parsing boundary.
+
+At minimum inspect:
+
+- TCP frame length
+- protobuf decoding
+- packet type
+- protobuf oneof consistency
+- protocol version
+- PacketID length
+- source/destination identity lengths
+- INIT fields
+- RESP fields
+- APP_DATA fields
+- session ID
+- ciphertext length
+- TTL
+- sequence numbers
+- unknown protobuf fields
+- malformed nested payloads
+
+Requirements:
+
+- reject invalid input deterministically
+- never panic on attacker-controlled input
+- never allocate based on an unchecked attacker-controlled size
+- never enter cryptographic processing before required structural validation
+- do not log attacker-controlled strings unsafely
+- do not bypass existing 64 KiB framing bound
+
+Add negative tests where coverage is missing.
+
+============================================================
+5. REPLAY HARDENING
+============================================================
+
+Audit both replay layers separately.
+
+NETWORK LAYER:
+
+    (source_node, packet_id)
+
+CRYPTOGRAPHIC LAYER:
+
+    (session_id, direction, sequence)
+
+Verify:
+
+- duplicate packets cannot cause uncontrolled forwarding
+- duplicate APP_DATA cannot bypass session replay protection
+- old sequence numbers are rejected
+- out-of-window sequence numbers are rejected
+- valid out-of-order packets continue to work
+- unauthenticated packets do not consume replay state
+- replay handling is concurrency-safe
+- no replay state can grow without bound
+
+Do NOT replace the existing M3 replay design.
+
+Do NOT merge network duplicate suppression with cryptographic replay state.
+
+Add tests for any uncovered edge cases.
+
+============================================================
+6. IMPERSONATION / AUTHENTICATION HARDENING
+============================================================
+
+Audit all identity-binding paths.
+
+Verify that:
+
+- Ed25519 identity is cryptographically bound to the M3 handshake
+- source_node routing metadata is NOT treated as cryptographic proof
+- expected remote identity cannot be silently substituted
+- wrong identity signatures are rejected
+- modified E_A is rejected
+- modified E_B is rejected
+- transcript modifications are rejected
+- session registration cannot occur before successful authentication
+- duplicate/late RESP cannot resurrect consumed handshake state
+- simultaneous handshake candidates remain correctly isolated
+
+Do not invent a new authentication protocol.
+
+Do not modify the frozen transcript.
+
+============================================================
+7. PACKET TAMPERING
+============================================================
+
+Audit packet modification at every layer.
+
+Test modification of:
+
+- packet ID
+- source identity
+- destination identity
+- TTL
+- session ID
+- sequence number
+- ciphertext
+- handshake ephemeral keys
+- signatures
+
+Distinguish carefully:
+
+    routing metadata modification
+
+from:
+
+    authenticated application-content modification
+
+A relay is allowed to modify TTL according to the M6 forwarding rules.
+
+A relay must NOT be able to modify authenticated application content without
+the destination rejecting it.
+
+Add tests wherever current coverage is insufficient.
+
+============================================================
+8. MALICIOUS RELAY HARDENING
+============================================================
+
+Treat an intermediate relay as potentially malicious.
+
+Verify that a relay cannot:
+
+- decrypt endpoint APP_DATA
+- obtain endpoint session keys
+- terminate an endpoint E2EE session
+- forge authenticated application messages
+- bypass endpoint authentication
+- cause a different endpoint session to decrypt the ciphertext
+- alter ciphertext successfully
+
+Also test relay behaviors such as:
+
+- packet dropping
+- packet duplication
+- malformed forwarding
+- TTL manipulation
+- unexpected packet type forwarding
+- forwarding loops
+- repeated unique PacketIDs
+
+Do NOT attempt to solve anonymity or global traffic analysis in M7.
+
+============================================================
+9. BASIC DOS / RESOURCE HARDENING
+============================================================
+
+Audit all attacker-controlled resource paths.
+
+Focus on:
+
+- connection attempts
+- pending handshakes
+- active peers
+- packet parsing
+- duplicate cache
+- forwarding queues
+- telemetry queues
+- goroutine creation
+- oversized input
+- repeated malformed input
+- unique PacketID flooding
+
+Existing M5/M6 bounds MUST remain intact.
+
+No unbounded queue or cache may be introduced.
+
+No blocking network I/O may be introduced into the router.
+
+No attacker-controlled loop may create unbounded goroutines.
+
+If rate limiting is necessary, keep it bounded, simple and scoped.
+
+Do not redesign the routing protocol.
+
+============================================================
+10. TELEMETRY SECURITY
+============================================================
+
+Audit observability as a security boundary.
+
+Verify that telemetry cannot expose:
+
+- plaintext
+- private identity keys
+- ephemeral private keys
+- session keys
+- passwords
+- raw secret material
+- sensitive cryptographic state
+
+Audit attacker-controlled values entering logs.
+
+Prevent:
+
+- log injection
+- unbounded log messages
+- blocking telemetry paths
+- telemetry failure from breaking networking
+- telemetry queues from growing without bound
+
+Existing bounded asynchronous telemetry behavior must remain non-blocking.
+
+Add tests for malicious log/event content where appropriate.
+
+============================================================
+11. PANIC / FAILURE HARDENING
+============================================================
+
+Search security-sensitive paths for:
+
+- unchecked type assertions
+- nil dereferences
+- invalid slice bounds
+- unchecked protobuf assumptions
+- panic-prone parsing
+- goroutine lifecycle races
+- close/send races
+- shutdown races
+
+An attacker-controlled packet must result in:
+
+    reject/drop/error
+
+not:
+
+    process crash/panic
+
+Add regression tests for any real issues found.
+
+============================================================
+12. CONCURRENCY
+============================================================
+
+Every M7 change must be race-safe.
+
+Run targeted race tests for modified subsystems.
+
+Eventually run:
+
+    go test -race ./...
+
+Do not accept "it appears thread-safe" as evidence.
+
+============================================================
+13. TEST REQUIREMENTS
+============================================================
+
+For every implemented M7 control, create or extend tests.
+
+Tests must cover:
+
+### Input validation
+- malformed packets
+- malformed nested payloads
+- invalid field sizes
+- unknown fields
+- invalid packet types
+- invalid versions
+- oversized frames
+
+### Replay
+- duplicate network packet
+- duplicate APP_DATA
+- stale sequence
+- outside replay window
+- valid out-of-order sequence
+- unauthenticated replay attempt
+- concurrent replay attempts
+
+### Authentication
+- wrong identity
+- modified transcript
+- modified E_A
+- modified E_B
+- forged signature
+- duplicate/late RESP
+- simultaneous candidates
+
+### Tampering
+- routing metadata
+- ciphertext
+- session ID
+- sequence
+- handshake fields
+
+### Malicious relay
+- ciphertext remains opaque
+- relay cannot establish endpoint session
+- modified ciphertext rejected
+- duplicate forwarding controlled
+- TTL abuse controlled
+
+### Resource exhaustion
+- repeated malformed packets
+- unique PacketID flood
+- queue exhaustion
+- pending handshake exhaustion
+- telemetry queue exhaustion
+- repeated connection attempts
+
+### Failure safety
+- no panic
+- no deadlock
+- no goroutine leak where practical
+- clean shutdown
+
+============================================================
+14. VALIDATION
+============================================================
+
+After implementation:
+
+    gofmt -w <changed files>
+
+    go vet ./...
+
+    go test ./...
+
+    go test -race ./...
+
+    go build ./...
+
+If Docker behavior is affected:
+
+    docker compose config
+    docker compose build
+    docker compose up -d
+    docker compose ps
+    docker compose logs
+    docker compose down
+
+Use the project's existing containerized environment.
+
+Do not claim success without actual command results.
+
+============================================================
+15. DOCUMENTATION RULE
+============================================================
+
+DO NOT synchronize the documentation yet.
+
+The existing documentation vault is authoritative and must remain untouched
+during this implementation/evidence cycle unless a source file itself must be
+updated as part of an implementation requirement.
+
+After M7 implementation is independently reviewed and APPROVED by the Project
+Overseer, documentation synchronization will be performed separately.
+
+When that happens, preserve the exact existing structure:
+
+    e2ee-mesh-chat-docs/
+    ├── 00-governance/
+    ├── 01-project/
+    ├── 02-architecture/
+    ├── 03-security/
+    ├── 04-protocol/
+    ├── 05-cryptography/
+    ├── 06-networking/
+    ├── 07-testing/
+    ├── 08-implementation/
+    └── 09-academics/
+
+Do not create a parallel documentation tree.
+
+============================================================
+16. M7 IMPLEMENTATION BOUNDARY
+============================================================
+
+M7 MUST NOT:
+
+- redesign M3
+- redesign M4
+- redesign M6
+- change protobuf schema
+- replace ChaCha20-Poly1305
+- replace X25519
+- replace Ed25519
+- alter handshake transcripts
+- alter HKDF labels
+- alter nonce construction
+- alter PacketID size
+- introduce DHT
+- introduce route discovery
+- introduce anonymity systems
+- introduce metadata-hiding protocols
+- introduce unrelated UI features
+- start M8
+- start M9
+- start M10
+
+If an apparent requirement conflicts with a frozen decision:
+
+    STOP AND REPORT THE CONFLICT.
+
+============================================================
+17. REQUIRED FINAL REPORT
+============================================================
+
+Return:
+
+# PROJECT OVERSEER — M7 IMPLEMENTATION REPORT
+
+## 1. Files Changed
+List exact files.
+
+## 2. Security Gap Audit
+For each M7 area:
+
+    Existing control
+    Gap found
+    Action taken
+
+Areas:
+
+- malformed input
+- replay
+- impersonation
+- tampering
+- malicious relay
+- basic DoS
+- telemetry leakage
+- telemetry injection
+- telemetry resource bounds
+- panic/failure safety
+- concurrency
+
+## 3. Production Changes
+For every change:
+- file
+- function/component
+- exact security problem
+- exact fix
+- why it preserves frozen M3/M4/M6 behavior
+
+## 4. Test Changes
+List exact test names.
+
+## 5. Security Test Evidence
+Provide actual PASS output.
+
+## 6. Resource-Bound Evidence
+Provide measured/observed bounds where applicable.
+
+## 7. Race Evidence
+Provide actual:
+
+    go test -race ./...
+
+output.
+
+## 8. Full Validation
+Provide actual:
+
+    go vet ./...
+    go test ./...
+    go build ./...
+
+results.
+
+## 9. Docker Evidence
+Only if affected.
+
+## 10. Remaining Limitations
+State honestly what M7 does NOT solve.
+
+## 11. M7 Recommendation
+
+State exactly one:
+
+    READY FOR PROJECT OVERSEER SECURITY REVIEW
+
+or
+
+    NOT READY FOR PROJECT OVERSEER SECURITY REVIEW
+
+DO NOT state "M7 APPROVED".
+
+Only the Project Overseer can approve M7.
+
+============================================================
+FINAL RULE
+============================================================
+
+Implementation first.
+Evidence second.
+Approval last.
+
+Do not confuse implementation completion with milestone approval.
+
+Begin with the M7 security-gap audit and proceed only within the scope above.
+
+```
+
+
+```
+PROJECT OVERSEER — M7 SECURITY HARDENING
+STATUS: IMPLEMENTATION AUTHORIZED
+MODE: SECURITY HARDENING ONLY
+
+M0–M6 are COMPLETE / VERIFIED / APPROVED.
+
+M6 is APPROVED AND FROZEN.
+
+You are authorized to begin M7 implementation, but ONLY within the scope below.
+
+============================================================
+0. AUTHORITATIVE DOCUMENTATION STRUCTURE
+============================================================
+
+The authoritative documentation vault is:
+
+    e2ee-mesh-chat-docs/
+
+Its directory structure MUST be preserved exactly:
+
+    00-governance/
+    01-project/
+    02-architecture/
+    03-security/
+    04-protocol/
+    05-cryptography/
+    06-networking/
+    07-testing/
+    08-implementation/
+    09-academics/
+
+Do NOT create a parallel documentation hierarchy.
+
+DO NOT synchronize documentation during this implementation cycle.
+
+Documentation synchronization happens only after M7 is independently reviewed
+and APPROVED by the Project Overseer.
+
+============================================================
+1. FROZEN SECURITY/PROTOCOL BASELINE
+============================================================
+
+M3, M4 and M6 are approved and frozen.
+
+DO NOT redesign or silently modify:
+
+- Ed25519 identity
+- X25519 ephemeral key agreement
+- canonical M3 handshake transcripts
+- SHA256(T_RESP) session ID
+- HKDF-SHA-256
+- HKDF labels
+- ChaCha20-Poly1305
+- AEAD nonce construction
+- directional keys
+- 64-message replay window semantics
+- protobuf schema
+- PacketID = 16 bytes
+- maximum TTL = 32
+- default TTL = 16
+- packet cache = 10,000 / 2 minutes
+- forwarding queue = 1,000 packets / 2 MiB per peer
+- endpoint-session / transport-peer separation
+- relay-blind E2EE boundary
+- M6 bounded managed flooding
+
+If you discover a defect in one of these frozen areas:
+
+    STOP
+    identify the defect
+    explain the security consequence
+    do NOT silently redesign the protocol
+
+============================================================
+2. IMPORTANT CRYPTOGRAPHY CORRECTION
+============================================================
+
+The existing system uses:
+
+    ChaCha20-Poly1305
+
+NOT:
+
+    AES-GCM
+
+Do not change the AEAD primitive.
+
+Any implementation plan/report/documentation referring to "AES-GCM"
+as the existing MeshChat cipher must be corrected to ChaCha20-Poly1305.
+
+============================================================
+3. M7 OBJECTIVE
+============================================================
+
+M7 is SECURITY HARDENING.
+
+Primary areas:
+
+1. malformed-input handling
+2. replay correctness
+3. authentication/identity binding
+4. packet tampering
+5. malicious relay behavior
+6. basic denial-of-service resistance
+7. telemetry security
+8. panic/failure safety
+9. concurrency/resource lifecycle
+
+Priority:
+
+    Security
+        >
+    Correctness
+        >
+    Simplicity
+        >
+    Performance
+        >
+    Features
+
+Do not add unrelated functionality.
+
+============================================================
+4. PHASE 1 — SOURCE AUDIT BEFORE IMPLEMENTATION
+============================================================
+
+Before changing ANY production code, inspect:
+
+    internal/crypto/
+    internal/transport/
+    internal/mesh/
+    internal/routing/
+    internal/protocol/
+    internal/app/
+    tests/
+
+Also inspect relevant documentation under:
+
+    03-security/
+    04-protocol/
+    05-cryptography/
+    06-networking/
+    07-testing/
+    08-implementation/
+
+Determine whether each suspected gap is actually present.
+
+Do NOT blindly implement the proposed fixes.
+
+Classify each finding:
+
+    CONFIRMED GAP
+    ALREADY MITIGATED
+    PARTIALLY MITIGATED
+    FALSE POSITIVE
+
+Only confirmed/partial real gaps should result in code changes.
+
+============================================================
+5. MALFORMED INPUT HARDENING
+============================================================
+
+Audit every externally controlled parsing boundary.
+
+At minimum:
+
+- TCP frame length
+- protobuf decoding
+- protocol version
+- packet type
+- protobuf oneof
+- PacketID
+- source_node
+- dest_node
+- TTL
+- INIT fields
+- RESP fields
+- APP_DATA fields
+- session ID
+- sequence number
+- ciphertext
+- unknown protobuf fields
+
+Required invariants:
+
+- attacker-controlled input never causes a panic
+- no allocation occurs from an unchecked oversized length
+- malformed packets are rejected deterministically
+- unknown protocol versions are rejected
+- unknown packet types are rejected
+- invalid protobuf oneof combinations are rejected
+- unknown protobuf fields are rejected according to the existing protocol policy
+- nested payloads are validated before routing decisions where required
+
+IMPORTANT:
+
+M4 already contains packet validation.
+
+Determine whether M6 introduced a path that bypasses that validation.
+
+If so, restore a single clean validation boundary.
+
+Do NOT blindly duplicate validation logic.
+
+If `transport.ValidatePacket` cannot be reused because of package dependency
+constraints, place shared protocol validation in an appropriate lower-level
+package rather than creating divergent security checks.
+
+Do NOT introduce an import cycle.
+
+Desired conceptual pipeline:
+
+    bounded frame
+        ↓
+    protobuf decode
+        ↓
+    structural packet validation
+        ↓
+    routing
+        ↓
+    endpoint cryptographic processing
+
+============================================================
+6. CONCURRENT CRYPTOGRAPHIC REPLAY — HIGH PRIORITY
+============================================================
+
+AUDIT:
+
+    internal/crypto/session.go
+
+Specifically `DecryptMessage`.
+
+Determine whether replay validation currently does:
+
+    lock
+    check replay state
+    unlock
+
+    AEAD decrypt
+
+    lock
+    commit replay state
+    unlock
+
+If so, this is a genuine concurrent replay TOCTOU vulnerability.
+
+Fix it.
+
+Preferred solution:
+
+    receiveMu.Lock()
+
+        validate sequence/replay window
+
+        perform AEAD authentication/decryption
+
+        ONLY if AEAD succeeds:
+            commit replay state
+
+    receiveMu.Unlock()
+
+The lock must guarantee that concurrent calls cannot both successfully consume
+the same sequence number.
+
+Important:
+
+- authenticated failure must NOT consume replay state
+- successful decryption must consume replay state exactly once
+- concurrent duplicate ciphertext must result in exactly one success
+- valid out-of-order messages must remain supported
+- replay-window semantics must remain unchanged
+- do not replace the replay-window design
+
+### Required concurrency test
+
+Create/extend a test that:
+
+    - creates one valid session
+    - produces one valid APP_DATA ciphertext
+    - invokes DecryptMessage concurrently from 10 goroutines
+    - every goroutine supplies the exact same sequence/ciphertext
+
+Expected:
+
+    exactly 1 successful decryption
+    exactly 9 ErrReplayDetected
+
+Also preserve tests proving that an unauthenticated ciphertext does not consume
+replay state.
+
+Run this test under:
+
+    go test -race
+
+============================================================
+7. AUTHENTICATION / IMPERSONATION HARDENING
+============================================================
+
+Audit:
+
+- identity binding
+- signed handshake transcript
+- source identity handling
+- session registration
+- duplicate/late RESP
+- simultaneous handshake candidates
+
+Verify:
+
+- Ed25519 identity authenticates the M3 transcript
+- source_node is NOT treated as cryptographic proof
+- wrong identity signatures fail
+- modified E_A fails
+- modified E_B fails
+- modified transcript fails
+- session registration occurs only after successful authentication
+- consumed pending handshake state cannot be resurrected
+
+Do NOT create a second authentication protocol.
+
+Do NOT modify the frozen M3 transcript.
+
+============================================================
+8. PACKET TAMPERING
+============================================================
+
+Test attacker modification of:
+
+- packet_id
+- source_node
+- dest_node
+- TTL
+- session_id
+- sequence_num
+- ciphertext
+- E_A
+- E_B
+- signatures
+
+Distinguish:
+
+    routing metadata
+
+from:
+
+    authenticated application content
+
+TTL is intentionally mutable by forwarding nodes.
+
+Ciphertext/session/sequence modifications must fail cryptographic validation.
+
+A malicious relay must not be able to forge valid endpoint application data.
+
+============================================================
+9. MALICIOUS RELAY HARDENING
+============================================================
+
+Treat intermediate relays as potentially malicious.
+
+Verify that a relay cannot:
+
+- decrypt endpoint APP_DATA
+- obtain endpoint session keys
+- terminate endpoint E2EE
+- forge endpoint ciphertext
+- cause a different session to accept ciphertext
+- modify ciphertext successfully
+
+Test:
+
+- ciphertext modification
+- ciphertext replacement
+- session ID replacement
+- sequence replacement
+- duplicate forwarding
+- malformed forwarding
+- TTL abuse
+- unexpected packet types
+- repeated unique PacketIDs
+
+Do NOT attempt to solve anonymity or global traffic analysis in M7.
+
+============================================================
+10. BASIC DOS / RESOURCE HARDENING
+============================================================
+
+Audit attacker-controlled resource paths:
+
+- inbound connections
+- pending handshakes
+- active peers
+- frame parsing
+- protobuf parsing
+- packet cache
+- forwarding queues
+- telemetry queues
+- goroutines
+- malformed packet floods
+- unique PacketID floods
+
+Existing bounds MUST remain intact:
+
+    active peers        <= 50
+    pending handshakes  <= 10
+    cache entries       <= 10,000
+    queue packets       <= 1,000 per peer
+    queue bytes         <= 2 MiB per peer
+    frame size          <= 64 KiB
+    TTL                 <= 32
+
+### Slow connection / handshake exhaustion
+
+Audit whether an attacker can occupy a pending-handshake slot indefinitely by
+dripping bytes slowly.
+
+Verify:
+
+- handshake deadline is applied
+- deadline covers the complete handshake operation
+- timeout releases pending resources
+- malformed handshake closes promptly
+- stalled handshakes cannot block shutdown
+- repeated attempts do not create unbounded goroutines
+
+Do not add elaborate rate limiting unless the source audit demonstrates that
+existing resource controls are insufficient.
+
+============================================================
+11. TELEMETRY SECURITY
+============================================================
+
+Audit all telemetry/logging paths.
+
+Never expose:
+
+- plaintext
+- private identity keys
+- ephemeral private keys
+- session keys
+- passwords
+- secret cryptographic material
+
+### Logs
+
+Attacker-controlled identity/data must not create log injection.
+
+Use bounded canonical representations.
+
+### Metrics
+
+Do NOT use arbitrary remote identities as high-cardinality metric labels.
+
+Prefer bounded labels such as:
+
+    event=authentication_failure
+    reason=invalid_signature
+
+rather than:
+
+    peer_id=<every unique attacker identity>
+
+Telemetry must remain:
+
+- bounded
+- nonblocking
+- failure-tolerant
+- outside the E2EE critical path
+
+Telemetry failure must not break mesh operation.
+
+============================================================
+12. PANIC / FAILURE SAFETY
+============================================================
+
+Audit security-sensitive code for:
+
+- nil dereferences
+- unchecked slice bounds
+- unchecked type assertions
+- malformed protobuf assumptions
+- panic paths
+- goroutine lifecycle problems
+- close/send races
+- shutdown races
+- resource leaks
+
+Attacker-controlled input must result in:
+
+    reject / drop / error
+
+not:
+
+    process crash
+
+Add regression tests for actual defects discovered.
+
+============================================================
+13. SESSION LIFECYCLE AUDIT
+============================================================
+
+Audit:
+
+- session registration
+- session lookup
+- session replacement
+- session removal
+- concurrent registration/lookup
+- stale session behavior
+- session rotation
+- session ID collisions
+
+Do not change endpoint-session/transport-peer separation.
+
+============================================================
+14. PACKET OWNERSHIP AUDIT
+============================================================
+
+Audit byte-slice ownership through:
+
+    router
+      ↓
+    forwarding queue
+      ↓
+    peer writer
+
+Verify that protobuf buffers are not unexpectedly mutated or reused.
+
+TTL modification must not cause data races or cross-peer packet corruption.
+
+============================================================
+15. TEST MATRIX
+============================================================
+
+Add or extend tests for every real M7 change.
+
+### Input validation
+- malformed packets
+- malformed nested payloads
+- oversized frames
+- unknown protobuf fields
+- invalid field sizes
+- invalid packet types
+- invalid versions
+
+### Replay
+- duplicate ciphertext
+- concurrent duplicate ciphertext
+- stale sequence
+- outside replay window
+- valid out-of-order sequence
+- unauthenticated ciphertext
+- concurrent replay attempts
+
+### Authentication
+- wrong identity
+- modified transcript
+- modified E_A
+- modified E_B
+- forged signature
+- duplicate RESP
+- late RESP
+- simultaneous candidates
+
+### Tampering
+- routing metadata
+- ciphertext
+- session ID
+- sequence
+- handshake fields
+
+### Malicious relay
+- relay cannot decrypt
+- relay lacks endpoint session
+- modified ciphertext rejected
+- duplicate forwarding controlled
+- TTL abuse controlled
+
+### Resource exhaustion
+- malformed-input flood
+- unique PacketID flood
+- queue exhaustion
+- pending handshake exhaustion
+- slow handshake
+- telemetry queue exhaustion
+
+### Failure safety
+- panic resistance
+- clean shutdown
+- connection closure
+- peer closure
+- concurrent close/send
+- goroutine/resource cleanup
+
+============================================================
+16. VALIDATION REQUIREMENTS
+============================================================
+
+After implementation:
+
+    gofmt -w <changed files>
+
+    go vet ./...
+
+    go test ./...
+
+    go test -race ./...
+
+    go build ./...
+
+If networking/Docker code changes:
+
+    docker compose config
+    docker compose build
+    docker compose up -d
+    docker compose ps
+    docker compose logs
+    docker compose down
+
+Use the existing containerized environment.
+
+Actual command results are required.
+
+Do NOT fabricate or summarize results without running the commands.
+
+============================================================
+17. DOCUMENTATION
+============================================================
+
+DO NOT synchronize documentation during implementation.
+
+Do not modify the documentation hierarchy.
+
+After M7 receives Project Overseer approval, documentation synchronization will
+be performed separately.
+
+The authoritative structure remains:
+
+    e2ee-mesh-chat-docs/
+    ├── 00-governance/
+    ├── 01-project/
+    ├── 02-architecture/
+    ├── 03-security/
+    ├── 04-protocol/
+    ├── 05-cryptography/
+    ├── 06-networking/
+    ├── 07-testing/
+    ├── 08-implementation/
+    └── 09-academics/
+
+============================================================
+18. M7 IMPLEMENTATION BOUNDARY
+============================================================
+
+DO NOT:
+
+- redesign M3
+- redesign M4
+- redesign M6
+- change protobuf schema
+- change cryptographic primitives
+- change handshake transcripts
+- change HKDF labels
+- change AEAD construction
+- change nonce construction
+- change PacketID size
+- change TTL maximum
+- introduce DHT
+- introduce route discovery
+- introduce anonymity protocols
+- introduce metadata-hiding protocols
+- implement M8
+- implement M9
+- implement M10
+
+If a required security fix appears to require a frozen protocol change:
+
+    STOP AND REPORT IT.
+
+============================================================
+19. REQUIRED FINAL IMPLEMENTATION REPORT
+============================================================
+
+Return exactly:
+
+# PROJECT OVERSEER — M7 IMPLEMENTATION REPORT
+
+## 1. Files Changed
+
+List exact files.
+
+## 2. Security Gap Audit
+
+For each:
+
+- malformed input
+- replay
+- authentication
+- tampering
+- malicious relay
+- basic DoS
+- telemetry leakage
+- telemetry injection/cardinality
+- panic/failure safety
+- concurrency
+- session lifecycle
+- packet ownership
+
+State:
+
+    Existing control
+    Finding
+    Severity
+    Action
+
+If no gap exists:
+
+    NO GAP FOUND
+
+Do not invent a fix.
+
+## 3. Production Changes
+
+For every actual change:
+
+- file
+- function/component
+- security problem
+- fix
+- why it preserves M3/M4/M6
+
+## 4. Test Changes
+
+List exact test names.
+
+## 5. Security Test Evidence
+
+Provide actual commands and PASS output.
+
+## 6. Resource-Bound Evidence
+
+Provide measured/observed bounds where applicable.
+
+## 7. Race Evidence
+
+Provide actual:
+
+    go test -race ./...
+
+results.
+
+## 8. Full Validation
+
+Provide actual:
+
+    go vet ./...
+    go test ./...
+    go build ./...
+
+results.
+
+## 9. Docker Evidence
+
+Only if Docker/networking was affected.
+
+## 10. Remaining Limitations
+
+State honestly what M7 does not solve.
+
+## 11. Final Recommendation
+
+State exactly one:
+
+    READY FOR PROJECT OVERSEER SECURITY REVIEW
+
+or:
+
+    NOT READY FOR PROJECT OVERSEER SECURITY REVIEW
+
+Do NOT state:
+
+    M7 APPROVED
+
+Only the Project Overseer can approve M7.
+
+============================================================
+FINAL RULE
+============================================================
+
+Audit first.
+Fix only real defects.
+Test every fix.
+Provide actual evidence.
+Wait for Project Overseer approval.
+
+Begin with the source audit now.
+
+```
+
+
+```
+PROJECT OVERSEER — M7 FINAL SECURITY EVIDENCE GATE
+STATUS: IMPLEMENTATION REVIEW — NO NEW FEATURES
+
+The M7 implementation is substantially acceptable.
+
+The concurrent replay remediation and router validation changes are directionally
+correct. Do NOT redesign M7 and do NOT add unrelated security mechanisms.
+
+The remaining task is ONLY to close the evidence gaps below.
+
+============================================================
+1. CONCURRENT REPLAY — SOURCE + ASSERTION PROOF
+============================================================
+
+Show the actual production source of:
+
+    internal/crypto/session.go
+    DecryptMessage
+
+I need the complete relevant section proving that:
+
+    receiveMu
+        ↓
+    replay check
+        ↓
+    AEAD Open
+        ↓
+    replay-state commit
+        ↓
+    unlock
+
+is serialized.
+
+The critical invariant is:
+
+    authenticated duplicate:
+        exactly one caller succeeds
+
+    unauthenticated ciphertext:
+        does NOT consume replay state
+
+Then show the actual test source for:
+
+    TestAEADConcurrentReplay
+
+The test MUST demonstrably assert:
+
+    10 concurrent identical DecryptMessage calls
+    exactly 1 success
+    exactly 9 ErrReplayDetected
+
+Provide the actual test output.
+
+============================================================
+2. ROUTER VALIDATION — SECURITY BOUNDARY PROOF
+============================================================
+
+Show the actual production source around:
+
+    Router.OnMessage
+
+including:
+
+    protobuf unmarshal
+    ValidatePacket
+    cache insertion
+    TTL processing
+    local handling / forwarding
+
+I need to verify that malformed/unknown-field packets are rejected BEFORE
+routing behavior occurs.
+
+Then show the exact tests proving:
+
+    unknown protobuf fields → rejected
+    malformed APP_DATA → rejected
+    invalid packet structure → rejected
+    oversized input → rejected
+
+Provide actual:
+
+    go test -v ./internal/routing
+
+output for those tests.
+
+Do NOT merely state that the tests pass.
+
+============================================================
+3. TELEMETRY SECURITY — SOURCE PROOF
+============================================================
+
+Show the actual source for:
+
+    TelemetryRecorder
+    SanitizeID
+    every relevant call site
+
+Verify:
+
+    - attacker-controlled values cannot become arbitrary metric labels
+    - arbitrary identities do not create unbounded metric cardinality
+    - logs cannot receive uncontrolled binary/newline injection
+    - identities are bounded before logging
+    - plaintext/session keys/private keys are never sent to telemetry
+    - telemetry remains asynchronous/nonblocking
+
+Important:
+
+Do NOT claim that hex encoding alone solves metric cardinality.
+
+If identity values are metric labels, explicitly show how cardinality is bounded.
+
+If they are not metric labels, show that instead.
+
+============================================================
+4. HANDSHAKE / AUTHENTICATION REGRESSION
+============================================================
+
+Do not change the existing M3/M6 handshake.
+
+Provide the existing PASS evidence for the relevant authentication tests:
+
+    wrong identity
+    modified E_A
+    modified E_B
+    modified transcript
+    duplicate RESP
+    late RESP
+    simultaneous candidates
+
+No new authentication protocol is required.
+
+============================================================
+5. DOS / HANDSHAKE DEADLINE SOURCE
+============================================================
+
+Show actual production source demonstrating:
+
+    conn.SetDeadline(...)
+
+and the complete handshake path it protects.
+
+I need to verify that the 5-second deadline actually covers the complete inbound
+handshake operation and that a stalled attacker releases the pending handshake
+resource.
+
+Provide the relevant test source/output for:
+
+    pending handshake exhaustion
+    handshake timeout / stalled connection
+    slot/resource release
+
+If existing M5 tests already establish this and remain unchanged, identify them
+and provide their PASS output.
+
+Do NOT add a new rate-limiting system unless the existing implementation is
+actually insufficient.
+
+============================================================
+6. PANIC / FAILURE AUDIT
+============================================================
+
+Provide the result of a focused source audit of externally controlled parsing
+paths.
+
+Report any actual findings as:
+
+    FOUND
+    NOT FOUND
+
+Do not invent fixes.
+
+At minimum inspect:
+
+    protobuf parsing
+    packet validation
+    routing
+    session decryption
+    peer handling
+    listener handling
+
+If an actual panic vulnerability was found and fixed, provide the regression
+test.
+
+============================================================
+7. REPOSITORY-WIDE VALIDATION
+============================================================
+
+Run and provide ACTUAL output, not merely "succeeded":
+
+    go vet ./...
+    go test ./...
+    go test -race ./...
+    go build ./...
+
+The output must cover the entire repository, including command/application
+packages where applicable.
+
+Do not abbreviate away package results.
+
+============================================================
+8. DOCKER
+============================================================
+
+Docker code was reportedly unchanged.
+
+Therefore Docker does not need to be rebuilt unless the final implementation
+changed networking/runtime behavior.
+
+If no Docker changes occurred, explicitly state:
+
+    Docker runtime behavior unchanged; no Docker validation required.
+
+============================================================
+9. STALE CRYPTO TERMINOLOGY AUDIT
+============================================================
+
+Perform a repository search for:
+
+    AES-GCM
+    AES GCM
+    AESGCM
+
+Confirm whether any stale references incorrectly describe MeshChat's actual
+AEAD.
+
+The actual frozen primitive is:
+
+    ChaCha20-Poly1305
+
+Do not change cryptography.
+
+If stale documentation/comments exist in source-controlled implementation
+documentation, identify them but do not perform documentation synchronization
+yet.
+
+============================================================
+10. NO DOCUMENTATION SYNC
+============================================================
+
+Do NOT synchronize the documentation vault.
+
+Do NOT begin M8.
+
+Do NOT begin M9.
+
+Do NOT begin M10.
+
+Do NOT modify the architecture.
+
+============================================================
+11. REQUIRED FINAL RESPONSE
+============================================================
+
+Return exactly:
+
+# PROJECT OVERSEER — M7 FINAL SECURITY EVIDENCE
+
+## 1. Concurrent Replay
+
+### Production Source
+<actual source>
+
+### Test Source
+<actual relevant test>
+
+### Actual Test Output
+<actual output>
+
+### Result
+PASS / FAIL
+
+## 2. Router Validation
+
+### Production Source
+<actual source>
+
+### Tests
+<actual test names/source>
+
+### Actual Output
+<actual output>
+
+### Result
+PASS / FAIL
+
+## 3. Telemetry Security
+
+### Production Source
+<actual relevant source>
+
+### Analysis
+<bounded cardinality + injection + secret leakage>
+
+### Result
+PASS / FAIL
+
+## 4. Authentication Regression
+
+<actual test evidence>
+
+## 5. Handshake / DoS Protection
+
+<actual source + test evidence>
+
+## 6. Panic / Failure Audit
+
+<actual findings>
+
+## 7. Full Validation
+
+### go vet ./...
+<actual output>
+
+### go test ./...
+<actual output>
+
+### go test -race ./...
+<actual output>
+
+### go build ./...
+<actual output>
+
+## 8. Docker
+
+<unchanged / actual evidence>
+
+## 9. Crypto Terminology Audit
+
+<actual search result>
+
+## 10. Remaining Limitations
+
+<precise limitations>
+
+## 11. Final Recommendation
+
+State exactly one:
+
+    READY FOR PROJECT OVERSEER M7 APPROVAL
+
+or:
+
+    NOT READY FOR PROJECT OVERSEER M7 APPROVAL
+
+DO NOT state "M7 APPROVED".
+
+The Project Overseer makes the final approval decision.
+
+============================================================
+FINAL RULE
+============================================================
+
+This is an evidence gate, not another implementation phase.
+
+Only fix something if the evidence audit discovers an actual security defect.
+Otherwise make no production changes.
+
+```
+
+
+```
+PROJECT OVERSEER — M7 EVIDENCE REMEDIATION ONLY
+
+M7 remains NOT APPROVED.
+
+Do NOT modify the architecture.
+Do NOT redesign M3/M4/M6.
+Do NOT start M8.
+Do NOT synchronize documentation.
+Do NOT make speculative security changes.
+
+Your implementation appears largely correct. The remaining task is to CLOSE THE EVIDENCE GAPS identified below.
+
+==================================================
+1. ROUTER VALIDATION — PROVIDE DIRECT BOUNDARY EVIDENCE
+==================================================
+
+Show the actual production source for:
+
+    internal/routing/router.go
+    Router.OnMessage(...)
+
+including the complete relevant path from raw bytes through:
+
+    protobuf unmarshal
+    transport.ValidatePacket
+    cache insertion
+    TTL handling
+    routing/forwarding
+
+Then provide actual tests specifically demonstrating Router.OnMessage rejects:
+
+1. malformed protobuf
+2. unknown protocol version
+3. unknown protobuf fields
+4. invalid packet type / oneof mismatch
+5. invalid source/destination lengths
+6. invalid APP_DATA session_id length
+7. invalid APP_DATA ciphertext length
+8. oversized packet/frame
+
+Do not merely show that transport.ValidatePacket has these checks.
+
+The evidence must demonstrate that the ROUTER boundary invokes those checks before caching or routing.
+
+Provide:
+
+- exact test names
+- relevant test source
+- actual command
+- actual output
+
+If existing transport tests already cover some cases, explicitly distinguish:
+
+    transport-only coverage
+from
+    Router.OnMessage boundary coverage.
+
+Do not duplicate tests unnecessarily if a clean boundary test can exercise the existing validator.
+
+==================================================
+2. TELEMETRY — ACTUAL IMPLEMENTATION AND CARDINALITY PROOF
+==================================================
+
+Audit the complete telemetry implementation, not just the interface.
+
+Show actual source for:
+
+    internal/mesh/observability.go
+    telemetry implementation
+    all RecordPeerConnected call sites
+    all RecordPeerDisconnected call sites
+    all RecordHandshakeFailed call sites
+    all RecordDuplicateConnection call sites
+    all RecordResourceLimitReached call sites
+
+Determine whether peer identity, remote identity, packet identity, source identity, destination identity, or any attacker-controlled value is used as a Prometheus metric LABEL.
+
+Critical requirement:
+
+SanitizeID() and hex encoding alone do NOT establish bounded metric cardinality.
+
+If arbitrary peer identities are currently metric labels, FIX THAT.
+
+Preferred approach:
+
+- do not use arbitrary peer IDs as Prometheus labels;
+- use bounded categorical labels such as event/result/reason;
+- identities may be present in bounded structured logs if safely encoded;
+- never expose private keys, session keys, plaintext, passwords, or ciphertext payloads.
+
+If identities are already absent from metric labels, prove this directly from the implementation.
+
+Also verify:
+
+- no unbounded dynamic metric names
+- no unbounded dynamic label names
+- no unbounded label values from attacker-controlled data
+- no plaintext leakage
+- no private/session key leakage
+- no log injection
+- telemetry failure cannot break networking
+- telemetry queue remains bounded/nonblocking
+
+Add or run a test that proves attacker-controlled identities cannot create unbounded metric cardinality.
+
+Report the exact implementation decision and why it bounds cardinality.
+
+==================================================
+3. HANDSHAKE DEADLINE / RESOURCE LIFECYCLE
+==================================================
+
+Show the complete inbound handshake path in:
+
+    internal/mesh/listener.go
+
+from connection acceptance through:
+
+    pending slot acquisition
+    deadline installation
+    first frame read
+    validation
+    handshake processing
+    success/failure
+    pending slot release
+    connection cleanup
+    deadline clearing
+
+Verify that the deadline covers the entire authentication operation.
+
+Add or identify tests proving:
+
+1. stalled handshake times out
+2. pending slot is released after timeout
+3. failed handshake does not leak a pending slot
+4. subsequent connection can acquire the released slot
+5. successful authentication clears the handshake deadline
+6. failed authentication closes/releases resources correctly
+
+Provide exact source, test names, commands, and outputs.
+
+==================================================
+4. PANIC / FAILURE-SAFETY AUDIT
+==================================================
+
+Perform an actual source audit.
+
+At minimum inspect:
+
+    internal/protocol
+    internal/transport
+    internal/crypto
+    internal/routing
+    internal/mesh
+
+Search for:
+
+- panic(
+- goroutine boundaries
+- deferred cleanup
+- semaphore release
+- WaitGroup ownership
+- channel send/close races
+- nil dereferences around failure paths
+- unchecked type assertions
+- unchecked slice indexing
+- malformed protobuf handling
+- error paths after partial state mutation
+- telemetry callbacks
+- connection close paths
+
+Do NOT simply report "NOT FOUND".
+
+For each subsystem provide:
+
+    subsystem
+    relevant failure paths
+    cleanup behavior
+    panic risk
+    conclusion
+
+If no issue exists, show the source evidence supporting that conclusion.
+
+If a real vulnerability is found, fix it and add a regression test.
+
+==================================================
+5. CRYPTO TERMINOLOGY AUDIT
+==================================================
+
+Run an actual repository search for:
+
+    AES-GCM
+    AES GCM
+    AESGCM
+
+Also search for any stale references to AES where the frozen implementation should say:
+
+    ChaCha20-Poly1305
+
+Provide the exact search command and actual output.
+
+Do not report merely "No results found" without the command.
+
+==================================================
+6. FULL VALIDATION
+==================================================
+
+After any code/test changes, run:
+
+    gofmt -w <changed files>
+    go vet ./...
+    go test ./...
+    go test -race ./...
+    go build ./...
+
+Provide actual outputs.
+
+Do not summarize these as merely "passed."
+
+==================================================
+7. SCOPE CONTROL
+==================================================
+
+Do NOT:
+
+- modify the frozen protocol
+- modify M3 handshake transcript
+- modify M3 HKDF
+- replace ChaCha20-Poly1305
+- modify M4 framing
+- modify M6 routing architecture
+- add anonymity/onion routing
+- add DHT/route discovery
+- add M8 UI work
+- add M9 demo work
+- add M10 documentation work
+
+==================================================
+8. FINAL REPORT FORMAT
+==================================================
+
+Return a concise evidence report containing:
+
+1. Files changed
+2. Router boundary evidence
+3. Telemetry implementation/cardinality evidence
+4. Handshake deadline/resource evidence
+5. Panic/failure audit
+6. Crypto terminology search
+7. Full validation outputs
+8. Docker statement
+9. Remaining limitations
+10. Final recommendation
+
+The final recommendation MUST be exactly one of:
+
+READY FOR PROJECT OVERSEER M7 APPROVAL
+
+or
+
+NOT READY
+
+Do not claim READY unless every blocker above is actually closed with source/test evidence.
+
+```
+
+
+```
+# PROJECT OVERSEER — M7 FINAL REMEDIATION
+
+M7 is **NOT APPROVED YET**.
+
+The implementation is substantially complete. There are now only **two required closure items**:
+
+1. Prove/fix telemetry metric cardinality at the actual implementation level.
+    
+2. Add explicit Router oversized-input boundary evidence.
+    
+
+There is also one small audit-quality issue to correct if practical.
+
+**Do not start M8.**  
+**Do not modify M3/M4/M6 architecture.**  
+**Do not synchronize documentation.**  
+**Do not redesign the protocol.**  
+**Do not make unrelated changes.**
+
+---
+
+# 1. TELEMETRY CARDINALITY — PRIMARY BLOCKER
+
+The previous evidence established `SanitizeID()` but did NOT prove that arbitrary peer identities cannot become unbounded Prometheus metric labels.
+
+The distinction is critical:
+
+> Bounded label VALUE length ≠ bounded metric CARDINALITY.
+
+Therefore, audit the **actual telemetry implementation**, not merely the interface.
+
+Inspect and provide the complete relevant source for:
+
+- `internal/mesh/observability.go`
+    
+- `internal/mesh/manager.go`
+    
+- telemetry implementation/package
+    
+- every call site of:
+    
+    - `RecordPeerConnected`
+        
+    - `RecordPeerDisconnected`
+        
+    - `RecordHandshakeFailed`
+        
+    - `RecordDuplicateConnection`
+        
+    - `RecordResourceLimitReached`
+        
+
+Also search the repository for:
+
+```text
+WithLabelValues
+WithLabelValues(
+MustCurryWith
+CurryWith
+NewCounterVec
+NewGaugeVec
+NewHistogramVec
+NewSummaryVec
+Register
+prometheus
+peer_id
+remote_id
+source_id
+dest_id
+identity
+
+
+## Required security property
+
+Attacker-controlled identities MUST NOT be used as arbitrary Prometheus label values.
+
+For example, this is NOT acceptable:
+
+```text
+peer_connected{peer_id="<attacker-controlled-identity>"}
+
+
+because an attacker can generate many unique identities and cause unbounded metric cardinality.
+
+Preferred acceptable design:
+
+```text
+handshake_failed_total{reason="timeout"}
+handshake_failed_total{reason="authentication_failed"}
+handshake_failed_total{reason="malformed"}
+
+
+where the label vocabulary is finite and controlled by the implementation.
+
+Peer identities may be included in bounded structured logs if safely encoded, but:
+
+- no private keys
+    
+- no session keys
+    
+- no plaintext
+    
+- no passwords
+    
+- no secret crypto material
+    
+- no arbitrary ciphertext payloads
+    
+- no unbounded dynamic metric names
+    
+- no attacker-controlled dynamic label names
+    
+- no attacker-controlled identity labels
+    
+
+`SanitizeID()` may remain as defense-in-depth for logs/observer interfaces, but DO NOT claim that it alone solves cardinality.
+
+## If arbitrary identities ARE metric labels
+
+Fix the implementation.
+
+Remove identity labels from metrics and replace them with bounded categorical dimensions where appropriate.
+
+Add regression tests proving arbitrary identities do not create distinct metric series.
+
+## If arbitrary identities are ALREADY absent from metrics
+
+Do not change the implementation unnecessarily.
+
+Instead, provide direct source evidence proving:
+
+1. the metric definitions;
+    
+2. their label names;
+    
+3. their label values;
+    
+4. all relevant call sites;
+    
+5. that peer identity cannot enter the metric label set.
+    
+
+Also explain exactly why the metric cardinality is bounded.
+
+Run the relevant tests and provide actual output.
+
+---
+
+# 2. ROUTER OVERSIZED INPUT — REQUIRED
+
+Add an explicit Router boundary test for an oversized input/frame.
+
+The test must demonstrate that an input exceeding the frozen maximum of:
+
+```text
+64 KiB = 65536 bytes
+
+
+does not reach normal routing/caching/allocation behavior.
+
+Test the actual Router/transport boundary as appropriate.
+
+The test should verify rejection rather than merely testing an unrelated transport helper.
+
+Use an exact test name such as:
+
+text
+TestRouterValidationBoundary/OversizedPacket
+
+
+or an equivalent clear name.
+
+Provide:
+
+- test source
+    
+- actual command
+    
+- actual output
+    
+
+Ensure this does not weaken the existing bounded-allocation behavior.
+
+---
+
+# 3. PANIC / FAILURE AUDIT — SMALL CORRECTION
+
+The previous audit stated:
+
+> "internal/crypto: RWMutex locks correctly scoped"
+
+But the frozen M3 Session implementation uses the send/receive mutex design already approved.
+
+Do NOT change the implementation merely because of this wording.
+
+Instead, correct the audit terminology and provide a concise source-grounded failure audit covering:
+
+### internal/protocol
+
+- protobuf parsing
+    
+- unknown fields
+    
+- malformed structures
+    
+- validation errors
+    
+
+### internal/transport
+
+- frame length
+    
+- allocation bounds
+    
+- short writes
+    
+- connection closure
+    
+- malformed packet handling
+    
+
+### internal/crypto
+
+- AEAD failure
+    
+- replay rejection
+    
+- sequence exhaustion
+    
+- mutex lifecycle
+    
+- session state failures
+    
+
+### internal/routing
+
+- cache bounds
+    
+- queue bounds
+    
+- malformed packet handling
+    
+- forwarding failures
+    
+- peer disappearance
+    
+
+### internal/mesh
+
+- pending handshake cleanup
+    
+- WaitGroup ownership
+    
+- semaphore release
+    
+- connection closure
+    
+- duplicate replacement
+    
+- telemetry failure isolation
+    
+
+Search for:
+
+```text
+panic(
+recover(
+go func
+defer
+
+
+and inspect the relevant failure paths.
+
+Do NOT merely say "Safe."
+
+Give a concise source-based conclusion for each subsystem.
+
+If a real vulnerability is discovered, fix it and add a regression test.
+
+---
+
+# 4. DO NOT REOPEN CLOSED AREAS
+
+The following are already accepted and must remain frozen:
+
+### M3
+
+- Ed25519 identity
+    
+- X25519
+    
+- exact M3 handshake transcript
+    
+- SHA-256 session ID
+    
+- HKDF-SHA-256 derivation
+    
+- ChaCha20-Poly1305
+    
+- sequence-based nonce construction
+    
+- 64-message replay window
+    
+
+### M4
+
+- TCP framing
+    
+- 4-byte big-endian length prefix
+    
+- 64 KiB maximum
+    
+- packet validation boundary
+    
+- direct secure messaging integration
+    
+
+### M6
+
+- managed flooding
+    
+- PacketID `(source, packet_id)` cache
+    
+- 16-byte PacketID
+    
+- TTL semantics
+    
+- maximum TTL 32
+    
+- bounded per-peer queues
+    
+- endpoint-to-endpoint E2EE
+    
+- relay ciphertext boundary
+    
+- multi-hop handshake correlation
+    
+
+Do not redesign any of these.
+
+---
+
+# 5. VALIDATION
+
+After making only the required changes:
+
+```text
+gofmt -w <changed files>
+
+go vet ./...
+
+go test ./...
+
+go test -race ./...
+
+go build ./...
+
+
+Provide the **actual outputs**, not merely "passed."
+
+Also run the focused tests for:
+
+```text
+concurrent replay
+router validation boundary
+oversized router input
+telemetry/cardinality
+handshake timeout/resource release
+
+
+If a telemetry implementation changed, include the relevant telemetry tests.
+
+---
+
+# 6. CRYPTO TERMINOLOGY
+
+No need to modify anything if already clean.
+
+For evidence, run:
+
+```text
+grep -r -i -E "AES-GCM|AES GCM|AESGCM|AES" <repository>
+
+
+and provide the actual result.
+
+The frozen authenticated-encryption primitive is:
+
+```text
+ChaCha20-Poly1305
+
+
+---
+
+# 7. SCOPE
+
+Do NOT:
+
+- synchronize documentation
+    
+- update the Obsidian vault
+    
+- start M8
+    
+- start M9
+    
+- start M10
+    
+- add anonymity
+    
+- add onion routing
+    
+- add DHT
+    
+- add route discovery
+    
+- redesign routing
+    
+- modify the wire schema
+    
+- change cryptographic primitives
+    
+- change the frozen handshake
+    
+- change the M6 architecture
+    
+
+This is **M7 closure evidence only**.
+
+---
+
+# 8. FINAL REPORT
+
+Return a concise final evidence report with:
+
+1. Files changed
+    
+2. Telemetry implementation/cardinality evidence
+    
+3. Router oversized-input evidence
+    
+4. Panic/failure audit
+    
+5. Focused security-test outputs
+    
+6. Full validation outputs
+    
+7. Crypto terminology search
+    
+8. Docker statement
+    
+9. Remaining limitations
+    
+10. Final recommendation
+    
+
+The final recommendation MUST be exactly one of:
+
+```text
+READY FOR PROJECT OVERSEER M7 APPROVAL
+``
+
+or
+
+```text
+NOT READY
+
+
+Do not claim READY unless the telemetry cardinality issue is proven closed and the oversized Router boundary test is present and passing.
+
+```
+
+
+```
 
 
 ```

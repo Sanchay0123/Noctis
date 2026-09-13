@@ -31,3 +31,14 @@ With the M5 maximum of 50 active peers, the nominal queued-payload ceiling from 
 ## Security interpretation
 
 These are bounded-availability controls, not a complete DoS defense. The system may still experience packet drops, CPU pressure, or bandwidth exhaustion under sufficiently aggressive unique-packet floods.
+
+
+## M7 Resource-Hardening Verification
+
+M7 revalidated the existing M6 resource bounds and added router-entry
+oversized-input rejection. Concurrent replay and handshake timeout paths were
+also reviewed for bounded lifecycle behavior.
+
+M6 cache and forwarding-queue limits remain frozen and unchanged.
+
+**Status: 🟢 M7 VERIFIED**

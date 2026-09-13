@@ -44,3 +44,12 @@ Forwarding is best-effort and bounded. A packet is structurally validated before
 The forwarding queue is limited to 1,000 packets and 2 MiB per peer. Enqueue is non-blocking; either limit being reached causes a drop. The router does not perform network writes itself.
 
 **Status: 🟢 COMPLETE / VERIFIED**
+
+
+## M7 Forwarding Hardening
+
+Router input validation occurs before duplicate-cache insertion and forwarding.
+Oversized raw router input is rejected at the routing boundary. Forwarded
+E2EE ciphertext remains opaque to relays.
+
+**Status: 🟢 M7 VERIFIED**
