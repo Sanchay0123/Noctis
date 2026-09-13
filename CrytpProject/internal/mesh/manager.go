@@ -17,6 +17,7 @@ type PeerManager interface {
 	Disconnect(identity []byte) error
 	GetPeer(identity []byte) (Peer, error)
 	ActivePeers() int
+	GetActivePeersSnapshot() []Peer
 	Shutdown() error
 }
 
@@ -220,6 +221,11 @@ func (pm *peerManager) register(ch *transport.DirectChannel, remoteID []byte, in
 			existing.Close()
 			
 
+			pm.wg.Add(1)
+			go func() {
+				defer pm.wg.Done()
+				newP.writeLoop()
+			}()
 			go func() {
 				defer pm.wg.Done()
 				newP.readLoop()
@@ -238,6 +244,11 @@ func (pm *peerManager) register(ch *transport.DirectChannel, remoteID []byte, in
 	pm.mu.Unlock()
 
 
+	pm.wg.Add(1)
+	go func() {
+		defer pm.wg.Done()
+		newP.writeLoop()
+	}()
 	go func() {
 		defer pm.wg.Done()
 		newP.readLoop()
@@ -251,4 +262,13 @@ func (pm *peerManager) register(ch *transport.DirectChannel, remoteID []byte, in
 
 func (pm *peerManager) Listen(addr string) error {
 	return pm.listener.Listen(addr)
+}
+func (pm *peerManager) GetActivePeersSnapshot() []Peer {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	peers := make([]Peer, 0, len(pm.peers))
+	for _, p := range pm.peers {
+		peers = append(peers, p)
+	}
+	return peers
 }

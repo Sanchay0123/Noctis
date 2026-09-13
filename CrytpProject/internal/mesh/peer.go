@@ -20,7 +20,8 @@ const (
 type Peer interface {
 	Identity() []byte
 	State() PeerState
-	Send(plaintext []byte) error
+	Send(msg []byte) error
+	EnqueueForward(packet []byte) bool
 	Close() error
 }
 
@@ -32,6 +33,11 @@ type peer struct {
 	channel   *transport.DirectChannel
 	manager   *peerManager
 	onMsg     func(sender []byte, msg []byte)
+
+	queueMu     sync.Mutex
+	queue       chan []byte
+	queuedCount int
+	queuedBytes int
 
 	closeOnce sync.Once
 	closed    chan struct{}
@@ -45,6 +51,7 @@ func newPeer(ch *transport.DirectChannel, id []byte, initiator bool, mgr *peerMa
 		channel:   ch,
 		manager:   mgr,
 		onMsg:     onMsg,
+		queue:     make(chan []byte, 1000), // Max capacity in channel
 		closed:    make(chan struct{}),
 	}
 }
@@ -75,7 +82,7 @@ func (p *peer) setState(newState PeerState) bool {
 	return true
 }
 
-func (p *peer) Send(plaintext []byte) error {
+func (p *peer) Send(msg []byte) error {
 	p.mu.RLock()
 	state := p.state
 	p.mu.RUnlock()
@@ -84,7 +91,59 @@ func (p *peer) Send(plaintext []byte) error {
 		return ErrNotEstablished
 	}
 
-	return p.channel.SendPlaintext(plaintext)
+	if !p.EnqueueForward(msg) {
+		return ErrQueueFull
+	}
+	return nil
+}
+
+func (p *peer) EnqueueForward(packet []byte) bool {
+	p.mu.RLock()
+	state := p.state
+	p.mu.RUnlock()
+
+	if state != PeerStateEstablished {
+		return false
+	}
+
+	p.queueMu.Lock()
+	defer p.queueMu.Unlock()
+
+	if p.queuedCount >= 1000 || p.queuedBytes+len(packet) > 2*1024*1024 {
+		return false
+	}
+
+	select {
+	case p.queue <- packet:
+		p.queuedCount++
+		p.queuedBytes += len(packet)
+		return true
+	default:
+		return false
+	}
+}
+
+func (p *peer) writeLoop() {
+	for {
+		select {
+		case <-p.closed:
+			return
+		case msg, ok := <-p.queue:
+			if !ok {
+				return
+			}
+			p.queueMu.Lock()
+			p.queuedCount--
+			p.queuedBytes -= len(msg)
+			p.queueMu.Unlock()
+
+			err := p.channel.SendPlaintext(msg)
+			if err != nil {
+				p.Close()
+				return
+			}
+		}
+	}
 }
 
 func (p *peer) Close() error {

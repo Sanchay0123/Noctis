@@ -463,3 +463,15 @@ func deriveSession(tResp []byte, ss []byte, isInitiator bool) *Session {
 
 	return s
 }
+
+func (h *InitiatorHandshake) TestResp(msg *RespMessage) bool {
+	if msg == nil || h.state != InitiatorStateInitSent {
+		return false
+	}
+	if len(msg.EphemeralKey) != 32 || len(msg.Signature) != 64 {
+		return false
+	}
+	tResp := buildTResp(h.identity.PublicKey(), h.peerID, h.eAPub, msg.EphemeralKey)
+	err := VerifySignature(h.peerID, tResp, msg.Signature)
+	return err == nil
+}

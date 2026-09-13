@@ -9108,3 +9108,5728 @@ Do not claim M5 approval. The Project Overseer will issue the final gate after r
 
 ```
 
+
+```
+
+PROJECT OVERSEER — M6 ARCHITECTURE GATE
+
+M5 is formally APPROVED, FROZEN, and fully documented.
+
+You are now authorized to begin **M6 ARCHITECTURE PLANNING ONLY**.
+
+DO NOT IMPLEMENT M6 YET.
+
+The Project Overseer will review and freeze the architecture before implementation begins.
+
+# M6 — DECENTRALIZED MESH ROUTING
+
+## Objective
+
+Design the routing/forwarding layer that allows an encrypted application message to traverse multiple intermediate mesh nodes while preserving the E2EE boundary established by M3/M4.
+
+The critical architectural invariant is:
+
+> Intermediate relay nodes MUST NOT need the recipient's plaintext message key or application plaintext in order to forward an encrypted packet.
+
+The routing layer must remain separate from the cryptographic message layer.
+
+## Existing frozen architecture
+
+M5 provides:
+
+- authenticated direct TCP peers;
+    
+- `PeerManager`;
+    
+- `Peer`;
+    
+- established M4 `DirectChannel`s;
+    
+- deterministic duplicate connection arbitration;
+    
+- peer lifecycle management;
+    
+- resource limits;
+    
+- bounded asynchronous telemetry;
+    
+- direct encrypted messaging.
+    
+
+M5 does NOT provide multi-hop routing.
+
+M6 must build above M5 rather than modify M3/M4 cryptographic primitives.
+
+## Existing frozen packet structure
+
+The current Protobuf packet model contains:
+
+```protobuf
+message MeshPacket {
+  uint32 version = 1;
+  PacketType type = 2;
+  bytes packet_id = 3;
+  uint32 ttl = 4;
+  bytes source_node = 5;
+  bytes dest_node = 6;
+  oneof payload {
+    InitPayload init = 7;
+    RespPayload resp = 8;
+    AppDataPayload app_data = 9;
+  }
+}
+
+
+M6 must carefully determine which existing fields are routing metadata and which belong to the E2EE/session layer.
+
+Do NOT silently change the frozen wire schema.
+
+If a schema change is genuinely necessary, propose it explicitly for Project Overseer review rather than implementing it.
+
+# REQUIRED ARCHITECTURAL QUESTIONS
+
+Your M6 architecture proposal MUST resolve all of the following.
+
+## 1. Routing model
+
+The baseline calls for:
+
+> bounded managed flooding + TTL + LRU PacketID caching.
+
+Determine precisely:
+
+- whether M6 uses controlled flooding or route discovery;
+    
+- whether route tables are required;
+    
+- whether route selection exists;
+    
+- whether a hybrid approach is necessary;
+    
+- how a node decides which peers receive a packet;
+    
+- how duplicate transmissions are suppressed.
+    
+
+Do not introduce DHT or complex routing protocols unless there is a compelling project requirement.
+
+Prefer the simplest architecture that satisfies multi-hop delivery.
+
+## 2. Packet identity
+
+Define precisely:
+
+- PacketID size;
+    
+- PacketID generation;
+    
+- uniqueness expectations;
+    
+- cache key;
+    
+- cache lifetime;
+    
+- LRU capacity;
+    
+- whether the cache is global or per source;
+    
+- behavior when the cache is full;
+    
+- whether `(source_node, packet_id)` is the canonical duplicate key.
+    
+
+Do not confuse PacketID duplicate suppression with the M4 encrypted-message replay window.
+
+These are different security mechanisms.
+
+## 3. TTL semantics
+
+Define:
+
+- initial TTL;
+    
+- maximum permitted TTL;
+    
+- decrement point;
+    
+- behavior at TTL = 0;
+    
+- behavior at TTL = 1;
+    
+- local-destination processing semantics;
+    
+- whether a packet is forwarded after local processing;
+    
+- malformed/oversized TTL behavior.
+    
+
+The architecture must prevent routing loops from creating unbounded traffic.
+
+## 4. Forwarding algorithm
+
+Specify exact forwarding behavior.
+
+For example, conceptually:
+
+```text
+receive packet
+      |
+      v
+validate envelope
+      |
+      +---- malformed ----> DROP
+      |
+      v
+check PacketID cache
+      |
+      +---- duplicate ----> DROP
+      |
+      v
+record PacketID
+      |
+      v
+is destination local?
+      |
+    yes/no
+      |
+      +---- yes ----> deliver to local crypto/message layer
+      |
+      +---- no ----> decrement TTL
+                         |
+                         +---- expired ----> DROP
+                         |
+                         +---- valid ----> bounded forwarding queue
+
+
+This is only a conceptual starting point. Propose the final algorithm explicitly.
+
+## 5. Forwarding queue
+
+Define:
+
+- bounded/unbounded;
+    
+- maximum queue size;
+    
+- enqueue behavior when full;
+    
+- per-peer vs global queues;
+    
+- backpressure policy;
+    
+- drop policy;
+    
+- whether forwarding is asynchronous;
+    
+- whether a slow peer can block other peers.
+    
+
+A malicious node must not be able to exhaust memory simply by generating packets.
+
+## 6. Peer selection
+
+Define how flooding interacts with M5 peers.
+
+For example:
+
+- never send back through the incoming peer;
+    
+- send to all eligible peers;
+    
+- maximum forwarding fanout;
+    
+- behavior when peers appear/disappear during forwarding.
+    
+
+Be explicit about whether M6 uses all established M5 peers or a subset.
+
+## 7. Security boundary
+
+Document exactly what an intermediate node can see.
+
+It may see routing metadata such as:
+
+- source identity;
+    
+- destination identity;
+    
+- PacketID;
+    
+- TTL;
+    
+- packet type;
+    
+- packet size.
+    
+
+It must NOT obtain:
+
+- application plaintext;
+    
+- recipient session keys;
+    
+- sender session keys;
+    
+- private identity keys.
+    
+
+Explain how the M4 encrypted `AppDataPayload` remains opaque to relays.
+
+## 8. Interaction with M4 replay protection
+
+Do NOT replace M4's receiver-side replay window.
+
+Define the relationship between:
+
+```text
+Network duplicate suppression
+        +
+M4 encrypted-message replay protection
+
+
+A packet being seen previously by a relay does not necessarily mean the encrypted message has been accepted by its destination.
+
+Keep these mechanisms independent.
+
+## 9. Malformed packet handling
+
+Define validation before expensive processing.
+
+Consider:
+
+- unsupported protocol version;
+    
+- invalid packet type;
+    
+- invalid PacketID length;
+    
+- invalid identity lengths;
+    
+- invalid TTL;
+    
+- malformed Protobuf;
+    
+- unknown fields;
+    
+- invalid payload structure;
+    
+- oversized packets;
+    
+- invalid destination;
+    
+- impossible state combinations.
+    
+
+All malformed packets must fail closed.
+
+## 10. DoS/resource controls
+
+Define hard limits for:
+
+- maximum TTL;
+    
+- PacketID cache capacity;
+    
+- PacketID cache lifetime;
+    
+- forwarding queue capacity;
+    
+- maximum packet size;
+    
+- maximum forwarding fanout;
+    
+- maximum processing rate if required;
+    
+- peer-related resource consumption.
+    
+
+Explain what happens when each limit is reached.
+
+## 11. Routing loops
+
+Provide a concrete explanation of how the architecture handles:
+
+```text
+A → B → C → A
+
+
+and more complicated cyclic topologies.
+
+Demonstrate why the combination of PacketID caching + TTL prevents infinite forwarding.
+
+## 12. Peer churn
+
+Define behavior when:
+
+- next-hop peer disconnects;
+    
+- peer disappears during forwarding;
+    
+- destination becomes reachable later;
+    
+- forwarding fails;
+    
+- a peer reconnects;
+    
+- duplicate peer replacement occurs under M5 arbitration.
+    
+
+Do NOT add automatic reconnect behavior to M5.
+
+## 13. Concurrency model
+
+Define ownership and synchronization for:
+
+- routing table, if any;
+    
+- PacketID cache;
+    
+- forwarding queues;
+    
+- peer snapshots;
+    
+- packet processing;
+    
+- shutdown.
+    
+
+Avoid holding global locks during network I/O.
+
+## 14. Observability
+
+M6 telemetry must remain out-of-band.
+
+Propose safe metrics such as:
+
+```text
+mesh_packets_received_total
+mesh_packets_forwarded_total
+mesh_packets_dropped_total
+mesh_packets_expired_total
+mesh_packet_duplicates_total
+mesh_forward_queue_drops_total
+mesh_route_changes_total
+mesh_route_failures_total
+
+
+Do NOT log:
+
+- plaintext;
+    
+- private keys;
+    
+- session keys;
+    
+- passwords;
+    
+- raw sensitive cryptographic material.
+    
+
+## 15. Failure semantics
+
+Define explicit errors/drop reasons for:
+
+- duplicate;
+    
+- expired TTL;
+    
+- malformed packet;
+    
+- unsupported version;
+    
+- queue full;
+    
+- no eligible peers;
+    
+- destination unavailable;
+    
+- forwarding failure.
+    
+
+Distinguish expected packet drops from internal system failures.
+
+# REQUIRED M6 TEST ARCHITECTURE
+
+Before implementation, propose the test matrix.
+
+At minimum include:
+
+### Topology tests
+
+```text
+A ↔ B
+A ↔ B ↔ C
+A ↔ B ↔ C ↔ D
+A ↔ B
+|   |
+C---D
+
+
+### Routing tests
+
+- one-hop delivery;
+    
+- two-hop delivery;
+    
+- three-hop delivery;
+    
+- packet forwarding;
+    
+- TTL expiration;
+    
+- TTL boundary;
+    
+- duplicate suppression;
+    
+- loop prevention;
+    
+- forwarding through multiple peers;
+    
+- destination processing;
+    
+- destination not reachable.
+    
+
+### Adversarial tests
+
+- malformed packet;
+    
+- oversized packet;
+    
+- invalid TTL;
+    
+- repeated PacketID;
+    
+- PacketID cache exhaustion;
+    
+- forwarding queue exhaustion;
+    
+- malicious packet flood;
+    
+- packet modification;
+    
+- packet replay;
+    
+- relay attempting to access plaintext.
+    
+
+### Concurrency tests
+
+- concurrent packet forwarding;
+    
+- concurrent cache access;
+    
+- peer disconnect during forwarding;
+    
+- queue pressure;
+    
+- shutdown during forwarding;
+    
+- race detector.
+    
+
+### E2EE boundary test
+
+Create a test proving:
+
+```text
+A ---- encrypted packet ----> B ---- encrypted packet ----> C
+
+
+where B acts only as a relay and cannot decrypt A's application message intended for C.
+
+Do not weaken the existing M4 E2EE design merely to make routing easier.
+
+# REQUIRED ARCHITECTURE DELIVERABLE
+
+Return a complete M6 architecture proposal containing:
+
+1. Executive summary.
+    
+2. M6 scope.
+    
+3. Explicit non-goals.
+    
+4. Component architecture.
+    
+5. Routing model.
+    
+6. Packet lifecycle.
+    
+7. PacketID cache design.
+    
+8. TTL design.
+    
+9. Forwarding queue design.
+    
+10. Peer-selection/flooding algorithm.
+    
+11. Concurrency model.
+    
+12. Failure handling.
+    
+13. DoS/resource limits.
+    
+14. Security boundary.
+    
+15. M4/M5 integration.
+    
+16. Observability.
+    
+17. Test architecture.
+    
+18. Mermaid diagrams.
+    
+19. Sequence diagrams where useful.
+    
+20. Proposed files/packages to modify or create.
+    
+21. Any proposed protocol/schema changes.
+    
+22. Acceptance criteria.
+    
+23. Risks and trade-offs.
+    
+
+# HARD CONSTRAINTS
+
+Do NOT:
+
+- implement M6;
+    
+- modify M3 cryptography;
+    
+- modify M4 AEAD/session semantics;
+    
+- rewrite M5 peer management;
+    
+- introduce DHT;
+    
+- introduce unnecessary routing protocols;
+    
+- expose plaintext to relays;
+    
+- claim anonymity;
+    
+- claim perfect security;
+    
+- implement custom cryptographic primitives.
+    
+
+Security priority remains:
+
+> Security > Correctness > Simplicity > Performance > Features
+
+M6 is an architecture gate.
+
+Return the proposal only. The Project Overseer will review and freeze it before implementation begins.
+
+```
+
+
+
+```
+M6 ARCHITECTURE REVISION — BLOCKED / REDESIGN REQUIRED
+
+Project Overseer has reviewed the M6 Decentralized Mesh Routing Architecture.
+
+Verdict: REJECTED FOR FREEZE.
+
+The overall routing model is acceptable:
+- bounded managed flooding
+- TTL-based propagation control
+- PacketID duplicate suppression
+- no DHT
+- no route discovery
+- no route tables
+- no schema changes
+- per-peer nonblocking forwarding queues
+- preservation of the M3/M4 E2EE boundary
+
+However, the architecture has several blockers that MUST be resolved before implementation.
+
+DO NOT IMPLEMENT CODE YET.
+
+==================================================
+BLOCKER 1 — M4/M6 END-TO-END SESSION ARCHITECTURE
+==================================================
+
+The current architecture says:
+
+"If dest_node == local_node, pass the packet to the M4 Session layer."
+
+This is insufficient because M4 sessions are currently associated with direct TCP channels.
+
+For:
+
+A <-> B <-> C
+
+an A-to-C encrypted packet arrives at C over the B-C transport connection, but its E2EE session is A-C.
+
+Therefore redesign the architecture to explicitly define:
+
+1. How an endpoint identifies the correct E2EE session from session_id.
+2. How a routed APP_DATA packet is delivered to the correct local E2EE session independently of the immediate transport peer.
+3. Session registration and deregistration.
+4. Session lookup/concurrency semantics.
+5. How simultaneous sessions are handled.
+6. How unknown session_id packets are handled.
+7. How session lifecycle interacts with peer disconnection.
+8. How an endpoint can have multiple E2EE sessions over different routed paths.
+9. Whether sessions are endpoint-to-endpoint rather than transport-peer-to-transport-peer.
+
+Do NOT rewrite M4 unnecessarily. Define the minimal adapter/session-manager layer required above the existing M4 primitives.
+
+==================================================
+BLOCKER 2 — MULTI-HOP HANDSHAKE
+==================================================
+
+Explicitly design how M3 authenticated session establishment works across:
+
+A -> B -> C
+C -> B -> A
+
+The architecture MUST explain:
+
+- INIT forwarding
+- RESP forwarding
+- source/destination semantics
+- packet_id handling for handshake packets
+- how A authenticates C
+- how C authenticates A
+- how B remains unable to derive the A-C session keys
+- how the M3 transcript remains exactly frozen
+- how the existing M4 direct-channel APIs are adapted or abstracted without weakening authentication
+
+Do not invent a new cryptographic handshake.
+
+Use the exact frozen M3 handshake:
+DOMAIN = "MeshChat-Handshake-v1"
+T_INIT = DOMAIN || version || ID_A || ID_B || E_A || ZERO32
+T_RESP = DOMAIN || version || ID_A || ID_B || E_A || E_B
+Session ID = SHA256(T_RESP)
+HKDF as already frozen.
+
+The relay must forward the handshake packets without terminating the E2EE handshake.
+
+==================================================
+BLOCKER 3 — PACKET_ID LENGTH
+==================================================
+
+The frozen protobuf schema specifies:
+
+packet_id = 16 bytes.
+
+The current M6 document incorrectly says 32 bytes.
+
+DO NOT modify the frozen schema.
+
+Correct the M6 architecture to:
+
+- PacketID = exactly 16 bytes
+- generated using crypto/rand
+- cache key = (source_node, packet_id)
+
+Do not silently change any existing protocol field size.
+
+==================================================
+REQUIREMENT 4 — PACKETID CACHE SEMANTICS
+==================================================
+
+Keep the proposed starting parameters unless analysis proves otherwise:
+
+- capacity = 10,000 entries
+- lifetime = 2 minutes
+- LRU eviction
+- global per-node cache
+
+But explicitly define:
+
+- insertion point
+- whether malformed packets enter cache
+- whether packets with invalid TTL enter cache
+- whether locally destined packets enter cache
+- cache eviction behavior
+- cache expiry behavior
+- cache concurrency
+- memory bound
+- behavior under high-rate unique PacketIDs
+- cache churn/cache poisoning as a DoS limitation
+
+Do NOT claim the cache completely prevents adversarial amplification.
+
+Explain that it primarily suppresses repeated forwarding of the same packet within the cache lifetime.
+
+==================================================
+REQUIREMENT 5 — ROUTING IDENTITY VS CRYPTO AUTHENTICATION
+==================================================
+
+Explicitly distinguish:
+
+source_node routing metadata
+
+from
+
+cryptographically authenticated sender identity.
+
+A relay MUST NOT treat source_node alone as proof that the packet was created by that identity.
+
+Explain where cryptographic authentication comes from:
+- M3 signatures for handshake
+- M4 session cryptography for application data
+
+Document that routing metadata is visible and potentially forgeable by malicious peers.
+
+==================================================
+REQUIREMENT 6 — TTL SEMANTICS
+==================================================
+
+Freeze exact semantics:
+
+TTL == 0:
+    reject/drop universally.
+
+TTL == 1:
+    if destination == local node:
+        deliver
+    else:
+        drop.
+
+TTL > 1:
+    if destination == local node:
+        deliver
+    else:
+        decrement by 1 and forward.
+
+Maximum accepted TTL = 32.
+Default initial TTL = 16.
+
+Explicitly explain why local delivery at TTL=1 is allowed.
+
+==================================================
+REQUIREMENT 7 — FORWARDING QUEUE OWNERSHIP
+==================================================
+
+Define exact ownership:
+
+Router
+  -> per-peer bounded TX queue
+  -> peer writer
+  -> M5 transport
+
+The Router MUST NOT perform network I/O while forwarding.
+
+Define:
+
+- queue capacity = 1000 packets/peer
+- nonblocking enqueue
+- queue-full drop behavior
+- peer-close behavior
+- queue shutdown behavior
+- aggregate memory implications
+- fairness
+- whether application and forwarding traffic share queues
+- concurrency ownership
+- race-safe queue removal
+
+No global routing lock may be held during network I/O.
+
+==================================================
+REQUIREMENT 8 — RELAY PAYLOAD BOUNDARY
+==================================================
+
+Replace the overly broad statement that relays "parse only top-level fields."
+
+Clarify:
+
+Relays may structurally parse and validate the protobuf envelope and payload type as necessary for protocol correctness.
+
+Relays MUST NOT:
+- decrypt APP_DATA
+- access plaintext
+- derive destination E2EE session keys
+- terminate an endpoint-to-endpoint E2EE session
+- use relay transport keys to decrypt end-to-end application data
+
+The security boundary is cryptographic, not "protobuf cannot be parsed."
+
+==================================================
+REQUIREMENT 9 — E2EE TEST
+==================================================
+
+Replace the current E2EE test.
+
+The test must prove:
+
+A encrypts plaintext "SECRET" for C.
+
+A -> B -> C.
+
+B can inspect the MeshPacket and ciphertext bytes.
+
+B cannot decrypt the ciphertext because B lacks the A-C E2EE session keys.
+
+C successfully decrypts and obtains "SECRET".
+
+Also prove that B's transport/session keys are not sufficient to decrypt A-C application ciphertext.
+
+==================================================
+REQUIREMENT 10 — FLOODING COMPLEXITY
+==================================================
+
+Do not state simply:
+
+"O(E) per transmission"
+
+Replace with a more accurate bounded-flooding description.
+
+Explain that forwarding work depends on the number of eligible peer transmissions reached within the TTL-limited propagation region, with duplicate suppression preventing repeated forwarding of the same PacketID during the cache lifetime.
+
+==================================================
+REQUIRED ARCHITECTURE DELIVERABLE
+==================================================
+
+Return a revised M6 architecture document only.
+
+Include:
+
+1. Executive Summary
+2. Scope
+3. Non-goals
+4. Component Architecture
+5. End-to-End Session Architecture
+6. Multi-Hop Handshake Flow
+7. Routing Model
+8. Packet Lifecycle
+9. PacketID Cache
+10. TTL Semantics
+11. Forwarding Queues
+12. Peer Selection/Flooding
+13. Concurrency Model
+14. Failure Handling
+15. DoS/Resource Limits
+16. Security Boundary
+17. M4 Replay Interaction
+18. Observability
+19. Test Architecture
+20. E2EE Relay-Boundary Test
+21. Sequence Diagrams
+22. Proposed Files/Packages
+23. Schema Changes — must remain NONE
+24. Acceptance Criteria
+25. Risks and Trade-offs
+
+Use Mermaid diagrams for:
+- component architecture
+- A-B-C packet flow
+- multi-hop E2EE handshake
+- forwarding lifecycle
+
+Explicitly preserve all frozen M3/M4/M5 decisions.
+
+Do not implement any code.
+
+Do not modify the protobuf schema.
+
+Do not introduce DHT, route discovery, route tables, or unnecessary routing protocols.
+
+Do not claim anonymity, perfect security, or that relays are unable to inspect all metadata.
+
+At the end provide:
+- list of changed architectural decisions
+- list of unresolved risks
+- exact proposed implementation files
+- explicit statement that implementation is NOT authorized until Project Overseer approval.
+
+```
+
+
+```
+M6 ARCHITECTURE — FINAL CORRECTION PASS
+
+Project Overseer reviewed M6 Architecture Revision 2.
+
+The fundamental M6 design is now APPROVED IN PRINCIPLE:
+- bounded managed flooding
+- TTL propagation control
+- 16-byte PacketID
+- LRU duplicate suppression
+- no DHT
+- no route discovery
+- no route tables
+- endpoint-to-endpoint E2EE sessions independent of transport peers
+- multi-hop INIT/RESP forwarding
+- non-blocking per-peer queues
+- preservation of M3/M4/M5 boundaries
+
+Do NOT redesign the routing model.
+
+Do NOT implement code yet.
+
+Make ONLY the following final architectural corrections.
+
+==================================================
+1. CRITICAL — ACTUAL QUEUE MEMORY BOUNDS
+==================================================
+
+The current statement that 1,000 packets per peer implies approximately 10 MB of queue memory is incorrect.
+
+M5 permits up to 50 active peers and frame sizes up to 64 KiB.
+
+Therefore packet-count-only limits can theoretically permit multiple gigabytes of queued payload memory.
+
+Revise the queue design to include BOTH:
+
+- maximum packets per peer
+- maximum queued bytes per peer
+
+Keep the 1,000 packet limit as the packet-count ceiling.
+
+Define an explicit byte ceiling.
+
+Choose a simple defensible value appropriate for this academic project and explain the trade-off.
+
+Enqueue MUST fail/drop when either:
+- packet count limit is reached, OR
+- byte limit is reached.
+
+Define how queued bytes are accounted for and released.
+
+State the resulting theoretical aggregate queue memory bound using M5 MaxActivePeers.
+
+Do not claim an incorrect memory bound.
+
+==================================================
+2. CRITICAL — HANDSHAKE CORRELATION AND SESSION REGISTRATION
+==================================================
+
+Explicitly define how multi-hop M3 handshake state is correlated.
+
+The architecture must define a conceptual PendingHandshake structure containing enough information to safely associate INIT/RESP messages with the correct handshake instance.
+
+At minimum address:
+
+- local identity
+- remote identity
+- initiator/responder role
+- M3 handshake state
+- ephemeral-key state
+- creation/timeout information
+- concurrency ownership
+
+Define:
+
+A) How an outgoing INIT creates pending handshake state.
+
+B) How an incoming INIT is associated with a responder handshake.
+
+C) How an incoming RESP is associated with the correct pending initiator handshake.
+
+D) When and only when the M3 handshake becomes cryptographically established.
+
+E) When the resulting Session is inserted into SessionManager.
+
+F) What happens when signature verification fails.
+
+G) What happens when transcript/session validation fails.
+
+H) What happens when a duplicate/late RESP arrives.
+
+I) What happens when pending handshake state times out.
+
+J) How forged source_node values are prevented from causing session registration.
+
+CRITICAL SECURITY RULE:
+
+A MeshPacket's source_node/dest_node fields are routing metadata and are NOT sufficient to authenticate a peer.
+
+Session registration MUST occur only after the M3 cryptographic state machine successfully verifies the exact frozen transcript and derives the session.
+
+Do not invent a new cryptographic handshake.
+
+==================================================
+3. ALTERNATIVE PATH CLAIM
+==================================================
+
+Change wording equivalent to:
+
+"loss of intermediate peer allows traffic to seamlessly flow over alternative routed paths"
+
+to a technically precise statement:
+
+Loss of an intermediate transport peer does not cryptographically invalidate the endpoint-to-endpoint E2EE session. Subsequent packets MAY reach the destination through another available flooded path if the topology permits. M6 does not guarantee route repair or delivery.
+
+Do not introduce route discovery.
+
+==================================================
+4. PACKETID CACHE KEY
+==================================================
+
+Change:
+
+"(source_node, packet_id) strings"
+
+to a fixed binary key conceptually equivalent to:
+
+type PacketCacheKey struct {
+    Source   [32]byte
+    PacketID [16]byte
+}
+
+Do not implement it yet; this is an architectural definition.
+
+Explain that this avoids unnecessary string conversion/allocation and exactly matches the frozen field sizes.
+
+==================================================
+5. CACHE INSERTION TRADE-OFF
+==================================================
+
+Keep the current intentional insertion point:
+
+after structural envelope validation
+before TTL/destination processing.
+
+Explicitly document that this means structurally valid packets with invalid/expired TTL can still consume cache entries.
+
+State that this is intentional to suppress repeated processing but increases exposure to cache-churn/cache-poisoning DoS.
+
+Do not claim the cache prevents adversarial amplification.
+
+==================================================
+6. QUEUE CLOSE SEMANTICS
+==================================================
+
+Replace ambiguous wording such as:
+
+"queue is drained"
+
+with explicit semantics.
+
+When a peer closes:
+
+- queued packets are discarded
+- queue resources are released
+- no queued packet is transmitted after peer closure
+- Router must tolerate concurrent peer removal safely
+
+No blocking drain operation.
+
+==================================================
+7. SHARED QUEUE TRADE-OFF
+==================================================
+
+Keep application-originated and routed traffic sharing the same peer TX queue.
+
+Explicitly document:
+
+- this is intentional M6 simplification
+- routed flooding can consume queue capacity
+- application traffic may be dropped when the shared queue is full
+- M6 introduces no priority/QoS system
+- this is a known best-effort limitation
+
+Do not introduce unnecessary scheduling complexity.
+
+==================================================
+8. FINAL ACCEPTANCE CRITERIA
+==================================================
+
+Update acceptance criteria to include:
+
+- 3-hop E2EE message delivery
+- multi-hop M3 handshake completion
+- relay cannot decrypt endpoint ciphertext
+- transport-peer loss does not invalidate endpoint E2EE session
+- alternate-path delivery is possible when topology permits
+- PacketID exactly 16 bytes
+- cache bounded in entries and memory
+- forwarding queues bounded in packets and bytes
+- no blocking network I/O from Router
+- cyclic flooding terminates through duplicate suppression + TTL
+- malformed/oversized packets are dropped
+- concurrency/race tests pass
+- sustained malicious flood does not cause unbounded memory growth
+
+==================================================
+OUTPUT
+==================================================
+
+Return ONLY the revised M6 architecture document.
+
+Do not implement code.
+
+Do not modify the protobuf schema.
+
+Do not modify M3/M4 cryptographic definitions.
+
+Do not modify M5 architecture.
+
+At the end include:
+
+- final architectural decisions
+- known limitations
+- proposed implementation files
+- acceptance criteria
+- explicit statement:
+
+"Implementation remains NOT AUTHORIZED pending Project Overseer approval and architecture freeze."
+
+```
+
+
+```
+M6 FINAL ARCHITECTURE PATCH — ONE BLOCKER
+
+Do not redesign M6.
+
+Make only these documentation corrections.
+
+1. HANDSHAKE CORRELATION
+
+The current statement:
+
+"The handshake manager looks up the pending initiator handshake state by the remote identity."
+
+is insufficient because multiple simultaneous handshakes with the same remote identity are possible.
+
+Define an internal PendingHandshakeKey that uniquely identifies a handshake instance.
+
+Use an identifier derived from the exact frozen T_INIT transcript, conceptually:
+
+    PendingHandshakeKey = SHA256(T_INIT)
+
+This is an INTERNAL state-management key only.
+
+DO NOT add it to the protobuf schema.
+DO NOT modify T_INIT.
+DO NOT modify T_RESP.
+DO NOT modify the M3 cryptographic protocol.
+
+Explicitly define:
+
+- outgoing INIT creates PendingHandshake keyed by the T_INIT-derived identifier
+- pending state contains the M3 handshake state and ephemeral state
+- incoming RESP is correlated with the exact pending handshake instance
+- successful signature/transcript verification is required before SessionManager registration
+- pending state is removed after successful establishment
+- pending state is removed on timeout
+- duplicate/late responses cannot establish another session from an already-consumed handshake state
+- multiple simultaneous handshakes with the same remote identity are supported safely
+
+Do not claim remote identity alone uniquely identifies a handshake.
+
+2. QUEUE MEMORY WORDING
+
+Clarify that the 100 MiB figure is the theoretical maximum for queued outbound data across 50 peers.
+
+Add that each peer writer may temporarily hold one dequeued packet while performing transport I/O, bounded by the M5 64 KiB frame limit.
+
+Do not introduce an unbounded buffer.
+
+3. Return the complete final M6 architecture document.
+
+No code implementation.
+
+At the end retain:
+
+"Implementation remains NOT AUTHORIZED pending Project Overseer approval and architecture freeze."
+
+```
+
+
+```
+M6 FINAL ARCHITECTURE CORRECTION — HANDSHAKE CORRELATION
+
+Project Overseer has reviewed M6 Architecture Revision 4.
+
+The M6 routing architecture is APPROVED IN PRINCIPLE.
+
+All previous blockers are resolved except one protocol-correlation issue.
+
+DO NOT redesign M6.
+DO NOT implement code yet.
+DO NOT modify the protobuf schema.
+DO NOT modify the frozen M3 cryptographic protocol.
+
+==================================================
+REMAINING BLOCKER — RESP CORRELATION
+==================================================
+
+The architecture currently states:
+
+    PendingHandshakeKey = SHA256(T_INIT)
+
+and:
+
+    "The handshake manager correlates the incoming RESP with the
+     exact pending initiator handshake instance using the T_INIT-derived
+     internal key."
+
+This is not directly possible from the wire protocol because the frozen
+RESP payload does NOT contain PendingHandshakeKey or SHA256(T_INIT).
+
+The frozen RespPayload contains only:
+
+    E_B
+    signature
+
+And T_RESP is:
+
+    DOMAIN || version || ID_A || ID_B || E_A || E_B
+
+Therefore SHA256(T_INIT) must remain an INTERNAL state key only.
+It must NOT be described as a wire-level correlation identifier.
+
+==================================================
+REQUIRED CORRECTION
+==================================================
+
+Define RESP correlation without modifying the protobuf.
+
+For an incoming RESP at the initiator:
+
+1. Identify the expected remote identity/context for the pending
+   handshake candidates.
+
+2. Obtain the set of currently pending initiator handshake states for
+   that remote identity.
+
+3. Each candidate contains its own E_A / T_INIT state.
+
+4. For each candidate, reconstruct the exact frozen T_RESP:
+
+       DOMAIN || version || ID_A || ID_B || E_A || E_B
+
+   using:
+       - local ID_A
+       - expected remote ID_B
+       - candidate E_A
+       - received E_B
+
+5. Verify the received responder signature against that candidate's
+   exact T_RESP.
+
+6. Exactly one candidate must authenticate successfully.
+
+7. If exactly one candidate succeeds:
+       - complete the M3 state machine
+       - derive the shared secret
+       - derive the frozen HKDF session keys
+       - compute the frozen Session ID
+       - register the resulting Session
+       - remove the pending handshake state
+
+8. If zero candidates succeed:
+       - reject/drop the RESP
+       - do not register a session
+
+9. If more than one candidate somehow succeeds:
+       - treat this as a protocol/state error
+       - do not register any session
+       - fail closed
+
+10. A duplicate or late RESP cannot establish another session after the
+    matching pending handshake state has been consumed.
+
+==================================================
+INTERNAL KEY
+==================================================
+
+Keep:
+
+    PendingHandshakeKey = SHA256(T_INIT)
+
+as an INTERNAL map/state identifier.
+
+Explicitly state:
+
+- it is never transmitted
+- it is not part of the protobuf
+- it is not required to be reconstructed from the RESP
+- it uniquely identifies the pending handshake instance locally
+
+The responder may also use the same T_INIT-derived value internally for
+its responder-side pending state if useful, but no new protocol field is
+permitted.
+
+==================================================
+CONCURRENCY
+==================================================
+
+Explicitly define that multiple pending handshakes with the same remote
+identity are allowed.
+
+The implementation must safely support:
+
+    A -> C : INIT(E_A1)
+    A -> C : INIT(E_A2)
+
+followed by responses in either order.
+
+Each RESP must authenticate against the correct E_A candidate.
+
+Pending-handshake state must not be globally keyed only by remote identity.
+
+==================================================
+SECURITY
+==================================================
+
+Explicitly state:
+
+- source_node/dest_node are routing metadata
+- routing metadata alone never authenticates an endpoint
+- only successful M3 signature verification over the exact frozen
+  transcript permits handshake establishment
+- SessionManager registration occurs only after complete M3
+  cryptographic establishment
+
+Do not introduce a new handshake protocol.
+
+==================================================
+OUTPUT
+==================================================
+
+Return the complete corrected M6 architecture document.
+
+No implementation.
+
+No schema changes.
+
+No M3/M4 protocol changes.
+
+At the end retain:
+
+"Implementation remains NOT AUTHORIZED pending Project Overseer approval and architecture freeze."
+
+```
+
+
+```
+M6 IMPLEMENTATION AUTHORIZATION — ARCHITECTURE FROZEN
+
+PROJECT OVERSEER DECISION: 🟢 M6 ARCHITECTURE APPROVED AND FROZEN
+
+You are now authorized to implement M6.
+
+Implement ONLY the architecture defined in the approved M6 architecture document.
+
+==================================================
+FROZEN ARCHITECTURAL DECISIONS
+==================================================
+
+Routing:
+- Bounded managed flooding.
+- No DHT.
+- No route discovery.
+- No routing tables.
+- No shortest-path algorithm.
+- Forward to all eligible active peers except IncomingPeer.
+
+PacketID:
+- EXACTLY 16 bytes.
+- Generated using crypto/rand at the source.
+- Duplicate key is:
+    Source [32]byte
+    PacketID [16]byte
+- Internal cache key may be:
+    type PacketCacheKey struct {
+        Source   [32]byte
+        PacketID [16]byte
+    }
+
+PacketID cache:
+- Capacity: 10,000 entries.
+- Lifetime: 2 minutes.
+- LRU.
+- Protected by dedicated mutex.
+- Cache insertion occurs after structural envelope validation and before TTL/destination processing.
+- High-rate unique PacketIDs may cause cache churn; do not claim perfect amplification prevention.
+
+TTL:
+- Default initial TTL = 16.
+- Maximum accepted TTL = 32.
+- TTL > 32: drop.
+- TTL == 0: drop universally.
+- TTL == 1:
+    local destination -> deliver
+    non-local -> drop
+- TTL > 1:
+    local destination -> deliver
+    non-local -> decrement by 1 and forward.
+
+Forwarding:
+- Router performs NO network I/O.
+- Forwarding uses bounded per-peer queues.
+- Queue limits:
+    1000 packets per peer
+    2 MiB queued bytes per peer
+- Enqueue is non-blocking.
+- Drop when either limit is reached.
+- Application-originated and routed traffic share the peer queue.
+- No M6 QoS/priority system.
+- When peer closes, queued packets are discarded.
+- No blocking drain operation.
+- Peer writer may hold one dequeued packet during transport I/O, bounded by M5's 64 KiB frame limit.
+
+E2EE:
+- E2EE sessions are endpoint-to-endpoint.
+- They are NOT tied to the immediate TCP peer.
+- APP_DATA is routed by destination and session_id.
+- Local destination packets are delivered to SessionManager.
+- Unknown session_id -> local drop.
+- Relay nodes MUST NOT decrypt endpoint ciphertext.
+- Relay nodes MUST NOT derive endpoint E2EE session keys.
+- Relay transport keys MUST NOT be usable to decrypt endpoint application ciphertext.
+
+M3 handshake:
+- Multi-hop INIT/RESP packets are routed through the mesh.
+- Relays do not terminate the M3 handshake.
+- Frozen M3 transcript/protocol MUST remain unchanged.
+- Do not invent a new handshake.
+- Do not modify the protobuf schema.
+
+CRITICAL HANDSHAKE CORRELATION RULE:
+
+PendingHandshakeKey = SHA256(T_INIT)
+
+This is INTERNAL ONLY.
+It is NOT transmitted.
+It is NOT added to protobuf.
+It is NOT a wire correlation field.
+
+Multiple pending handshakes with the same remote identity MUST be supported.
+
+For an incoming RESP:
+
+1. Identify the expected remote identity/context.
+2. Obtain all currently pending initiator handshake candidates for that remote.
+3. Each candidate contains its own E_A/T_INIT state.
+4. Reconstruct T_RESP for each candidate using:
+       ID_A
+       expected ID_B
+       candidate E_A
+       received E_B
+5. Verify the responder signature against each candidate's exact T_RESP.
+6. Exactly one candidate must succeed.
+7. If exactly one succeeds:
+       complete M3
+       derive shared secret
+       derive frozen HKDF keys
+       compute frozen Session ID
+       register SessionManager session
+       consume/remove pending handshake
+8. If zero succeed:
+       drop
+       do not register
+9. If >1 succeed:
+       fail closed
+       do not register
+10. Duplicate/late RESP after consumption:
+       drop
+
+DO NOT simplify this to one pending handshake per remote identity.
+
+==================================================
+IMPLEMENTATION SCOPE
+==================================================
+
+Implement the approved files:
+
+NEW:
+    internal/routing/router.go
+    internal/routing/cache.go
+    internal/routing/router_test.go
+    internal/session/manager.go
+
+MODIFY:
+    internal/mesh/manager.go
+    internal/mesh/peer.go
+
+You may add narrowly necessary support files/tests if required, but do not redesign M5.
+
+Do not modify M3 cryptographic primitives or frozen M3 transcript/KDF behavior.
+
+Do not silently modify M4 cryptographic behavior.
+
+If an existing M4 API cannot directly support multi-hop operation, add the smallest adapter/integration layer necessary while preserving the existing M4 cryptographic implementation.
+
+==================================================
+ROUTER RESPONSIBILITIES
+==================================================
+
+Router must:
+
+1. Receive raw protobuf bytes from M5 peers.
+2. Parse and validate the MeshPacket.
+3. Reject unknown protocol versions.
+4. Reject unknown PacketType/invalid oneof combinations.
+5. Reject malformed field lengths.
+6. Reject oversized frames before allocation, respecting M5's 64 KiB bound.
+7. Validate:
+       packet_id = 16 bytes
+       source_node = 32 bytes
+       dest_node = 32 bytes
+       INIT ephemeral_key = 32 bytes
+       INIT signature = 64 bytes
+       RESP ephemeral_key = 32 bytes
+       RESP signature = 64 bytes
+       session_id = 32 bytes
+8. Reject malformed/unknown protobuf fields according to the frozen M4 validation policy.
+9. Apply PacketID duplicate suppression.
+10. Apply TTL semantics.
+11. Deliver local packets to the correct endpoint subsystem.
+12. Forward non-local packets through bounded peer queues.
+13. Never perform blocking network I/O during routing.
+14. Emit safe routing telemetry through the existing out-of-band mechanism.
+
+==================================================
+HANDSHAKE INTEGRATION
+==================================================
+
+Implement routing of:
+
+    PACKET_TYPE_INIT
+    PACKET_TYPE_RESP
+
+through multiple hops.
+
+Example:
+
+    A -> B -> C : INIT
+    C -> B -> A : RESP
+
+The relay B must only forward.
+
+C must authenticate A using the frozen M3 signature/transcript.
+
+A must authenticate C using the frozen M3 signature/transcript.
+
+Only after complete M3 cryptographic establishment may SessionManager register the session.
+
+Do not treat source_node as cryptographic authentication.
+
+==================================================
+APP DATA INTEGRATION
+==================================================
+
+Implement:
+
+    PACKET_TYPE_APP_DATA
+
+using the existing M4 session encryption/decryption layer.
+
+For a routed packet:
+
+    A -> B -> C
+
+where the E2EE session is A-C:
+
+- B forwards ciphertext.
+- C looks up session_id.
+- C passes ciphertext + sequence information into the correct M4 session.
+- C obtains plaintext only after successful M4 AEAD authentication/replay validation.
+
+B must never receive plaintext.
+
+==================================================
+FORWARDING
+==================================================
+
+Use M5 ActivePeers() snapshot.
+
+For every non-local packet:
+
+    if TTL <= 1:
+        drop
+
+    else:
+        packet.TTL--
+        for each active peer:
+            if peer == IncomingPeer:
+                continue
+            nonblocking enqueue
+
+Do not hold routing/global locks during network I/O.
+
+==================================================
+QUEUE IMPLEMENTATION
+==================================================
+
+Implement packet-count AND byte accounting.
+
+Each queued item must have a known byte size.
+
+On enqueue:
+
+    reject if packet_count >= 1000
+    reject if queued_bytes + packet_size > 2 MiB
+
+Otherwise atomically/account consistently:
+
+    packet_count++
+    queued_bytes += packet_size
+
+When writer removes an item from the queue:
+
+    packet_count--
+    queued_bytes -= packet_size
+
+The accounting must remain race-safe during:
+
+- concurrent enqueue
+- writer dequeue
+- peer shutdown
+- router shutdown
+- peer removal
+
+Do not create unbounded buffering elsewhere.
+
+==================================================
+SESSION MANAGER
+==================================================
+
+Implement a thread-safe endpoint E2EE session registry.
+
+Minimum conceptual API should support:
+
+- Register(session)
+- Lookup(sessionID)
+- Remove(sessionID)
+
+Use a suitable fixed-size representation for session IDs where practical.
+
+SessionManager must NOT key sessions by transport peer.
+
+Session lifecycle must be independent of an intermediate peer.
+
+Do not automatically terminate an endpoint E2EE session merely because one relay connection disappears.
+
+==================================================
+SECURITY REQUIREMENTS
+==================================================
+
+M6 MUST preserve:
+
+Confidentiality:
+- relay sees ciphertext only.
+
+Integrity:
+- M4 AEAD authenticates application data.
+
+Authentication:
+- M3 signatures authenticate handshake identities.
+
+Replay resistance:
+- M6 PacketID cache handles routing duplicates/loops.
+- M4 sequence/replay window handles cryptographic replay.
+- Do not merge these mechanisms.
+
+Do not log:
+- plaintext
+- private keys
+- session keys
+- shared secrets
+- passwords
+- sensitive cryptographic material
+
+Do not claim:
+- anonymity
+- perfect security
+- perfect traffic analysis resistance
+- unhackability
+
+==================================================
+TEST REQUIREMENTS
+==================================================
+
+Implement comprehensive tests.
+
+A. Unit tests
+
+Packet validation:
+- malformed protobuf
+- unknown protocol version
+- unknown packet type
+- wrong oneof
+- wrong PacketID length
+- wrong identity length
+- wrong ephemeral key length
+- wrong signature length
+- wrong session ID length
+- oversized input
+- TTL > 32
+- TTL == 0
+
+B. PacketID cache:
+- insertion
+- duplicate detection
+- LRU eviction
+- expiration
+- exact binary key behavior
+- source/PacketID collision isolation
+- concurrent access
+- cache churn
+
+C. TTL:
+- TTL 0 drops
+- TTL 1 local delivers
+- TTL 1 non-local drops
+- TTL 2 forwards with TTL 1
+- TTL 16
+- TTL 32 accepted
+- TTL 33 dropped
+
+D. Forwarding:
+- IncomingPeer excluded
+- all other active peers receive
+- queue-full drops
+- byte-limit drops
+- packet-count limit
+- concurrent enqueue
+- peer disconnect during enqueue
+- queue cleanup
+
+E. Multi-hop:
+    A <-> B
+    A <-> B <-> C
+    A <-> B <-> C <-> D
+
+Prove:
+- 1-hop delivery
+- 2-hop delivery
+- 3-hop delivery
+
+F. Loop topology:
+
+    A <-> B <-> C <-> D <-> A
+
+Prove:
+- no infinite forwarding
+- duplicate PacketIDs are suppressed
+- TTL eventually terminates propagation
+
+G. Multi-hop handshake:
+
+    A -> B -> C : INIT
+    C -> B -> A : RESP
+
+Prove:
+- M3 establishes A-C session
+- B never terminates the handshake
+- B cannot derive A-C session keys
+- session registration occurs only after complete M3 establishment
+
+H. Concurrent handshake correlation:
+
+Create multiple simultaneous handshakes between the same A/C identities with different E_A values.
+
+Deliver RESP packets in different orders.
+
+Prove each RESP matches only its cryptographically correct pending handshake.
+
+Prove that remote identity alone is NOT used as the unique pending-handshake key.
+
+I. E2EE relay boundary:
+
+A encrypts:
+
+    "SECRET"
+
+for C.
+
+Topology:
+
+    A -> B -> C
+
+Prove:
+- B sees routing metadata
+- B sees ciphertext
+- B cannot decrypt A-C ciphertext using B's transport/session keys
+- C decrypts successfully to "SECRET"
+
+J. Peer loss:
+
+Establish A-C E2EE session.
+
+Disconnect an intermediate peer.
+
+Verify:
+- session remains cryptographically valid
+- no automatic key replacement occurs
+- if another flooded path exists, subsequent traffic can still reach C
+
+K. Concurrency/race:
+- go test -race ./...
+- concurrent routing
+- concurrent cache access
+- concurrent session manager access
+- peer disconnect during forwarding
+- router shutdown
+- queue shutdown
+
+==================================================
+DOCKER / INTEGRATION
+==================================================
+
+Everything must remain containerized and reproducible.
+
+Update Docker Compose as necessary to demonstrate:
+
+    A
+    |
+    B
+   / \
+  C   D
+
+or another topology sufficient to demonstrate at least:
+
+    A -> B -> C
+
+for actual multi-hop delivery.
+
+The demo must prove actual ciphertext traverses a relay.
+
+Do not fake multi-hop behavior inside a single process.
+
+==================================================
+OBSERVABILITY
+==================================================
+
+Add safe out-of-band routing metrics where appropriate:
+
+    mesh_packets_received_total
+    mesh_packets_forwarded_total
+    mesh_packets_dropped_total
+    mesh_packets_expired_total
+    mesh_packet_duplicates_total
+    mesh_forward_queue_drops_total
+
+Do not put telemetry in the critical forwarding path in a way that can block routing.
+
+Telemetry failure MUST NOT break routing.
+
+==================================================
+VALIDATION
+==================================================
+
+Run at minimum:
+
+    gofmt
+    go vet ./...
+    go test ./...
+    go test -race ./...
+    go build ./...
+
+Then perform Docker validation:
+
+    docker compose config
+    docker compose build
+    docker compose up -d
+    docker compose ps
+    docker compose logs
+    docker compose down
+
+Capture concrete evidence for:
+
+- 3-hop delivery
+- multi-hop handshake
+- relay E2EE boundary
+- loop suppression
+- queue/resource limits
+
+Do not report tests as passing without actually running them.
+
+==================================================
+SCOPE PROTECTION
+==================================================
+
+DO NOT implement:
+
+- DHT
+- route discovery
+- routing tables
+- shortest-path algorithms
+- automatic topology repair
+- application ACK/retransmission
+- new cryptographic primitives
+- new cryptographic handshake
+- schema modifications
+- plaintext relay processing
+
+Do not rewrite M5.
+
+==================================================
+REQUIRED FINAL REPORT
+==================================================
+
+Return a detailed M6 implementation report containing:
+
+1. Executive summary
+2. Files created
+3. Files modified
+4. Router architecture
+5. PacketID cache implementation
+6. TTL implementation
+7. Forwarding queue implementation
+8. SessionManager implementation
+9. Multi-hop handshake implementation
+10. APP_DATA routing implementation
+11. Security boundary verification
+12. Test matrix
+13. Exact test commands and results
+14. Race-detector results
+15. Docker validation
+16. Multi-hop runtime evidence
+17. E2EE relay-boundary evidence
+18. Resource/DoS evidence
+19. Known limitations
+20. Any deviations from frozen architecture
+
+If ANY frozen architectural decision had to change:
+- STOP
+- report the deviation
+- do not silently change the architecture
+
+Do not claim M6 complete merely because unit tests pass.
+
+M6 completion requires actual end-to-end multi-hop runtime evidence.
+
+==================================================
+AUTHORIZATION
+==================================================
+
+M6 architecture is APPROVED AND FROZEN by the Project Overseer.
+
+Implementation is authorized.
+
+M7 is NOT authorized.
+
+Do not begin M7 work after M6 implementation.
+
+Stop after M6 implementation and report the evidence for independent Project Overseer review.
+
+```
+
+
+```
+PROJECT OVERSEER — M6 REMEDIATION REQUIRED
+
+M6 implementation is NOT APPROVED.
+
+The architecture remains frozen and approved. Do not redesign M6 or proceed to M7.
+
+Fix and provide source-level evidence for the following:
+
+1. CRITICAL — EnqueueForward queue accounting
+
+The current implementation appears to increment:
+
+    queuedCount++
+    queuedBytes += len(msg)
+
+before a non-blocking channel send, but returns false on:
+
+    default:
+
+without rolling back the accounting.
+
+This can permanently consume queue capacity after failed enqueue attempts.
+
+Fix this so queue accounting remains exactly consistent with successfully queued packets.
+
+Prove with tests that:
+- failed enqueue does not permanently increase queuedCount
+- failed enqueue does not permanently increase queuedBytes
+- queue capacity becomes available after writer dequeue
+- concurrent enqueue/dequeue preserves exact accounting
+- peer shutdown cannot leave accounting inconsistent
+- race detector passes
+
+2. CRITICAL — Frozen M3 handshake response correlation
+
+Audit the complete implementation of InitiatorHandshake.TestResp() and every caller.
+
+The frozen transcript is:
+
+    T_RESP =
+    DOMAIN ||
+    u8(PROTOCOL_VERSION) ||
+    ID_A ||
+    ID_B ||
+    E_A ||
+    E_B
+
+Incoming RESP correlation must:
+
+- enumerate pending initiator handshakes for the same remote identity
+- use each candidate's E_A
+- use the received RESP E_B
+- reconstruct the exact frozen T_RESP
+- verify the responder signature against that exact transcript
+- require exactly one candidate match
+- reject zero matches
+- fail closed on >1 match
+- support multiple simultaneous handshakes with the same remote
+- not introduce any wire/schema field
+- not modify the frozen M3 transcript
+
+Do NOT simplify pending state to pending[remoteIdentity].
+
+Provide the exact source implementation and tests demonstrating:
+- two simultaneous handshakes with same remote
+- RESP matches candidate A
+- RESP matches candidate B
+- wrong E_A candidate rejected
+- wrong E_B rejected
+- identity substitution rejected
+- malformed RESP rejected
+- duplicate/late RESP cannot establish a second session
+- ambiguous candidate match fails closed
+
+3. TTL — restore frozen M6 semantics
+
+The architecture froze:
+
+- maximum accepted TTL = 32
+- default initial TTL = 16
+
+Do not reinterpret 16 as the maximum.
+
+Implement/test:
+- TTL 0 → always drop
+- TTL 1 + local destination → process locally
+- TTL 1 + non-local destination → drop
+- TTL 2+ + non-local → decrement and forward
+- accepted TTL may be up to 32
+- TTL >32 → reject/drop
+
+Show exact source and boundary tests.
+
+4. E2EE terminology
+
+Do not claim “perfect forward secrecy over the mesh” merely because relays cannot access endpoint session state.
+
+Use precise terminology:
+
+“The intermediate relay does not possess the endpoint M4 session state and forwards APP_DATA as opaque ciphertext.”
+
+Only claim PFS if the complete M3 ephemeral-key lifecycle and destruction semantics have independently been demonstrated.
+
+5. M6 acceptance evidence
+
+Provide concrete named test evidence for:
+
+- packet structural validation
+- PacketID exactly 16 bytes
+- cache capacity 10,000
+- cache expiry 2 minutes
+- TTL 0/1/2/32/>32
+- bounded forwarding queues
+- 1000 packet limit
+- 2 MiB byte limit
+- concurrent queue accounting
+- cyclic topology loop termination
+- 1-hop delivery
+- 2-hop delivery
+- 3-hop delivery
+- multi-hop M3 handshake
+- concurrent same-remote handshake correlation
+- duplicate/late RESP handling
+- peer loss during an established multi-hop session
+- relay inability to decrypt APP_DATA
+- malformed packet handling
+- oversized frame handling
+- sustained flooding without unbounded memory
+- go test -race
+
+6. Docker evidence
+
+Re-run the real multi-container topology after fixes.
+
+Show:
+Alice -> Bob -> Carol
+
+and demonstrate:
+- Alice/Carol establish M3 end-to-end session
+- Bob only forwards packets
+- Bob cannot decrypt Carol-directed APP_DATA
+- TTL changes correctly at each hop
+- duplicate suppression works
+- bounded queues remain bounded
+
+Do not fake routing inside one process.
+
+7. Do not make unrelated changes
+
+Do NOT:
+- modify the protobuf schema
+- modify the frozen M3 transcript
+- weaken M4 validation
+- rewrite M5 peer lifecycle unnecessarily
+- add DHT/route discovery/route tables
+- implement M7 features
+
+After remediation, stop and submit a new M6 remediation report.
+
+Required report structure:
+
+1. Files changed
+2. Exact fixes
+3. Exact source evidence for handshake correlation
+4. Exact source evidence for queue accounting
+5. TTL implementation and boundary evidence
+6. Named test results
+7. Race-detector result
+8. Docker multi-hop result
+9. E2EE relay-boundary result
+10. Any remaining known limitations
+
+M6 remains NOT APPROVED until the Project Overseer independently reviews the remediation.
+
+```
+
+
+```
+PROJECT OVERSEER — M6 REMEDIATION IMPLEMENTATION AUTHORIZATION
+
+You are implementing the remediation required after the Project Overseer rejected the previous M6 implementation.
+
+STATUS:
+- M0–M5: COMPLETE and APPROVED.
+- M6 ARCHITECTURE: APPROVED and FROZEN.
+- M6 IMPLEMENTATION: PREVIOUSLY REJECTED.
+- M6 REMEDIATION: AUTHORIZED.
+- M7: NOT AUTHORIZED.
+
+Your job is to remediate ONLY the identified M6 implementation defects and provide concrete evidence for the M6 acceptance gate.
+
+DO NOT redesign M6.
+DO NOT modify the frozen architecture.
+DO NOT proceed to M7.
+
+============================================================
+1. FROZEN M6 ARCHITECTURE — MUST NOT CHANGE
+============================================================
+
+M6 uses:
+
+- bounded managed flooding
+- no DHT
+- no route tables
+- no route discovery
+- no routing algorithm
+- 16-byte PacketID
+- duplicate suppression keyed by:
+    (SourceNode[32], PacketID[16])
+- cache capacity: 10,000 entries
+- cache lifetime: 2 minutes
+- default initial TTL: 16
+- maximum accepted TTL: 32
+- per-peer forwarding queues:
+    maximum 1000 packets
+    maximum 2 MiB queued bytes
+- non-blocking router forwarding
+- router performs no network I/O
+- endpoint-to-endpoint M4 E2EE identified by session_id
+- relay nodes forward ciphertext but never decrypt endpoint APP_DATA
+- SessionManager is independent of M5 transport Peer connections
+- M3 handshake transcript remains EXACTLY frozen
+- no protobuf schema changes
+
+The approved M6 architecture remains authoritative.
+
+============================================================
+2. CRITICAL FIX #1 — FORWARDING QUEUE ACCOUNTING
+============================================================
+
+File:
+
+    internal/mesh/peer.go
+
+The previous implementation contained a bug:
+
+    queuedCount++
+    queuedBytes += len(msg)
+
+followed by:
+
+    select {
+    case p.queue <- msg:
+        return true
+    default:
+        return false
+    }
+
+If the non-blocking channel send failed, accounting could remain incremented even though the packet was never queued.
+
+FIX THIS.
+
+Required invariant:
+
+    queuedCount
+        ==
+    number of successfully queued packets
+
+and:
+
+    queuedBytes
+        ==
+    sum of len(packet) for successfully queued packets
+
+at every externally observable point.
+
+The implementation must guarantee that a failed enqueue does NOT permanently consume queue capacity.
+
+You may implement this using rollback or another race-safe design, but the actual accounting must remain exactly consistent with successful queue admission.
+
+Also inspect the dequeue/writer path.
+
+Every successfully dequeued packet must decrement:
+
+    queuedCount
+
+and:
+
+    queuedBytes
+
+exactly once.
+
+Peer shutdown must not corrupt accounting.
+
+Concurrent enqueue/dequeue must remain race-safe.
+
+IMPORTANT:
+Do not merely add tests around the old implementation.
+The underlying implementation must actually be corrected.
+
+============================================================
+3. QUEUE TEST REQUIREMENTS
+============================================================
+
+Add or extend tests in:
+
+    internal/mesh/peer_test.go
+
+Explicitly test:
+
+A. Successful enqueue:
+- count increases by exactly 1
+- bytes increase by exactly len(msg)
+
+B. Failed enqueue because packet-count limit:
+- enqueue returns false
+- count unchanged
+- bytes unchanged
+
+C. Failed enqueue because byte limit:
+- enqueue returns false
+- count unchanged
+- bytes unchanged
+
+D. Underlying channel full:
+- enqueue returns false
+- count unchanged
+- bytes unchanged
+
+E. Dequeue:
+- count decreases exactly once
+- bytes decrease by exact packet length
+
+F. Queue reuse:
+- fill queue
+- force rejection
+- dequeue
+- verify capacity becomes available again
+
+G. Concurrent enqueue/dequeue:
+- multiple producers
+- writer/dequeue activity
+- verify accounting invariants
+
+H. Shutdown:
+- close peer while queue contains packets
+- verify no accounting corruption or race
+
+Run:
+
+    go test -race ./internal/mesh
+
+============================================================
+4. CRITICAL FIX #2 — M3 HANDSHAKE RESPONSE CORRELATION
+============================================================
+
+This is a SECURITY-CRITICAL requirement.
+
+Previous evidence showed:
+
+    func (h *InitiatorHandshake) TestResp(resp *RespMessage) bool {
+        return ed25519.Verify(
+            h.remoteIdent.PublicKey(),
+            h.transcript,
+            resp.Signature,
+        )
+    }
+
+This does NOT by itself prove correct M6 response correlation.
+
+The frozen M3 response transcript is EXACTLY:
+
+    T_RESP =
+        DOMAIN ||
+        u8(PROTOCOL_VERSION) ||
+        ID_A ||
+        ID_B ||
+        E_A ||
+        E_B
+
+where:
+
+    DOMAIN = "MeshChat-Handshake-v1"
+
+    PROTOCOL_VERSION = 0x01
+
+    ID_A = initiator Ed25519 public key, exactly 32 bytes
+
+    ID_B = responder Ed25519 public key, exactly 32 bytes
+
+    E_A = initiator X25519 ephemeral public key, exactly 32 bytes
+
+    E_B = responder X25519 ephemeral public key, exactly 32 bytes
+
+Alice signs:
+
+    T_INIT =
+        DOMAIN ||
+        u8(PROTOCOL_VERSION) ||
+        ID_A ||
+        ID_B ||
+        E_A ||
+        ZERO32
+
+Bob signs:
+
+    T_RESP =
+        DOMAIN ||
+        u8(PROTOCOL_VERSION) ||
+        ID_A ||
+        ID_B ||
+        E_A ||
+        E_B
+
+DO NOT modify this transcript.
+
+DO NOT add a wire field.
+
+DO NOT add a protobuf field.
+
+DO NOT change M3 cryptographic primitives.
+
+============================================================
+5. REQUIRED M6 PENDING HANDSHAKE CORRELATION
+============================================================
+
+Multiple simultaneous handshakes with the SAME remote identity MUST be supported.
+
+DO NOT simplify pending state to:
+
+    pending[remoteIdentity]
+
+The approved internal correlation key is:
+
+    PendingHandshakeKey = SHA256(T_INIT)
+
+This is INTERNAL ONLY.
+
+It must NOT appear in the protobuf schema or wire protocol.
+
+When an incoming RESP is received:
+
+1. Identify candidate pending initiator handshakes for the responder identity.
+
+2. For each candidate:
+   - obtain that candidate's E_A
+   - obtain the received RESP's E_B
+   - reconstruct the exact frozen T_RESP
+   - verify the responder's Ed25519 signature over that exact T_RESP
+
+3. Count successful candidates.
+
+Required result:
+
+    exactly 1 match:
+        continue handshake establishment
+
+    0 matches:
+        reject/drop response
+
+    >1 matches:
+        FAIL CLOSED
+
+4. Only after successful cryptographic establishment may the session be registered.
+
+5. Duplicate or late RESP must NOT establish another session.
+
+6. A malformed RESP must not mutate pending state.
+
+7. Wrong E_A must fail.
+
+8. Wrong E_B must fail.
+
+9. Wrong responder identity must fail.
+
+10. Identity substitution must fail.
+
+IMPORTANT:
+The source implementation must actually perform this correlation.
+
+Do not merely create tests that assume another function is doing it.
+
+Audit all callers and the pending-handshake lifecycle.
+
+============================================================
+6. HANDSHAKE CORRELATION TESTS
+============================================================
+
+Add or extend tests in:
+
+    internal/crypto/session_test.go
+
+AND, if the correlation actually occurs in the session/routing/mesh layer, add the appropriate integration tests there as well.
+
+Explicitly prove:
+
+A. Two simultaneous initiator handshakes to the same remote.
+
+B. RESP for handshake A:
+- candidate A matches
+- candidate B does not
+
+C. RESP for handshake B:
+- candidate B matches
+- candidate A does not
+
+D. Wrong E_A:
+- no candidate match
+
+E. Wrong E_B:
+- signature verification fails
+
+F. Wrong responder identity:
+- rejected
+
+G. Identity substitution:
+- rejected
+
+H. Malformed RESP:
+- rejected
+
+I. Duplicate RESP:
+- cannot create second session
+
+J. Late RESP after handshake completion:
+- cannot establish another session
+
+K. Ambiguous candidate match:
+- >1 successful candidate
+- handshake fails closed
+
+L. Successful session registration occurs exactly once.
+
+Use the frozen known-answer/session behavior already approved in M3.
+
+Do not invalidate or rewrite existing M3 tests.
+
+============================================================
+7. FIX #3 — TTL SEMANTICS
+============================================================
+
+File:
+
+    internal/routing/router.go
+
+The previous implementation/report incorrectly described:
+
+    "Strict 16-hop TTL"
+
+This is WRONG.
+
+The frozen architecture requires:
+
+    maximum accepted TTL = 32
+    default initial TTL = 16
+
+16 is NOT the maximum.
+
+Implement exact semantics:
+
+FIRST:
+
+    validate packet structure
+
+THEN:
+
+    if TTL > 32:
+        DROP
+
+This must happen even if DestNode is local.
+
+Then:
+
+    if TTL == 0:
+        DROP
+
+Then:
+
+    if DestNode == local identity:
+        PROCESS LOCALLY
+
+Otherwise:
+
+    if TTL == 1:
+        DROP
+
+    if TTL > 1:
+        decrement TTL
+        forward
+
+Therefore:
+
+    TTL 0:
+        always drop
+
+    TTL 1 + local destination:
+        deliver locally
+
+    TTL 1 + non-local destination:
+        drop
+
+    TTL 2 + non-local:
+        decrement to 1 and forward
+
+    TTL 32:
+        accepted
+
+    TTL 33:
+        dropped
+
+Do NOT change the default initial TTL from 16.
+
+============================================================
+8. TTL TESTS
+============================================================
+
+Add or extend:
+
+    internal/routing/router_test.go
+
+Explicitly test:
+
+- TTL 0 local → dropped
+- TTL 0 remote → dropped
+- TTL 1 local → delivered
+- TTL 1 remote → dropped
+- TTL 2 remote → forwarded with TTL 1
+- TTL 16 remote → forwarded correctly
+- TTL 31 remote → forwarded correctly
+- TTL 32 remote → forwarded correctly
+- TTL 32 local → delivered
+- TTL 33 local → dropped
+- TTL 33 remote → dropped
+- TTL values above 32 → dropped
+
+Also verify that TTL >32 is rejected BEFORE local processing.
+
+============================================================
+9. PACKET VALIDATION TESTS
+============================================================
+
+Verify frozen M4/M6 validation remains intact.
+
+Test:
+
+- PacketID exactly 16 bytes
+- PacketID 15 bytes → reject
+- PacketID 17 bytes → reject
+- source_node exactly 32 bytes
+- destination_node exactly 32 bytes
+- ephemeral key exactly 32 bytes
+- signature exactly 64 bytes
+- session_id exactly 32 bytes
+- unknown packet type → reject
+- packet type / oneof mismatch → reject
+- unknown protobuf fields → reject
+- malformed protobuf → reject
+- oversized TCP frame >64 KiB → reject before allocation
+- unknown protocol version → reject
+
+DO NOT weaken M4 validation.
+
+============================================================
+10. DUPLICATE CACHE TESTS
+============================================================
+
+Verify:
+
+    key = (SourceNode[32], PacketID[16])
+
+Test:
+
+- first packet accepted
+- identical packet rejected as duplicate
+- same PacketID from different source is NOT treated as duplicate
+- cache capacity is bounded at 10,000
+- entries expire after 2 minutes
+- expired entry can be accepted again
+- concurrent cache access is race-safe
+- cache does not grow without bound
+
+If exact wall-clock testing is problematic, use an injectable clock or another deterministic mechanism rather than flaky sleeps.
+
+============================================================
+11. ROUTING / LOOP TESTS
+============================================================
+
+Explicitly test:
+
+- 1-hop delivery
+- 2-hop delivery
+- 3-hop delivery
+- cyclic topology
+- duplicate suppression terminates flooding
+- TTL terminates flooding
+- incoming peer is excluded from forwarding
+- local destination is processed exactly once
+- no forwarding loop causes unbounded packet growth
+
+Test both logical routing behavior and actual multi-node behavior where practical.
+
+============================================================
+12. FORWARDING QUEUE LIMITS
+============================================================
+
+Verify:
+
+    maximum packets per peer = 1000
+
+    maximum queued bytes per peer = 2 MiB
+
+The router must remain non-blocking.
+
+The router must not perform network I/O directly.
+
+Forwarding must use the peer's bounded queue.
+
+Queue-full behavior must be explicit and safe.
+
+If EnqueueForward returns:
+
+    false
+
+or:
+
+    ErrQueueFull
+
+ensure the router handles that condition without blocking or corrupting state.
+
+Telemetry may record the drop, but telemetry must never block the routing critical path.
+
+============================================================
+13. E2EE RELAY BOUNDARY
+============================================================
+
+Preserve the exact architectural security boundary.
+
+For a packet traveling:
+
+    Alice → Bob → Carol
+
+Bob MUST:
+
+- parse enough of the envelope to route it
+- inspect destination/routing metadata
+- decrement TTL where required
+- enqueue the packet onward
+
+Bob MUST NOT:
+
+- decrypt Alice→Carol APP_DATA
+- access Alice/Carol endpoint session keys
+- terminate Alice/Carol's M4 E2EE session
+- derive endpoint session keys
+- access endpoint plaintext
+- use M5 transport state as an endpoint decryption key
+
+The correct report wording is:
+
+    "The intermediate relay does not possess the endpoint M4 session state and forwards APP_DATA as opaque ciphertext."
+
+DO NOT write:
+
+    "perfect forward secrecy over the mesh"
+
+unless separately proven through the complete M3 ephemeral lifecycle.
+
+============================================================
+14. PEER-LOSS TEST
+============================================================
+
+Test an established multi-hop session:
+
+    Alice → Bob → Carol
+
+Then remove/close Bob's connection.
+
+Verify:
+
+- transport peer loss does not cryptographically invalidate the Alice↔Carol M4 session
+- SessionManager remains independent of the transport peer
+- no stale peer/session state causes unsafe behavior
+- packets are dropped safely if no alternative path exists
+- if an alternative path exists, endpoint session_id routing can use it without changing the endpoint session keys
+
+Do not implement route discovery or automatic rerouting as an M7 feature.
+
+============================================================
+15. SUSTAINED FLOOD / MEMORY BOUND TEST
+============================================================
+
+Demonstrate that sustained managed flooding remains bounded.
+
+Verify:
+
+- PacketID cache remains bounded
+- per-peer queues remain bounded
+- router does not accumulate unbounded pending packets
+- queue byte accounting remains correct
+- duplicate suppression works under repeated flooding
+- TTL terminates cyclic propagation
+
+============================================================
+16. RACE DETECTOR
+============================================================
+
+Run at minimum:
+
+    go test -race ./internal/mesh
+
+    go test -race ./internal/routing
+
+    go test -race ./internal/crypto
+
+Preferably also run:
+
+    go test -race ./...
+
+No race failures are acceptable.
+
+Also run:
+
+    gofmt
+    go vet ./...
+    go test ./...
+    go build ./...
+
+============================================================
+17. DOCKER MULTI-HOP VALIDATION
+============================================================
+
+Use the REAL Docker multi-container topology.
+
+Required topology:
+
+    Alice → Bob → Carol
+
+Do not fake routing inside one process.
+
+Run:
+
+    docker compose config
+    docker compose build
+    docker compose up -d
+    docker compose ps
+    docker compose logs
+
+Then shut down cleanly:
+
+    docker compose down
+
+Demonstrate:
+
+1. Alice connects to Bob.
+2. Bob connects to Carol.
+3. Alice initiates M3 handshake with Carol.
+4. INIT travels Alice → Bob → Carol.
+5. RESP travels Carol → Bob → Alice.
+6. Alice and Carol establish the endpoint M4 session.
+7. Alice sends APP_DATA to Carol.
+8. Bob forwards APP_DATA.
+9. Carol decrypts successfully.
+10. Bob does not possess endpoint session state or plaintext.
+11. TTL changes correctly at each hop.
+12. Duplicate suppression works.
+13. Queue bounds remain enforced.
+
+Capture concrete logs/evidence.
+
+============================================================
+18. SECURITY REQUIREMENTS
+============================================================
+
+Security takes precedence over performance.
+
+Never:
+- invent cryptographic primitives
+- modify the frozen transcript
+- reuse AEAD nonces
+- expose private keys
+- expose session keys
+- log plaintext
+- log ciphertext unnecessarily
+- export secret material through telemetry
+- weaken replay protection
+- bypass M4 validation
+- treat routing metadata as cryptographic authentication
+- claim anonymity
+- claim unhackability
+- claim perfect security
+
+M6 relay routing is NOT endpoint authentication.
+
+M3 provides endpoint authentication.
+
+M4 provides endpoint confidentiality/integrity/replay protection.
+
+M6 provides transport/routing behavior around those layers.
+
+============================================================
+19. FILE SCOPE
+============================================================
+
+Expected primary files:
+
+    internal/mesh/peer.go
+    internal/mesh/peer_test.go
+
+    internal/routing/router.go
+    internal/routing/router_test.go
+
+    internal/crypto/session.go
+    internal/crypto/session_test.go
+
+Modify other files ONLY if required for the actual implementation.
+
+Do NOT perform unrelated refactoring.
+
+Do NOT modify:
+- protobuf schema
+- frozen M3 transcript
+- M4 cryptographic semantics
+- M5 architecture unnecessarily
+
+============================================================
+20. DOCUMENTATION
+============================================================
+
+DO NOT synchronize the project documentation yet.
+
+Documentation synchronization happens ONLY after the Project Overseer formally approves M6.
+
+Do not create an M6 documentation ZIP.
+
+============================================================
+21. FINAL REPORT REQUIREMENTS
+============================================================
+
+After implementation and validation, STOP.
+
+Do not start M7.
+
+Submit a new:
+
+    PROJECT OVERSEER — M6 REMEDIATION FINAL REPORT
+
+with EXACTLY these sections:
+
+1. Files Changed
+
+2. Exact Fixes
+
+3. Queue Accounting Source Evidence
+
+4. Handshake Correlation Source Evidence
+
+5. TTL Implementation and Boundary Evidence
+
+6. Packet Validation Evidence
+
+7. Cache and Flooding Evidence
+
+8. Queue/Concurrency Evidence
+
+9. Named Test Results
+
+10. Race Detector Results
+
+11. Docker Multi-Hop Evidence
+
+12. E2EE Relay-Boundary Evidence
+
+13. Peer-Loss Evidence
+
+14. Sustained Flood/Memory-Bound Evidence
+
+15. Security Assessment
+
+16. Remaining Known Limitations
+
+For every important acceptance criterion, provide:
+- test name
+- command
+- result
+- relevant source evidence where appropriate
+
+Do NOT merely state:
+
+    "all tests passed"
+
+Provide concrete evidence.
+
+Do NOT claim an acceptance criterion is satisfied unless the implementation/test evidence actually demonstrates it.
+
+============================================================
+22. FINAL STOP CONDITION
+============================================================
+
+After completing remediation:
+
+STOP.
+
+Do not:
+- modify documentation
+- create documentation packages
+- begin M7
+- add unrelated features
+- declare M6 approved
+
+The Project Overseer will independently review the remediation report and make the final M6 approval decision.
+
+M6 REMEDIATION IMPLEMENTATION IS AUTHORIZED.
+BEGIN NOW.
+
+```
+
+
+```
+PROJECT OVERSEER — M6 FINAL SECURITY/EVIDENCE REMEDIATION
+
+M6 remains NOT APPROVED.
+
+The previous remediation fixed the queue-accounting defect and TTL semantics, but the Project Overseer still requires concrete implementation and test evidence for several acceptance criteria.
+
+This is the FINAL targeted M6 remediation pass.
+
+IMPORTANT STATUS:
+- M0–M5: APPROVED
+- M6 ARCHITECTURE: APPROVED AND FROZEN
+- M6 IMPLEMENTATION: NOT APPROVED
+- M6 REMEDIATION: AUTHORIZED
+- M7: NOT AUTHORIZED
+
+DO NOT redesign the architecture.
+DO NOT modify the protobuf schema.
+DO NOT modify the frozen M3 transcript.
+DO NOT weaken M4.
+DO NOT rewrite M5 unnecessarily.
+DO NOT add DHT, route discovery, route tables, or M7 functionality.
+DO NOT synchronize documentation.
+DO NOT create a documentation ZIP.
+
+Your goal is to provide implementation-level evidence for the remaining M6 security and acceptance blockers.
+
+============================================================
+1. CRITICAL — ACTUAL M6 HANDSHAKE CORRELATION
+============================================================
+
+This is the highest-priority item.
+
+The previous report demonstrated that:
+
+    TestResp()
+
+can reconstruct and verify a candidate T_RESP.
+
+That alone is NOT sufficient.
+
+The Project Overseer needs the actual M6 correlation implementation.
+
+Audit the COMPLETE code path for an incoming RESP.
+
+Show the exact source code responsible for:
+
+    incoming RESP
+        ↓
+    identify remote responder
+        ↓
+    enumerate ALL pending initiator handshakes for that remote
+        ↓
+    candidate A:
+        candidate E_A + received E_B
+        ↓
+        reconstruct exact T_RESP
+        ↓
+        verify responder Ed25519 signature
+
+    candidate B:
+        candidate E_A + received E_B
+        ↓
+        reconstruct exact T_RESP
+        ↓
+        verify responder Ed25519 signature
+
+        ...
+
+        ↓
+    count successful candidates
+        ↓
+    exactly 1 → continue
+    0        → reject
+    >1       → FAIL CLOSED
+
+The frozen transcript is:
+
+    T_RESP =
+        DOMAIN ||
+        u8(PROTOCOL_VERSION) ||
+        ID_A ||
+        ID_B ||
+        E_A ||
+        E_B
+
+where:
+
+    DOMAIN = "MeshChat-Handshake-v1"
+
+    PROTOCOL_VERSION = 0x01
+
+    ID_A = initiator Ed25519 public key
+    ID_B = responder Ed25519 public key
+    E_A  = candidate initiator X25519 public key
+    E_B  = received responder X25519 public key
+
+DO NOT modify this transcript.
+
+DO NOT add a correlation field to protobuf.
+
+DO NOT add a wire identifier.
+
+The internal pending key remains:
+
+    PendingHandshakeKey = SHA256(T_INIT)
+
+This key is internal only.
+
+CRITICAL:
+
+Do NOT use:
+
+    pending[remoteIdentity]
+
+as the sole pending-handshake state.
+
+Multiple simultaneous handshakes to the same remote MUST remain supported.
+
+============================================================
+2. REQUIRED HANDSHAKE TESTS
+============================================================
+
+Add explicit named tests demonstrating the ACTUAL correlation manager/path.
+
+Do not test only TestResp() in isolation.
+
+Required cases:
+
+    TestHandshakeCorrelation_SingleMatch
+
+    TestHandshakeCorrelation_TwoSimultaneousSameRemote
+
+    TestHandshakeCorrelation_MatchCandidateA
+
+    TestHandshakeCorrelation_MatchCandidateB
+
+    TestHandshakeCorrelation_NoCandidateMatch
+
+    TestHandshakeCorrelation_AmbiguousCandidatesFailClosed
+
+    TestHandshakeCorrelation_WrongEA
+
+    TestHandshakeCorrelation_WrongEB
+
+    TestHandshakeCorrelation_WrongIdentity
+
+    TestHandshakeCorrelation_MalformedRESP
+
+    TestHandshakeCorrelation_DuplicateRESP
+
+    TestHandshakeCorrelation_LateRESP
+
+    TestHandshakeCorrelation_ExactlyOnceRegistration
+
+For the simultaneous case:
+
+    Handshake A:
+        E_A1
+
+    Handshake B:
+        E_A2
+
+Both must target the same responder identity.
+
+Construct:
+
+    RESP(A)
+
+and prove:
+
+    A matches
+    B does not
+
+Then construct:
+
+    RESP(B)
+
+and prove:
+
+    B matches
+    A does not
+
+For ambiguous matching, deliberately create a test fixture that causes >1 candidate verification success if the implementation allows it, and prove that the correlation layer rejects/fails closed.
+
+Do not weaken cryptographic verification merely to make the ambiguous test possible.
+
+If a >1-match state is mathematically difficult to construct naturally, provide a deterministic test seam/mock around the candidate verifier that demonstrates the correlation manager's fail-closed logic while leaving production cryptographic verification untouched.
+
+The important thing is to prove that the correlation layer itself implements:
+
+    matches == 0 → reject
+    matches == 1 → accept
+    matches > 1 → fail closed
+
+============================================================
+3. PENDING HANDSHAKE LIFECYCLE
+============================================================
+
+Audit and test pending-handshake lifecycle.
+
+Prove:
+
+- pending state is created correctly
+- pending state is keyed independently for simultaneous handshakes
+- successful handshake consumes/removes the correct pending entry
+- unrelated pending handshake remains intact
+- duplicate RESP cannot recreate a session
+- late RESP cannot recreate a session
+- malformed RESP does not corrupt pending state
+- failed RESP does not consume the wrong candidate
+- failed handshake does not leak pending state indefinitely
+
+If pending entries have a timeout/cleanup mechanism, test it.
+
+If the current approved architecture specifies a bounded cleanup mechanism, preserve it.
+
+============================================================
+4. CRITICAL — E2EE RELAY-BOUNDARY TEST
+============================================================
+
+The previous report's Docker logs show that Bob routes APP_DATA.
+
+That is NOT sufficient by itself to prove that Bob cannot decrypt the endpoint message.
+
+Create a concrete integration/security test.
+
+Topology:
+
+    Alice → Bob → Carol
+
+Requirements:
+
+1. Alice and Carol establish an M3/M4 endpoint session.
+
+2. Alice creates APP_DATA encrypted for Carol.
+
+3. Bob receives the APP_DATA packet.
+
+4. Bob must not possess the Alice↔Carol endpoint M4 session state.
+
+5. Bob must forward the ciphertext.
+
+6. The ciphertext forwarded by Bob must remain unchanged except for permitted routing-envelope changes such as TTL serialization.
+
+7. Carol must successfully decrypt.
+
+8. Bob must not obtain plaintext.
+
+9. Bob must not be able to use M5 transport state as an endpoint decryption key.
+
+10. Unknown endpoint session_id at Bob must not cause Bob to attempt endpoint decryption.
+
+Add an explicit named test such as:
+
+    TestRelayCannotDecryptEndpointSession
+
+Where practical, assert:
+
+    ciphertext_before_relay == ciphertext_after_relay
+
+and verify that the relay has no endpoint session registered for Alice↔Carol.
+
+Use the exact approved terminology:
+
+    "The intermediate relay does not possess the endpoint M4 session state and forwards APP_DATA as opaque ciphertext."
+
+Do NOT claim:
+
+    "perfect forward secrecy over the mesh"
+
+The relay-boundary test is about endpoint confidentiality/session separation, not by itself PFS.
+
+============================================================
+5. PEER-LOSS TEST
+============================================================
+
+The previous report asserted peer-loss behavior but did not provide a concrete test.
+
+Create a named test:
+
+    TestPeerLossDoesNotInvalidateEndpointSession
+
+Use:
+
+    Alice → Bob → Carol
+
+Steps:
+
+1. Establish Alice↔Carol endpoint M4 session through Bob.
+
+2. Confirm session exists in SessionManager.
+
+3. Remove/close Bob transport connectivity.
+
+4. Confirm Alice↔Carol SessionManager state is not cryptographically destroyed merely because Bob disappeared.
+
+5. Confirm routing safely handles the unavailable transport.
+
+6. If no alternative path exists, APP_DATA must fail/drop safely.
+
+7. If an alternative path is available, endpoint session_id routing must still permit use of the same endpoint session without changing cryptographic session keys.
+
+DO NOT implement automatic route discovery or dynamic routing as part of this test.
+
+The purpose is to prove separation between:
+
+    transport peer lifecycle
+
+and:
+
+    endpoint cryptographic session lifecycle.
+
+============================================================
+6. CACHE TEST EVIDENCE
+============================================================
+
+Create explicit named tests for:
+
+    TestPacketCache_FirstPacketAccepted
+
+    TestPacketCache_DuplicateRejected
+
+    TestPacketCache_DifferentSourceSamePacketID
+
+    TestPacketCache_16BytePacketID
+
+    TestPacketCache_Capacity10000
+
+    TestPacketCache_Expiration
+
+    TestPacketCache_ConcurrentAccess
+
+Use deterministic time control if practical.
+
+The frozen key is:
+
+    (SourceNode[32], PacketID[16])
+
+The cache must remain bounded.
+
+Do NOT claim "unbounded sustained flood" is safe merely because an LRU exists.
+
+Demonstrate the bound.
+
+============================================================
+7. ROUTING LOOP / FLOODING TESTS
+============================================================
+
+Create explicit named tests for:
+
+    TestRouting_OneHop
+
+    TestRouting_TwoHop
+
+    TestRouting_ThreeHop
+
+    TestRouting_CyclicTopology
+
+    TestRouting_DuplicateSuppression
+
+    TestRouting_TTLTermination
+
+    TestRouting_ExcludeIncomingPeer
+
+    TestRouting_LocalDestinationExactlyOnce
+
+Prove a packet cannot continue indefinitely around a cycle.
+
+Demonstrate termination through:
+
+    duplicate suppression
+
+and/or:
+
+    TTL exhaustion.
+
+Verify forwarding does not perform blocking network I/O inside Router.OnMessage.
+
+============================================================
+8. QUEUE TEST COMPLETENESS
+============================================================
+
+The queue rollback fix is accepted provisionally, but provide explicit evidence for:
+
+    TestPeerQueueAccounting_SuccessfulEnqueue
+
+    TestPeerQueueAccounting_FailedCountLimit
+
+    TestPeerQueueAccounting_FailedByteLimit
+
+    TestPeerQueueAccounting_ChannelFullRollback
+
+    TestPeerQueueAccounting_Dequeue
+
+    TestPeerQueueAccounting_ReuseAfterDequeue
+
+    TestPeerQueueAccounting_ConcurrentEnqueueDequeue
+
+    TestPeerQueueAccounting_Shutdown
+
+The invariant must remain:
+
+    queuedCount
+        ==
+    successfully queued packets
+
+and:
+
+    queuedBytes
+        ==
+    sum of lengths of successfully queued packets
+
+No accounting leak is permitted.
+
+============================================================
+9. PACKET VALIDATION COMPLETENESS
+============================================================
+
+Provide explicit named tests covering:
+
+    PacketID 16 bytes → accepted
+
+    PacketID 15 bytes → rejected
+
+    PacketID 17 bytes → rejected
+
+    source_node 32 bytes
+
+    destination_node 32 bytes
+
+    ephemeral_key 32 bytes
+
+    signature 64 bytes
+
+    session_id 32 bytes
+
+    unknown PacketType → rejected
+
+    PacketType/oneof mismatch → rejected
+
+    unknown protobuf fields → rejected
+
+    malformed protobuf → rejected
+
+    protocol version != 1 → rejected
+
+    frame length > 64 KiB → rejected before allocation
+
+Do NOT weaken the existing M4 validation.
+
+============================================================
+10. TTL COMPLETENESS
+============================================================
+
+The implementation must remain:
+
+    maximum accepted TTL = 32
+    default initial TTL = 16
+
+Required behavior:
+
+    TTL 0:
+        always drop
+
+    TTL 1 + local:
+        process locally
+
+    TTL 1 + remote:
+        drop
+
+    TTL 2 + remote:
+        decrement and forward
+
+    TTL 16:
+        normal forwarding
+
+    TTL 31:
+        normal forwarding
+
+    TTL 32:
+        accepted
+
+    TTL 32 + local:
+        local delivery
+
+    TTL 33:
+        drop even if local
+
+Provide explicit named tests.
+
+============================================================
+11. SUSTAINED FLOOD / MEMORY BOUND
+============================================================
+
+Provide an actual boundedness test rather than a prose assertion.
+
+Demonstrate that under a large synthetic flood:
+
+- cache never exceeds 10,000 entries
+- per-peer queue never exceeds 1000 packets
+- per-peer queue never exceeds 2 MiB
+- router does not accumulate an unbounded pending forwarding list
+- duplicate suppression remains effective
+- TTL eventually terminates cyclic forwarding
+
+If direct memory measurement is noisy, instrument exact internal structure sizes/counters in a test-only manner.
+
+Do not rely solely on process RSS as proof.
+
+============================================================
+12. FULL RACE / STATIC VALIDATION
+============================================================
+
+Run:
+
+    gofmt -w <changed Go files>
+
+    go vet ./...
+
+    go test ./...
+
+    go test -race ./...
+
+    go build ./...
+
+Report each result separately.
+
+No race failures are acceptable.
+
+============================================================
+13. DOCKER MULTI-HOP VALIDATION
+============================================================
+
+Run the actual Docker topology.
+
+Required:
+
+    docker compose config
+    docker compose build
+    docker compose up -d
+    docker compose ps
+    docker compose logs
+    docker compose down
+
+Demonstrate:
+
+    Alice → Bob → Carol
+
+with:
+
+- Alice connects to Bob
+- Bob connects to Carol
+- Alice initiates M3 handshake with Carol
+- INIT travels through Bob
+- RESP travels through Bob
+- Alice and Carol establish endpoint session
+- APP_DATA travels through Bob
+- Carol decrypts
+- Bob only forwards
+- no endpoint plaintext is exposed at Bob
+- TTL decreases correctly
+- duplicate suppression functions
+
+Provide concrete logs.
+
+============================================================
+14. SECURITY LANGUAGE
+============================================================
+
+Correct this statement from the previous report:
+
+    "Missing MAC authentication (M3 failure) drops messages silently."
+
+Do not use this terminology.
+
+Correct security model:
+
+M3:
+    Ed25519 identity authentication
+    X25519 ephemeral key agreement
+    authenticated transcript
+    HKDF session derivation
+
+M4:
+    ChaCha20-Poly1305 confidentiality/integrity
+    replay protection
+    directional session keys
+
+M6:
+    routing/forwarding
+    bounded flooding
+    TTL
+    duplicate suppression
+    transport-independent endpoint session routing
+
+Use precise claims only.
+
+Do not claim:
+
+- military grade
+- unhackable
+- anonymous
+- perfectly secure
+- perfect forward secrecy over the mesh
+
+unless independently proven.
+
+============================================================
+15. SOURCE AUDIT REQUIREMENT
+============================================================
+
+For the final report, do NOT provide only summaries.
+
+For each previously blocked criterion, provide:
+
+- exact file
+- exact function
+- relevant source snippet
+- explanation of why it satisfies the frozen architecture
+- named test
+- test result
+
+Especially provide the COMPLETE source path for:
+
+A. incoming RESP correlation
+B. candidate enumeration
+C. exactly-one-match enforcement
+D. pending-state removal
+E. relay APP_DATA handling
+F. SessionManager separation
+G. queue dequeue/accounting
+H. TTL ordering
+
+============================================================
+16. NO DOCUMENTATION SYNC
+============================================================
+
+Do NOT modify or synchronize project documentation.
+
+Do NOT create:
+
+- M6 documentation ZIP
+- full-vault M6 ZIP
+- architecture review updates
+
+Documentation synchronization happens only after the Project Overseer formally approves M6.
+
+============================================================
+17. NO M7
+============================================================
+
+Do not implement:
+
+- route discovery
+- DHT
+- route tables
+- dynamic routing
+- advanced congestion control
+- production observability
+- anonymous routing
+- post-compromise security
+- M7 hardening/features
+
+Stop after M6 evidence is complete.
+
+============================================================
+18. FINAL REPORT FORMAT
+============================================================
+
+Return:
+
+# PROJECT OVERSEER — M6 FINAL SECURITY/EVIDENCE REMEDIATION REPORT
+
+## 1. Files Changed
+
+## 2. Exact Implementation Fixes
+
+## 3. Handshake Correlation Source Evidence
+Include:
+- pending state representation
+- candidate enumeration
+- T_RESP reconstruction
+- signature verification
+- exactly-one-match decision
+- pending-state consumption
+
+## 4. Handshake Correlation Test Evidence
+List every named correlation test and result.
+
+## 5. Queue Accounting Source Evidence
+
+## 6. Queue Test Evidence
+
+## 7. TTL Source Evidence
+
+## 8. TTL Test Evidence
+
+## 9. Packet Validation Evidence
+
+## 10. Cache/Flooding Evidence
+
+## 11. Routing/Loop Evidence
+
+## 12. E2EE Relay-Boundary Evidence
+
+## 13. Peer-Loss Evidence
+
+## 14. Sustained Flood/Memory-Bound Evidence
+
+## 15. Full Validation Results
+Include separately:
+
+    gofmt
+    go vet ./...
+    go test ./...
+    go test -race ./...
+    go build ./...
+
+## 16. Docker Multi-Hop Evidence
+
+## 17. Security Assessment
+
+## 18. Remaining Known Limitations
+
+For every claimed acceptance criterion, provide actual evidence.
+
+Do not say "covered" without showing the relevant test or source.
+
+Do not say "all tests pass" without listing the important named tests.
+
+Do not claim M6 approval.
+
+============================================================
+19. FINAL STOP
+============================================================
+
+After completing this work:
+
+STOP.
+
+Do not:
+- synchronize documentation
+- create documentation packages
+- begin M7
+- implement unrelated features
+- declare M6 approved
+
+The Project Overseer will independently audit this final evidence and make the M6 approval decision.
+
+M6 FINAL SECURITY/EVIDENCE REMEDIATION IS AUTHORIZED.
+
+BEGIN NOW.
+
+```
+
+
+```
+PROJECT OVERSEER — APPROVED PLAN WITH ONE MANDATORY CLARIFICATION
+
+Proceed with the M6 Final Security/Evidence Remediation Plan.
+
+However, do NOT assume that existing implementation is correct merely because the previous report claimed it was.
+
+Specifically:
+
+1. Audit the ACTUAL source implementation of M6 incoming RESP correlation.
+
+The previous report claimed:
+
+- exact candidate enumeration
+- exact T_RESP reconstruction
+- exactly-one-match enforcement
+- fail-closed on >1 matches
+
+but did not provide sufficient source evidence.
+
+Therefore:
+
+IF the existing implementation actually satisfies these requirements:
+    preserve it and provide complete source evidence.
+
+IF it does NOT:
+    fix the implementation before writing the tests.
+
+Do not create tests that merely prove a claimed behavior while the production path does not implement that behavior.
+
+The production correlation path MUST actually implement:
+
+    incoming RESP
+        ↓
+    enumerate pending same-remote candidates
+        ↓
+    reconstruct exact frozen T_RESP per candidate
+        ↓
+    verify Ed25519 signature
+        ↓
+    count matches
+        ↓
+    0 matches  → reject
+    1 match   → establish
+    >1 matches → fail closed
+
+Multiple simultaneous handshakes with the same remote MUST remain supported.
+
+Do NOT use pending[remoteIdentity] as the sole pending state.
+
+2. Do not force integration tests into router_test.go merely for naming convenience.
+
+Place each test at the architectural layer where it actually proves the behavior.
+
+For example:
+- routing tests → internal/routing
+- queue tests → internal/mesh
+- cryptographic correlation tests → internal/crypto
+- SessionManager/PeerManager separation → appropriate integration/session/mesh test
+- relay confidentiality boundary → integration test capable of proving Bob cannot access Alice↔Carol endpoint session state
+
+The test location is less important than proving the real production path.
+
+3. The E2EE relay test MUST prove more than:
+    "Bob logged parsed type 3."
+
+It should establish:
+- Alice↔Carol endpoint session exists
+- Bob does not have that endpoint session
+- Bob forwards APP_DATA
+- ciphertext remains opaque
+- Carol successfully decrypts
+- Bob does not obtain plaintext
+
+4. Peer-loss behavior must be demonstrated by an actual test, not merely inferred from architecture.
+
+5. Do not weaken or modify:
+- frozen protobuf schema
+- frozen M3 transcript
+- M4 AEAD/replay semantics
+- M5 peer architecture
+- M6 bounded-flooding architecture
+
+6. Run the complete validation suite:
+
+    gofmt -w <changed Go files>
+    go vet ./...
+    go test ./...
+    go test -race ./...
+    go build ./...
+
+7. Run real Docker validation:
+
+    docker compose config
+    docker compose build
+    docker compose up -d
+    docker compose ps
+    docker compose logs
+    docker compose down
+
+8. Do NOT synchronize documentation.
+
+9. Do NOT create an M6 documentation ZIP.
+
+10. Do NOT begin M7.
+
+The final report must contain the previously requested 18 sections and must distinguish:
+
+    IMPLEMENTATION SOURCE EVIDENCE
+    TEST EVIDENCE
+    DOCKER EVIDENCE
+    ARCHITECTURAL INFERENCE
+
+Do not call something "proven" when it is only inferred.
+
+Proceed with the remediation.
+STOP after the final report.
+The Project Overseer will perform the final independent M6 gate.
+
+```
+
+
+```
+PROJECT OVERSEER — FINAL M6 GATE EVIDENCE PASS
+
+M6 IS STILL NOT APPROVED.
+
+This is the FINAL evidence-verification pass before the Project Overseer makes the M6 approval decision.
+
+The previous report was rejected because it asserted that requirements were satisfied without providing sufficient implementation-level source evidence, complete named-test evidence, and complete validation/Docker output.
+
+DO NOT redesign M6.
+
+DO NOT add new architecture.
+
+DO NOT modify the frozen protobuf schema.
+
+DO NOT modify the frozen M3 transcript.
+
+DO NOT weaken M4.
+
+DO NOT rewrite M5 unnecessarily.
+
+DO NOT implement M7.
+
+DO NOT synchronize documentation.
+
+DO NOT create any documentation ZIP.
+
+Your task is now:
+
+1. Audit the actual production source.
+2. Fix ONLY an actual defect if the source audit reveals one.
+3. Execute the complete required tests.
+4. Execute the complete Docker validation.
+5. Produce concrete evidence.
+6. STOP.
+
+Do not claim anything is "proven" unless the source, test, or runtime evidence actually demonstrates it.
+
+============================================================
+1. CRITICAL — M6 HANDSHAKE CORRELATION SOURCE AUDIT
+============================================================
+
+This is the highest-priority requirement.
+
+Locate the ACTUAL production code path handling an incoming:
+
+    PACKET_TYPE_RESP
+
+Provide the exact:
+
+- file
+- function
+- relevant source code
+
+showing how the implementation:
+
+    incoming RESP
+        ↓
+    identifies responder identity
+        ↓
+    enumerates ALL pending initiator candidates for that remote
+        ↓
+    reconstructs T_RESP for EACH candidate
+        ↓
+    verifies the Ed25519 signature
+        ↓
+    counts successful candidates
+        ↓
+    0 matches  → reject
+    1 match   → establish
+    >1 matches → FAIL CLOSED
+
+The frozen transcript is:
+
+    T_RESP =
+        DOMAIN ||
+        u8(PROTOCOL_VERSION) ||
+        ID_A ||
+        ID_B ||
+        E_A ||
+        E_B
+
+where:
+
+    DOMAIN = "MeshChat-Handshake-v1"
+
+    PROTOCOL_VERSION = 0x01
+
+    ID_A = initiator Ed25519 public key
+    ID_B = responder Ed25519 public key
+    E_A  = candidate pending initiator X25519 public key
+    E_B  = received responder X25519 public key
+
+DO NOT change this.
+
+The internal pending key is:
+
+    SHA256(T_INIT)
+
+This key must remain internal and must NOT appear in protobuf/wire data.
+
+CRITICAL:
+
+Do NOT use:
+
+    pending[remoteIdentity]
+
+as the sole pending state.
+
+Multiple simultaneous handshakes to the same remote MUST remain independently representable.
+
+============================================================
+2. VERY IMPORTANT — DO NOT CONFUSE TestResp() WITH CORRELATION
+============================================================
+
+Showing:
+
+    TestResp()
+
+is NOT enough.
+
+You must show the code that CALLS candidate verification and decides:
+
+    match count == 0
+    match count == 1
+    match count > 1
+
+If this logic is currently missing from production code:
+
+    FIX THE PRODUCTION IMPLEMENTATION.
+
+Do not merely add a test.
+
+If the production implementation already exists:
+
+    DO NOT change it unnecessarily.
+
+Show it verbatim/relevant excerpt in the report.
+
+============================================================
+3. REQUIRED HANDSHAKE TESTS
+============================================================
+
+Execute and report explicit named tests for:
+
+    TestHandshakeCorrelation_SingleMatch
+
+    TestHandshakeCorrelation_TwoSimultaneousSameRemote
+
+    TestHandshakeCorrelation_MatchCandidateA
+
+    TestHandshakeCorrelation_MatchCandidateB
+
+    TestHandshakeCorrelation_NoCandidateMatch
+
+    TestHandshakeCorrelation_AmbiguousCandidatesFailClosed
+
+    TestHandshakeCorrelation_WrongEA
+
+    TestHandshakeCorrelation_WrongEB
+
+    TestHandshakeCorrelation_WrongIdentity
+
+    TestHandshakeCorrelation_MalformedRESP
+
+    TestHandshakeCorrelation_DuplicateRESP
+
+    TestHandshakeCorrelation_LateRESP
+
+    TestHandshakeCorrelation_ExactlyOnceRegistration
+
+For each important test provide:
+
+    TEST NAME
+    COMMAND
+    RESULT
+
+Do not merely state:
+
+    "handshake tests pass."
+
+============================================================
+4. PROVE SIMULTANEOUS SAME-REMOTE HANDSHAKES
+============================================================
+
+Demonstrate two genuinely distinct pending handshakes:
+
+    Handshake A:
+        E_A1
+        PendingKey = SHA256(T_INIT_A)
+
+    Handshake B:
+        E_A2
+        PendingKey = SHA256(T_INIT_B)
+
+Both target the same responder identity.
+
+They MUST be independently represented.
+
+For:
+
+    RESP(A)
+
+prove:
+
+    A matches
+    B does not
+
+For:
+
+    RESP(B)
+
+prove:
+
+    B matches
+    A does not
+
+Do NOT create two identical pending keys and call that two simultaneous handshakes.
+
+If an ambiguous >1 candidate condition is impossible under honest cryptographic operation, test the correlation manager's decision logic using a deterministic test seam/mock verifier.
+
+The production cryptographic verifier MUST remain real Ed25519 verification.
+
+The production correlation logic MUST still implement:
+
+    0 → reject
+    1 → establish
+    >1 → fail closed
+
+============================================================
+5. PENDING STATE LIFECYCLE
+============================================================
+
+Show actual production source and tests for:
+
+- pending insertion
+- independent pending entries
+- successful candidate consumption
+- unsuccessful candidate preservation
+- duplicate RESP rejection
+- late RESP rejection
+- malformed RESP handling
+- cleanup/expiration if implemented
+- exactly-once session registration
+
+Provide exact function names.
+
+============================================================
+6. E2EE RELAY BOUNDARY — ACTUAL SECURITY TEST
+============================================================
+
+The previous report did not provide enough evidence.
+
+Create or execute:
+
+    TestRelayCannotDecryptEndpointSession
+
+The test must establish:
+
+    Alice ↔ Carol endpoint M4 session
+
+through:
+
+    Alice → Bob → Carol
+
+Prove:
+
+1. Alice possesses endpoint session state.
+2. Carol possesses endpoint session state.
+3. Bob does NOT possess the Alice↔Carol endpoint session.
+4. Bob receives APP_DATA.
+5. Bob does not invoke endpoint decryption.
+6. Bob forwards ciphertext.
+7. Carol decrypts successfully.
+8. Bob never receives endpoint plaintext.
+9. Bob cannot decrypt the APP_DATA using its available session state.
+10. The endpoint session_id remains an endpoint routing identifier, not a relay decryption credential.
+
+Where practical, capture/assert:
+
+    ciphertext_before_relay == ciphertext_after_relay
+
+apart from explicitly permitted envelope changes such as TTL.
+
+Show the actual source path:
+
+    Router
+      ↓
+    local destination?
+      ↓
+    SessionManager lookup/decrypt
+
+versus:
+
+    relay destination
+      ↓
+    forward opaque packet
+
+Use only this wording for the security claim:
+
+    "The intermediate relay does not possess the endpoint M4 session state and forwards APP_DATA as opaque ciphertext."
+
+Do NOT claim:
+
+    "perfect forward secrecy over the mesh."
+
+============================================================
+7. PEER-LOSS — ACTUAL TEST
+============================================================
+
+Execute:
+
+    TestPeerLossDoesNotInvalidateEndpointSession
+
+Topology:
+
+    Alice → Bob → Carol
+
+Steps:
+
+1. Establish Alice↔Carol endpoint session.
+2. Confirm SessionManager contains it.
+3. Remove Bob transport connectivity.
+4. Confirm the endpoint cryptographic session itself is not silently destroyed merely because the transport peer disappeared.
+5. Confirm routing handles missing transport safely.
+6. If no alternative route exists, APP_DATA fails safely.
+7. If an alternative path exists, same endpoint session_id/session keys remain usable.
+
+Do not implement route discovery.
+
+Do not implement dynamic routing.
+
+This test exists only to prove:
+
+    transport peer lifecycle
+        !=
+    endpoint cryptographic session lifecycle
+
+============================================================
+8. PACKET CACHE — ACTUAL TEST EVIDENCE
+============================================================
+
+Execute explicit named tests:
+
+    TestPacketCache_FirstPacketAccepted
+
+    TestPacketCache_DuplicateRejected
+
+    TestPacketCache_DifferentSourceSamePacketID
+
+    TestPacketCache_16BytePacketID
+
+    TestPacketCache_Capacity10000
+
+    TestPacketCache_Expiration
+
+    TestPacketCache_ConcurrentAccess
+
+Frozen cache key:
+
+    SourceNode[32] + PacketID[16]
+
+Frozen limits:
+
+    capacity = 10000
+    lifetime = 2 minutes
+
+Demonstrate actual size remains <= 10000.
+
+Use deterministic/injectable time if necessary.
+
+============================================================
+9. ROUTING / LOOP TEST EVIDENCE
+============================================================
+
+Execute:
+
+    TestRouting_OneHop
+
+    TestRouting_TwoHop
+
+    TestRouting_ThreeHop
+
+    TestRouting_CyclicTopology
+
+    TestRouting_DuplicateSuppression
+
+    TestRouting_TTLTermination
+
+    TestRouting_ExcludeIncomingPeer
+
+    TestRouting_LocalDestinationExactlyOnce
+
+Prove cyclic flooding terminates through:
+
+- duplicate suppression
+- TTL exhaustion
+
+or both.
+
+Show that Router.OnMessage does not perform blocking network I/O.
+
+============================================================
+10. QUEUE ACCOUNTING — SOURCE + TEST
+============================================================
+
+Show final production source for:
+
+    EnqueueForward()
+
+and the writer/dequeue accounting path.
+
+Required invariant:
+
+    queuedCount
+        ==
+    successfully queued packets
+
+and:
+
+    queuedBytes
+        ==
+    sum(len(packet)) of successfully queued packets
+
+Execute:
+
+    TestPeerQueueAccounting_SuccessfulEnqueue
+
+    TestPeerQueueAccounting_FailedCountLimit
+
+    TestPeerQueueAccounting_FailedByteLimit
+
+    TestPeerQueueAccounting_ChannelFullRollback
+
+    TestPeerQueueAccounting_Dequeue
+
+    TestPeerQueueAccounting_ReuseAfterDequeue
+
+    TestPeerQueueAccounting_ConcurrentEnqueueDequeue
+
+    TestPeerQueueAccounting_Shutdown
+
+Frozen limits:
+
+    1000 packets
+    2 MiB
+
+No accounting leak is acceptable.
+
+============================================================
+11. PACKET VALIDATION — COMPLETE EVIDENCE
+============================================================
+
+Execute explicit tests covering:
+
+    PacketID 16 → accepted
+    PacketID 15 → rejected
+    PacketID 17 → rejected
+
+    source_node 32
+    destination_node 32
+
+    ephemeral_key 32
+    signature 64
+    session_id 32
+
+    unknown packet type → rejected
+    PacketType/oneof mismatch → rejected
+    unknown protobuf fields → rejected
+    malformed protobuf → rejected
+    protocol version != 1 → rejected
+    frame >64 KiB → rejected before allocation
+
+Do not weaken M4 validation.
+
+============================================================
+12. TTL — COMPLETE EVIDENCE
+============================================================
+
+Frozen:
+
+    default initial TTL = 16
+    maximum accepted TTL = 32
+
+Required:
+
+    TTL 0 local → drop
+    TTL 0 remote → drop
+
+    TTL 1 local → deliver
+    TTL 1 remote → drop
+
+    TTL 2 remote → decrement and forward
+
+    TTL 16 → normal
+
+    TTL 31 → normal
+
+    TTL 32 remote → forward
+    TTL 32 local → deliver
+
+    TTL 33 local → drop
+    TTL 33 remote → drop
+
+Show source proving TTL >32 is checked before local delivery.
+
+============================================================
+13. SUSTAINED FLOOD / MEMORY BOUND TEST
+============================================================
+
+Execute an actual synthetic flood test.
+
+Prove:
+
+    cache <= 10000 entries
+
+    each peer queue <= 1000 packets
+
+    each peer queue <= 2 MiB
+
+    no unbounded router forwarding list
+
+    duplicate suppression remains effective
+
+    cyclic flooding terminates
+
+Do not use only theoretical assertions.
+
+Test-only counters/instrumentation are acceptable.
+
+============================================================
+14. FULL VALIDATION — MUST RUN EXACTLY
+============================================================
+
+Run each command separately and report its result:
+
+    gofmt -w <all changed Go files>
+
+    go vet ./...
+
+    go test ./...
+
+    go test -race ./...
+
+    go build ./...
+
+If any command fails:
+
+    fix the issue
+
+then rerun it.
+
+Do not report a combined command as a substitute.
+
+============================================================
+15. DOCKER — MUST RUN EXACTLY
+============================================================
+
+Run:
+
+    docker compose config
+
+    docker compose build
+
+    docker compose up -d
+
+    docker compose ps
+
+    docker compose logs
+
+    docker compose down
+
+Provide the actual relevant output.
+
+Required real topology:
+
+    Alice → Bob → Carol
+
+Demonstrate:
+
+1. Alice connects to Bob.
+2. Bob connects to Carol.
+3. Alice initiates M3 with Carol.
+4. INIT crosses Bob.
+5. RESP crosses Bob.
+6. Alice and Carol establish endpoint M4 session.
+7. APP_DATA crosses Bob.
+8. Carol decrypts.
+9. Bob only forwards.
+10. Bob does not have endpoint session state.
+11. TTL changes correctly.
+12. Duplicate suppression works.
+
+Do NOT fake routing in one process.
+
+============================================================
+16. SECURITY TERMINOLOGY
+============================================================
+
+Do not use:
+
+    "Missing MAC authentication (M3 failure)"
+
+M3:
+
+    Ed25519 identity authentication
+    X25519 ephemeral key agreement
+    signed transcript
+    HKDF session derivation
+
+M4:
+
+    ChaCha20-Poly1305
+    directional keys
+    nonce uniqueness
+    replay protection
+
+M6:
+
+    managed flooding
+    TTL
+    duplicate suppression
+    bounded queues
+    endpoint session routing
+
+Do not claim:
+
+    military-grade
+    unhackable
+    anonymous
+    perfectly secure
+    perfect forward secrecy over the mesh
+
+Use precise claims only.
+
+============================================================
+17. SOURCE-OF-TRUTH DISCIPLINE
+============================================================
+
+For every important acceptance criterion, clearly distinguish:
+
+    SOURCE EVIDENCE
+    TEST EVIDENCE
+    DOCKER EVIDENCE
+    INFERENCE
+
+Example:
+
+    SOURCE:
+        Router.OnMessage() does X.
+
+    TEST:
+        TestRouting_ThreeHop passes.
+
+    DOCKER:
+        Alice → Bob → Carol log shows Y.
+
+    INFERENCE:
+        Therefore basic three-hop forwarding works.
+
+Do NOT present architectural inference as implementation proof.
+
+============================================================
+18. DOCUMENTATION / MILESTONE CONTROL
+============================================================
+
+DO NOT:
+
+- synchronize documentation
+- modify governance files
+- create M6 documentation ZIP
+- create full-vault package
+- begin M7
+- declare M6 approved
+
+The Project Overseer alone determines M6 approval.
+
+============================================================
+19. FINAL REPORT FORMAT
+============================================================
+
+Return exactly:
+
+# PROJECT OVERSEER — M6 FINAL SECURITY/EVIDENCE REMEDIATION REPORT
+
+## 1. Files Changed
+
+## 2. Exact Implementation Fixes
+
+## 3. Handshake Correlation Source Evidence
+
+Include actual relevant production source showing:
+- pending state
+- candidate enumeration
+- T_RESP reconstruction
+- signature verification
+- match counting
+- 0/1/>1 handling
+- pending consumption
+
+## 4. Handshake Correlation Test Evidence
+
+List every named test and result.
+
+## 5. Queue Accounting Source Evidence
+
+## 6. Queue Test Evidence
+
+## 7. TTL Source Evidence
+
+## 8. TTL Test Evidence
+
+## 9. Packet Validation Evidence
+
+## 10. Cache/Flooding Evidence
+
+## 11. Routing/Loop Evidence
+
+## 12. E2EE Relay-Boundary Evidence
+
+## 13. Peer-Loss Evidence
+
+## 14. Sustained Flood/Memory-Bound Evidence
+
+## 15. Full Validation Results
+
+Separately report:
+
+    gofmt
+    go vet ./...
+    go test ./...
+    go test -race ./...
+    go build ./...
+
+## 16. Docker Multi-Hop Evidence
+
+## 17. Security Assessment
+
+## 18. Remaining Known Limitations
+
+============================================================
+20. FINAL STOP CONDITION
+============================================================
+
+After producing the report:
+
+STOP.
+
+Do not:
+- synchronize documentation
+- create documentation packages
+- begin M7
+- add unrelated features
+- declare M6 approved
+
+The Project Overseer will independently perform the final M6 gate.
+
+M6 FINAL SECURITY/EVIDENCE PASS IS AUTHORIZED.
+
+BEGIN NOW.
+
+```
+
+
+
+```
+PROJECT OVERSEER — FINAL M6 ACCEPTANCE EVIDENCE PASS
+
+STATUS:
+- M0–M5: APPROVED
+- M6 ARCHITECTURE: APPROVED AND FROZEN
+- M6 IMPLEMENTATION: NOT YET APPROVED
+- THIS PASS: AUTHORIZED
+- M7: LOCKED
+
+The previous M6 report resolved most implementation concerns and provided substantially stronger evidence.
+
+The remaining blockers are now limited to:
+1. production pending-candidate construction evidence
+2. complete TTL/local-destination source evidence
+3. explicit E2EE ciphertext relay-boundary evidence
+4. explicit peer-loss evidence
+5. explicit sustained-flood boundedness evidence
+6. complete packet-validation test evidence
+7. complete Docker command/output evidence
+
+This is NOT an authorization to redesign M6.
+
+DO NOT redesign the architecture.
+DO NOT modify the protobuf schema.
+DO NOT modify the frozen M3 transcript.
+DO NOT modify M4 cryptographic semantics.
+DO NOT rewrite M5 unnecessarily.
+DO NOT implement M7.
+DO NOT add DHT.
+DO NOT add route discovery.
+DO NOT add route tables.
+DO NOT add dynamic routing.
+DO NOT synchronize documentation.
+DO NOT create an M6 documentation ZIP.
+
+Only fix an actual production defect if the source audit discovers one.
+
+============================================================
+1. PRODUCTION HANDSHAKE CANDIDATE CONSTRUCTION
+============================================================
+
+The previous report showed:
+
+    internal/routing/router.go
+    handleResp()
+
+with:
+
+    var matchKey [32]byte
+    var matchCount int
+
+    for key, cand := range candidates {
+        if cand.TestResp(respMsg) {
+            matchCount++
+            matchKey = key
+        }
+    }
+
+    if matchCount != 1 {
+        r.mu.Unlock()
+        return
+    }
+
+    cand := candidates[matchKey]
+    delete(candidates, matchKey)
+    r.mu.Unlock()
+
+This proves the match-count decision.
+
+The remaining requirement is to show exactly how:
+
+    candidates
+
+is constructed.
+
+Provide the ACTUAL production source showing:
+
+- pending handshake storage
+- internal PendingHandshakeKey
+- SHA256(T_INIT) usage
+- grouping/indexing of pending candidates by remote identity
+- retrieval of ALL candidates for an incoming RESP
+- support for multiple simultaneous handshakes to the same remote
+
+The architecture requires:
+
+    PendingHandshakeKey = SHA256(T_INIT)
+
+internal only.
+
+Do NOT use:
+
+    pending[remoteIdentity]
+
+as the sole pending state.
+
+The production structure must permit:
+
+    remote R:
+        candidate A → key SHA256(T_INIT_A)
+        candidate B → key SHA256(T_INIT_B)
+        candidate C → key SHA256(T_INIT_C)
+
+to coexist.
+
+IMPORTANT:
+
+Do not change correct code merely to satisfy this evidence request.
+
+If the implementation already satisfies it:
+    show it.
+
+If the implementation does not:
+    fix it.
+
+============================================================
+2. COMPLETE HANDSHAKE LIFECYCLE SOURCE
+============================================================
+
+Show the relevant production source for:
+
+A. pending handshake creation
+
+B. pending key generation
+
+C. pending candidate lookup
+
+D. incoming RESP correlation
+
+E. candidate verification
+
+F. 0/1/>1 match decision
+
+G. successful pending-state deletion
+
+H. duplicate/late RESP rejection
+
+I. session registration
+
+The source evidence must demonstrate that:
+
+    exactly one valid candidate
+        →
+    exactly one session registration
+
+and:
+
+    duplicate RESP
+        →
+    no second registration
+
+Do not rely solely on unit-test names.
+
+============================================================
+3. COMPLETE TTL SOURCE AUDIT
+============================================================
+
+Provide the complete relevant source around:
+
+    Router.OnMessage()
+    local destination handling
+    routeOut()
+    forwarding
+
+The required semantics are EXACTLY:
+
+    maximum accepted TTL = 32
+    default initial TTL = 16
+
+Behavior:
+
+    TTL 0:
+        always drop
+
+    TTL 1 + local:
+        deliver locally
+
+    TTL 1 + remote:
+        drop
+
+    TTL 2 + remote:
+        decrement to 1 and forward
+
+    TTL 16:
+        normal
+
+    TTL 31:
+        normal
+
+    TTL 32 + remote:
+        accepted and forwarded with TTL 31
+
+    TTL 32 + local:
+        accepted and delivered locally
+
+    TTL 33:
+        dropped before local processing
+
+Show enough surrounding source to prove that local TTL=1 is NOT accidentally decremented and forwarded.
+
+If a functional defect exists:
+    fix it.
+
+Otherwise:
+    preserve implementation.
+
+============================================================
+4. COMPLETE TTL TEST EVIDENCE
+============================================================
+
+Execute/report explicit tests for:
+
+    TTL 0 local
+    TTL 0 remote
+    TTL 1 local
+    TTL 1 remote
+    TTL 2 remote
+    TTL 16 remote
+    TTL 31 remote
+    TTL 32 remote
+    TTL 32 local
+    TTL 33 remote
+    TTL 33 local
+
+For every case provide:
+
+    test name
+    result
+
+Do not use only:
+
+    TestRouting_TTLTermination: PASS
+
+as evidence for all cases.
+
+============================================================
+5. E2EE RELAY BOUNDARY — ACTUAL CIPHERTEXT PROOF
+============================================================
+
+The previous test proved Bob's SessionManager contains zero Alice↔Carol endpoint sessions.
+
+That is useful but incomplete.
+
+Now explicitly test the data path.
+
+Required topology:
+
+    Alice → Bob → Carol
+
+Required proof:
+
+1. Alice and Carol establish an endpoint M4 session.
+
+2. Alice encrypts APP_DATA for Carol.
+
+3. Capture the serialized APP_DATA/ciphertext before Bob.
+
+4. Bob receives the packet.
+
+5. Bob has no Alice↔Carol endpoint session.
+
+6. Bob does NOT call endpoint decryption.
+
+7. Bob forwards the packet.
+
+8. Capture the serialized APP_DATA/ciphertext after Bob.
+
+9. Demonstrate:
+
+    ciphertext_before_relay
+        ==
+    ciphertext_after_relay
+
+except for explicitly permitted envelope/routing changes such as TTL.
+
+10. Carol successfully decrypts the forwarded ciphertext.
+
+11. Bob never receives the endpoint plaintext.
+
+12. Bob cannot decrypt the Alice↔Carol APP_DATA using its available session state.
+
+Create or extend an explicit test such as:
+
+    TestRelayCannotDecryptEndpointSession
+
+The test must exercise the REAL production path.
+
+Do not construct a fake object graph that bypasses Router/SessionManager/Peer behavior.
+
+Report the relevant source path:
+
+    local destination
+        →
+    SessionManager lookup
+        →
+    decrypt
+
+versus:
+
+    remote destination
+        →
+    forward opaque packet
+
+Use this exact security wording:
+
+    "The intermediate relay does not possess the endpoint M4 session state and forwards APP_DATA as opaque ciphertext."
+
+Do NOT claim:
+
+    "perfect forward secrecy over the mesh."
+
+============================================================
+6. PEER-LOSS — ACTUAL PROOF
+============================================================
+
+Execute:
+
+    TestPeerLossDoesNotInvalidateEndpointSession
+
+Required scenario:
+
+    Alice → Bob → Carol
+
+Steps:
+
+1. Establish Alice↔Carol M4 endpoint session through Bob.
+
+2. Verify Alice has the endpoint session.
+
+3. Verify Carol has the endpoint session.
+
+4. Close/remove Bob's transport connection.
+
+5. Verify Alice↔Carol endpoint cryptographic session objects remain valid.
+
+6. Verify Bob's transport peer state is gone.
+
+7. Attempt APP_DATA transmission.
+
+8. If no alternative path exists:
+       packet fails/drops safely.
+
+9. If an alternative path exists:
+       same endpoint session_id/session keys remain usable.
+
+DO NOT implement alternative route discovery for this test.
+
+The point is strictly:
+
+    transport peer lifecycle
+        !=
+    endpoint cryptographic session lifecycle
+
+Provide:
+- source evidence
+- test name
+- test output
+- observed result
+
+============================================================
+7. COMPLETE PACKET VALIDATION EVIDENCE
+============================================================
+
+Execute explicit tests for:
+
+    PacketID 16 bytes → accepted
+    PacketID 15 bytes → rejected
+    PacketID 17 bytes → rejected
+
+    source_node 32 bytes
+    destination_node 32 bytes
+
+    ephemeral_key 32 bytes
+    signature 64 bytes
+    session_id 32 bytes
+
+    unknown packet type → rejected
+    PacketType/oneof mismatch → rejected
+    unknown protobuf fields → rejected
+    malformed protobuf → rejected
+    protocol version != 1 → rejected
+    TCP frame >64 KiB → rejected before allocation
+
+If these are currently subtests, report their exact subtest names.
+
+Do not merely state:
+
+    "Packet validation passed."
+
+============================================================
+8. CACHE EVIDENCE
+============================================================
+
+Execute and report:
+
+    TestPacketCache_FirstPacketAccepted
+
+    TestPacketCache_DuplicateRejected
+
+    TestPacketCache_DifferentSourceSamePacketID
+
+    TestPacketCache_16BytePacketID
+
+    TestPacketCache_Capacity10000
+
+    TestPacketCache_Expiration
+
+    TestPacketCache_ConcurrentAccess
+
+Frozen:
+
+    key = SourceNode[32] + PacketID[16]
+
+    capacity = 10000
+
+    lifetime = 2 minutes
+
+Show the actual observed capacity bound.
+
+============================================================
+9. SUSTAINED FLOOD / MEMORY BOUND TEST
+============================================================
+
+The previous report asserted boundedness but did not provide sufficient concrete evidence.
+
+Create or execute an explicit named test:
+
+    TestSustainedFloodMemoryBounds
+
+The test must generate a sufficiently large synthetic flood to exercise:
+
+- duplicate cache
+- forwarding queues
+- cyclic topology
+- TTL expiration
+- duplicate suppression
+
+Record/assert:
+
+    maximum cache size <= 10000
+
+    maximum per-peer queued packets <= 1000
+
+    maximum per-peer queued bytes <= 2 MiB
+
+    no unbounded router forwarding accumulation
+
+    flooding eventually terminates
+
+Use test-only counters/instrumentation if required.
+
+Do not rely only on process RSS.
+
+Report actual observed maxima.
+
+============================================================
+10. ROUTING LOOP TESTS
+============================================================
+
+Execute/report:
+
+    TestRouting_OneHop
+
+    TestRouting_TwoHop
+
+    TestRouting_ThreeHop
+
+    TestRouting_CyclicTopology
+
+    TestRouting_DuplicateSuppression
+
+    TestRouting_TTLTermination
+
+    TestRouting_ExcludeIncomingPeer
+
+    TestRouting_LocalDestinationExactlyOnce
+
+Show results individually.
+
+============================================================
+11. QUEUE TESTS
+============================================================
+
+Execute/report:
+
+    TestPeerQueueAccounting_SuccessfulEnqueue
+
+    TestPeerQueueAccounting_FailedCountLimit
+
+    TestPeerQueueAccounting_FailedByteLimit
+
+    TestPeerQueueAccounting_ChannelFullRollback
+
+    TestPeerQueueAccounting_Dequeue
+
+    TestPeerQueueAccounting_ReuseAfterDequeue
+
+    TestPeerQueueAccounting_ConcurrentEnqueueDequeue
+
+    TestPeerQueueAccounting_Shutdown
+
+Show the final production source for:
+
+    EnqueueForward()
+
+and:
+
+    dequeue/write accounting
+
+Required invariant:
+
+    queuedCount
+        ==
+    successfully queued packets
+
+    queuedBytes
+        ==
+    sum(len(packet)) of successfully queued packets
+
+============================================================
+12. FULL VALIDATION COMMANDS
+============================================================
+
+Run each command SEPARATELY.
+
+Command 1:
+
+    gofmt -w <all changed Go files>
+
+Report exit code.
+
+Command 2:
+
+    go vet ./...
+
+Report exit code.
+
+Command 3:
+
+    go test ./...
+
+Report complete result.
+
+Command 4:
+
+    go test -race ./...
+
+Report complete result.
+
+Command 5:
+
+    go build ./...
+
+Report exit code.
+
+If any command fails:
+
+    fix
+    rerun
+    report final result
+
+Do NOT combine commands and use the combined result as evidence.
+
+============================================================
+13. DOCKER VALIDATION — COMPLETE OUTPUT
+============================================================
+
+Run exactly:
+
+    docker compose config
+
+    docker compose build
+
+    docker compose up -d
+
+    docker compose ps
+
+    docker compose logs
+
+    docker compose down
+
+Provide the actual relevant output for each command.
+
+Required topology:
+
+    Alice → Bob → Carol
+
+Demonstrate:
+
+1. Alice connects to Bob.
+2. Bob connects to Carol.
+3. Alice initiates M3 with Carol.
+4. INIT crosses Bob.
+5. RESP crosses Bob.
+6. Alice and Carol establish endpoint M4 session.
+7. APP_DATA crosses Bob.
+8. Carol decrypts.
+9. Bob remains an opaque relay.
+10. TTL changes correctly.
+11. Duplicate suppression works.
+
+Do not fake routing inside a single process.
+
+============================================================
+14. SECURITY TERMINOLOGY
+============================================================
+
+Use:
+
+M3:
+    Ed25519 identity authentication
+    X25519 ephemeral key agreement
+    signed transcript
+    HKDF session derivation
+
+M4:
+    ChaCha20-Poly1305
+    directional keys
+    nonce uniqueness
+    replay protection
+
+M6:
+    bounded managed flooding
+    TTL
+    duplicate suppression
+    bounded queues
+    endpoint session routing
+
+Do NOT claim:
+
+    military grade
+    unhackable
+    anonymous
+    perfectly secure
+    perfect forward secrecy over the mesh
+
+Do not use the incorrect phrase:
+
+    "Missing MAC authentication (M3 failure)"
+
+============================================================
+15. EVIDENCE DISCIPLINE
+============================================================
+
+For every important acceptance criterion distinguish:
+
+    SOURCE EVIDENCE
+    TEST EVIDENCE
+    DOCKER EVIDENCE
+    INFERENCE
+
+Example:
+
+SOURCE:
+    Router.OnMessage() performs X.
+
+TEST:
+    TestRouting_ThreeHop passes.
+
+DOCKER:
+    Alice → Bob → Carol produces Y.
+
+INFERENCE:
+    Therefore the 3-hop path works.
+
+Do not present inference as source evidence.
+
+============================================================
+16. CHANGE DISCIPLINE
+============================================================
+
+If source audit finds no defect:
+
+    DO NOT CHANGE PRODUCTION CODE.
+
+If source audit finds an actual defect:
+
+    make the smallest necessary fix.
+
+Do not perform unrelated refactoring.
+
+Do not change architecture.
+
+============================================================
+17. DOCUMENTATION CONTROL
+============================================================
+
+DO NOT:
+
+- synchronize documentation
+- modify governance files
+- create M6 documentation ZIP
+- create full-vault package
+- update milestone status files
+
+Documentation synchronization occurs ONLY after the Project Overseer formally approves M6.
+
+============================================================
+18. M7 CONTROL
+============================================================
+
+M7 remains LOCKED.
+
+Do not implement:
+
+- route discovery
+- DHT
+- route tables
+- dynamic routing
+- advanced congestion control
+- anonymous routing
+- post-compromise security
+- unrelated observability work
+- M7 hardening features
+
+============================================================
+19. FINAL REPORT FORMAT
+============================================================
+
+Return exactly:
+
+# PROJECT OVERSEER — M6 FINAL ACCEPTANCE EVIDENCE REPORT
+
+## 1. Files Changed
+
+## 2. Production Source Audit
+
+## 3. Handshake Pending-State Construction
+
+## 4. Handshake Correlation Source Evidence
+
+## 5. Handshake Correlation Test Evidence
+
+## 6. TTL Source Evidence
+
+## 7. TTL Test Evidence
+
+## 8. Packet Validation Evidence
+
+## 9. Cache Evidence
+
+## 10. Queue Source Evidence
+
+## 11. Queue Test Evidence
+
+## 12. Routing and Loop Evidence
+
+## 13. E2EE Relay-Boundary Source Evidence
+
+## 14. E2EE Relay-Boundary Test Evidence
+
+## 15. Peer-Loss Evidence
+
+## 16. Sustained Flood/Memory-Bound Evidence
+
+## 17. Full Validation Results
+
+Include separately:
+
+    gofmt
+    go vet ./...
+    go test ./...
+    go test -race ./...
+    go build ./...
+
+## 18. Docker Multi-Hop Evidence
+
+Include actual command/output evidence.
+
+## 19. Security Assessment
+
+## 20. Remaining Known Limitations
+
+For every acceptance criterion provide actual evidence.
+
+Do not say:
+
+    "all blockers resolved"
+
+unless the evidence immediately supporting that statement is provided.
+
+Do not omit source snippets for critical security paths.
+
+Do not omit test names/results.
+
+Do not omit Docker output.
+
+============================================================
+20. FINAL STOP CONDITION
+============================================================
+
+After completing the work and producing the report:
+
+STOP.
+
+Do not:
+- synchronize documentation
+- create documentation packages
+- begin M7
+- add unrelated features
+- declare M6 approved
+
+The Project Overseer will make the final M6 gate decision.
+
+M6 FINAL ACCEPTANCE EVIDENCE PASS IS AUTHORIZED.
+
+BEGIN NOW.
+
+```
+
+
+```
+PROJECT OVERSEER — M6 FINAL MICRO-EVIDENCE GATE
+STATUS: CONDITIONAL / NOT APPROVED
+SCOPE: EVIDENCE ONLY — NO CODE CHANGES
+
+M6 is at the final acceptance gate.
+
+The previous evidence report substantially resolved the outstanding M6 issues. Only TWO source-context gaps remain. Do NOT redesign anything and do NOT make speculative changes.
+
+==================================================
+1. HANDSHAKE CANDIDATE CONSTRUCTION — SOURCE PROOF
+==================================================
+
+File:
+    internal/routing/router.go
+
+Show the COMPLETE production-source excerpt of handleResp covering:
+
+1. How the remote identity is obtained from the received RESP/packet.
+2. How the pending candidates are selected/scoped to that exact remote identity.
+3. The construction/assignment of the local `candidates` variable immediately before:
+
+    for key, cand := range candidates {
+
+4. The complete candidate-testing loop.
+5. The 0-match / 1-match / >1-match behavior.
+6. Successful candidate selection.
+7. Removal/consumption of the selected pending candidate.
+8. Any subsequent session registration/lifecycle operation relevant to preventing duplicate or late RESP re-establishment.
+
+The critical requirement is to prove from ACTUAL PRODUCTION SOURCE that:
+
+    candidates = pending handshakes belonging to the correct remote identity
+
+and NOT merely all pending handshakes globally.
+
+The frozen architecture requires:
+
+    pendingInits[remoteIdentity][SHA256(T_INIT)]
+
+with multiple simultaneous candidates allowed for the same remote.
+
+Do NOT merely paraphrase the implementation.
+Do NOT show only the previously supplied match-count loop.
+Show the surrounding source that constructs `candidates`.
+
+Also provide the exact test command and PASS output for the relevant handshake-correlation tests.
+
+At minimum identify the tests covering:
+
+    - one valid candidate
+    - two simultaneous candidates for the same remote
+    - candidate A matching
+    - candidate B matching
+    - zero candidates matching
+    - ambiguous candidates
+    - wrong E_A
+    - wrong E_B
+    - wrong identity
+    - duplicate RESP
+    - late RESP
+    - exactly-once registration
+
+If these tests already exist and pass, DO NOT modify them.
+
+==================================================
+2. COMPLETE TTL ROUTING DECISION — SOURCE PROOF
+==================================================
+
+File:
+    internal/routing/router.go
+
+Show the COMPLETE production-source routing decision covering:
+
+    TTL == 0
+    TTL > 32
+    local destination
+    remote destination
+    TTL == 1
+    TTL > 1
+    decrement before forwarding
+
+The source must make the following semantics unambiguous:
+
+    TTL 0
+        -> drop
+
+    TTL > 32
+        -> drop before processing/forwarding
+
+    TTL 1 + LOCAL destination
+        -> deliver locally
+        -> DO NOT decrement
+        -> DO NOT forward
+
+    TTL 1 + REMOTE destination
+        -> drop
+        -> DO NOT forward
+
+    TTL > 1 + LOCAL destination
+        -> deliver locally
+        -> DO NOT forward
+
+    TTL > 1 + REMOTE destination
+        -> decrement exactly once
+        -> forward
+
+Show enough surrounding code that I can verify the ordering of these decisions.
+
+Do NOT provide only:
+
+    if pkt.Ttl == 1 ...
+
+and
+
+    pkt.Ttl--
+
+I need the complete surrounding local-destination/remote-destination decision.
+
+Then provide exact PASS output for the TTL boundary tests.
+
+The evidence must cover:
+
+    TTL 0
+    TTL 1 local
+    TTL 1 remote
+    TTL 2 local
+    TTL 2 remote
+    TTL 16
+    TTL 31
+    TTL 32
+    TTL 33
+
+If an existing test already exercises these boundaries, identify it precisely.
+Do not modify tests unless there is an actual defect.
+
+==================================================
+3. STRICT EVIDENCE RULES
+==================================================
+
+This is a SOURCE-LEVEL ACCEPTANCE AUDIT.
+
+Therefore:
+
+- Actual production source > description.
+- Actual test output > assertion that tests exist.
+- Do not substitute inference for missing source.
+- Do not claim something is proven when only indirectly inferred.
+- Do not fabricate command output.
+- Do not omit relevant surrounding source with "unchanged" or "etc.".
+- If a claimed requirement is not actually satisfied, report it honestly.
+- If an actual implementation defect is discovered, fix only that defect and then provide the before/after source and validation.
+- Otherwise make NO CODE CHANGES.
+
+==================================================
+4. DO NOT TOUCH
+==================================================
+
+Do NOT:
+
+- modify protobuf/schema
+- modify M3 cryptography
+- modify M4 protocol
+- redesign M6
+- add routing discovery
+- add DHT
+- add route selection
+- add new cryptographic primitives
+- change handshake transcripts
+- change PacketID size
+- change TTL max
+- change queue bounds
+- perform documentation synchronization
+- start M7
+- add unrelated features
+- refactor unrelated code
+
+M6 architecture is already APPROVED AND FROZEN.
+
+==================================================
+5. FINAL VALIDATION
+==================================================
+
+If NO code changes are made, do not waste time rerunning the entire repository unless necessary.
+
+Provide the exact existing test commands/results used to establish the two final evidence points.
+
+If you DO make an actual defect fix, then run:
+
+    gofmt -w <changed files>
+    go vet ./...
+    go test ./...
+    go test -race ./...
+    go build ./...
+
+and provide the actual exit/results.
+
+==================================================
+6. REQUIRED FINAL RESPONSE FORMAT
+==================================================
+
+Return ONLY:
+
+# M6 FINAL MICRO-EVIDENCE
+
+## A. Handshake Candidate Construction
+
+### Production Source
+<complete relevant source excerpt>
+
+### Candidate Scoping Explanation
+<brief explanation of how candidates are restricted to the correct remote>
+
+### Test Evidence
+<exact command + actual PASS output>
+
+## B. TTL Routing Decision
+
+### Production Source
+<complete relevant source excerpt>
+
+### TTL Semantics
+<brief mapping of each required TTL case to the actual code path>
+
+### Test Evidence
+<exact command + actual PASS output>
+
+## C. Code Changes
+Either:
+
+    No production source changed. Evidence-only verification.
+
+OR, if an actual defect was discovered:
+
+    <exact defect and exact files changed>
+
+## D. Final M6 Gate Recommendation
+
+State exactly one:
+
+    READY FOR M6 APPROVAL
+
+or
+
+    NOT READY FOR M6 APPROVAL
+
+Do NOT perform documentation synchronization.
+Do NOT begin M7.
+Do NOT provide a generic project status report.
+
+This is the final evidence request before the Project Overseer makes the M6 gate decision.
+```
+
+
+```
+
+
+```
