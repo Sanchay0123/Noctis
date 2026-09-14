@@ -40,6 +40,18 @@ func NewUIState() *UIState {
 	}
 }
 
+func (s *UIState) EnsureConversation(peerID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.conversations[peerID]; !exists {
+		s.peerList = append(s.peerList, peerID)
+		s.conversations[peerID] = []Message{}
+		return true
+	}
+	return false
+}
+
 func (s *UIState) AddMessage(peerID string, msg Message) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -279,6 +291,10 @@ func RunEventConsumer(events <-chan apppkg.AppEvent, state *UIState, shutdown <-
 				case apppkg.EventTypeSessionEstablished:
 					if statusLabel != nil {
 						statusLabel.SetText("Status: Secure Session Established with " + e.PeerID[:8])
+					}
+					isNew := state.EnsureConversation(e.PeerID)
+					if isNew && conversationList != nil {
+						conversationList.Refresh()
 					}
 				case apppkg.EventTypeConnectionFailed:
 					if statusLabel != nil {
