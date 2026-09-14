@@ -132,11 +132,6 @@ func (l *Listener) handleInbound(conn net.Conn) {
 
 	expectedID := pkt.SourceNode
 
-	if !l.pm.isExpectedInbound(expectedID) {
-		conn.Close()
-		return
-	}
-
 	fullPacket := make([]byte, 4+length)
 	copy(fullPacket[0:4], lenBuf[:])
 	copy(fullPacket[4:], data)

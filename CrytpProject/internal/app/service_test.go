@@ -237,8 +237,8 @@ func TestApplicationService_NewNode_ConfigurableListener(t *testing.T) {
 	defer node2.Stop()
 
 	// node1 must expect node2's inbound connection
-	pub2, _ := hex.DecodeString(node2.GetLocalIdentity())
-	node1.(*appService).meshManager.ExpectInbound(pub2)
+	_, _ = hex.DecodeString(node2.GetLocalIdentity())
+	// node1.(*appService).meshManager.ExpectInbound(pub2)
 	time.Sleep(50 * time.Millisecond) // Wait for listener to bind
 
 	peerIDHex := node1.GetLocalIdentity()
@@ -265,8 +265,8 @@ func TestApplicationService_NewNode_DefaultListener(t *testing.T) {
 	}
 	defer node2.Stop()
 
-	pub2, _ := hex.DecodeString(node2.GetLocalIdentity())
-	node1.(*appService).meshManager.ExpectInbound(pub2)
+	_, _ = hex.DecodeString(node2.GetLocalIdentity())
+	// node1.(*appService).meshManager.ExpectInbound(pub2)
 	time.Sleep(50 * time.Millisecond) // Wait for listener to bind
 
 	peerIDHex := node1.GetLocalIdentity()
@@ -286,7 +286,7 @@ func TestDialNode_States(t *testing.T) {
 	
 	addr2 := "127.0.0.1:9199"
 	node2.meshManager.Listen(addr2)
-	node2.meshManager.ExpectInbound(node1.localIdent.PublicKey())
+	// node2.meshManager.ExpectInbound(node1.localIdent.PublicKey())
 	
 	pId := node2.GetLocalIdentityBytes()
 	pIdHex := hex.EncodeToString(pId)
@@ -321,9 +321,78 @@ func TestDialNode_States(t *testing.T) {
 	p.Close()
 	
 	// dial again, should succeed because old peer is stale
-	node2.meshManager.ExpectInbound(node1.localIdent.PublicKey())
+	// node2.meshManager.ExpectInbound(node1.localIdent.PublicKey())
 	err = node1.DialNode(context.Background(), addr2, pIdHex)
 	if err != nil {
 		t.Fatalf("Expected DialNode to succeed with stale peer, got: %v", err)
+	}
+}
+
+func TestListener_AcceptsUnknownPeer(t *testing.T) {
+	n1, _ := NewNode("node1")
+	node1 := n1.(*appService)
+	n2, _ := NewNode("node2")
+	node2 := n2.(*appService)
+	defer node1.Stop()
+	defer node2.Stop()
+	
+	addr2 := "127.0.0.1:9303"
+	node2.meshManager.Listen(addr2)
+	
+	err := node1.DialNode(context.Background(), addr2, hex.EncodeToString(node2.GetLocalIdentityBytes()))
+	if err != nil {
+		t.Fatalf("A -> B failed: %v", err)
+	}
+	
+	node1.StartConversation(hex.EncodeToString(node2.GetLocalIdentityBytes()))
+	time.Sleep(200 * time.Millisecond)
+	
+	err = node1.SendMessage(hex.EncodeToString(node2.GetLocalIdentityBytes()), "Hello B")
+	if err != nil {
+		t.Fatalf("A -> B send failed: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	
+	n3, _ := NewNode("node3")
+	node3 := n3.(*appService)
+	n4, _ := NewNode("node4")
+	node4 := n4.(*appService)
+	defer node3.Stop()
+	defer node4.Stop()
+	
+	addr3 := "127.0.0.1:9304"
+	node3.meshManager.Listen(addr3)
+	
+	err = node4.DialNode(context.Background(), addr3, hex.EncodeToString(node3.GetLocalIdentityBytes()))
+	if err != nil {
+		t.Fatalf("B -> A failed: %v", err)
+	}
+	
+	node4.StartConversation(hex.EncodeToString(node3.GetLocalIdentityBytes()))
+	time.Sleep(200 * time.Millisecond)
+	
+	err = node4.SendMessage(hex.EncodeToString(node3.GetLocalIdentityBytes()), "Hello A")
+	if err != nil {
+		t.Fatalf("B -> A send failed: %v", err)
+	}
+}
+
+func TestExpectedPeerIDStillEnforced(t *testing.T) {
+	n1, _ := NewNode("node1")
+	node1 := n1.(*appService)
+	n2, _ := NewNode("node2")
+	node2 := n2.(*appService)
+	defer node1.Stop()
+	defer node2.Stop()
+	
+	addr2 := "127.0.0.1:9305"
+	node2.meshManager.Listen(addr2)
+	
+	fakeID := make([]byte, 32)
+	fakeID[0] = 0x99
+	
+	err := node1.DialNode(context.Background(), addr2, hex.EncodeToString(fakeID))
+	if err == nil {
+		t.Fatalf("Expected error when dialling with incorrect expectedPeerID, got nil")
 	}
 }

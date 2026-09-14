@@ -65,10 +65,10 @@ func TestRelayCannotDecryptEndpointSession(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	alicePM.ExpectInbound(bobIdent.PublicKey())
-	bobPM.ExpectInbound(aliceIdent.PublicKey())
-	bobPM.ExpectInbound(carolIdent.PublicKey())
-	carolPM.ExpectInbound(bobIdent.PublicKey())
+	_ = alicePM // alicePM.ExpectInbound(bobIdent.PublicKey())
+	_ = bobPM // bobPM.ExpectInbound(aliceIdent.PublicKey())
+	_ = bobPM // bobPM.ExpectInbound(carolIdent.PublicKey())
+	_ = carolPM // carolPM.ExpectInbound(bobIdent.PublicKey())
 
 	alicePM.Connect(context.Background(), "127.0.0.1:8100", bobIdent.PublicKey())
 	bobPM.Connect(context.Background(), "127.0.0.1:8101", carolIdent.PublicKey())
@@ -132,10 +132,10 @@ func TestPeerLossDoesNotInvalidateEndpointSession(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	alicePM.ExpectInbound(bobIdent.PublicKey())
-	bobPM.ExpectInbound(aliceIdent.PublicKey())
-	bobPM.ExpectInbound(carolIdent.PublicKey())
-	carolPM.ExpectInbound(bobIdent.PublicKey())
+	_ = alicePM // alicePM.ExpectInbound(bobIdent.PublicKey())
+	_ = bobPM // bobPM.ExpectInbound(aliceIdent.PublicKey())
+	_ = bobPM // bobPM.ExpectInbound(carolIdent.PublicKey())
+	_ = carolPM // carolPM.ExpectInbound(bobIdent.PublicKey())
 
 	alicePM.Connect(context.Background(), "127.0.0.1:8200", bobIdent.PublicKey())
 	bobPM.Connect(context.Background(), "127.0.0.1:8201", carolIdent.PublicKey())
@@ -240,10 +240,10 @@ func TestRelayCiphertextBoundary(t *testing.T) {
 	carolPM.Listen("127.0.0.1:8301")
 	time.Sleep(100 * time.Millisecond)
 
-	alicePM.ExpectInbound(bobIdent.PublicKey())
-	baseBobPM.ExpectInbound(aliceIdent.PublicKey())
-	baseBobPM.ExpectInbound(carolIdent.PublicKey())
-	carolPM.ExpectInbound(bobIdent.PublicKey())
+	_ = alicePM // alicePM.ExpectInbound(bobIdent.PublicKey())
+	_ = baseBobPM // baseBobPM.ExpectInbound(aliceIdent.PublicKey())
+	_ = baseBobPM // baseBobPM.ExpectInbound(carolIdent.PublicKey())
+	_ = carolPM // carolPM.ExpectInbound(bobIdent.PublicKey())
 
 	alicePM.Connect(context.Background(), "127.0.0.1:8300", bobIdent.PublicKey())
 	baseBobPM.Connect(context.Background(), "127.0.0.1:8301", carolIdent.PublicKey())

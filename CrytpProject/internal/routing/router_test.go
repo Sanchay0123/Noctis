@@ -24,7 +24,7 @@ func (m *mockPeerManager) Shutdown() error                         { return nil 
 func (m *mockPeerManager) Connect(ctx context.Context, addr string, expectedIdentity []byte) error {
 	return nil
 }
-func (m *mockPeerManager) ExpectInbound(identity []byte)            {}
+	// func (m *mockPeerManager) ExpectInbound(identity []byte)            {}
 func (m *mockPeerManager) Disconnect(identity []byte) error         { return nil }
 func (m *mockPeerManager) SendTo(identity []byte, msg []byte) error { return nil }
 func (m *mockPeerManager) Broadcast(msg []byte) error               { return nil }
@@ -396,7 +396,7 @@ func (d *dummyPM) GetActivePeersSnapshot() []mesh.Peer { return d.peers }
 func (d *dummyPM) Connect(ctx context.Context, endpoint string, expectedIdentity []byte) error {
 	return nil
 }
-func (d *dummyPM) ExpectInbound(identity []byte)              {}
+	// func (d *dummyPM) ExpectInbound(identity []byte)              {}
 func (d *dummyPM) Listen(addr string) error                   { return nil }
 func (d *dummyPM) Disconnect(identity []byte) error           { return nil }
 func (d *dummyPM) GetPeer(identity []byte) (mesh.Peer, error) { return nil, nil }

@@ -145,7 +145,6 @@ func (s *appService) DialNode(ctx context.Context, address string, expectedPeerI
 		return nil
 	}
 
-	s.meshManager.ExpectInbound(peerPubKey)
 	return s.meshManager.Connect(ctx, address, peerPubKey)
 }
 

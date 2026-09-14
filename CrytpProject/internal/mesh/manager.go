@@ -12,7 +12,6 @@ import (
 
 type PeerManager interface {
 	Connect(ctx context.Context, endpoint string, expectedIdentity []byte) error
-	ExpectInbound(identity []byte)
 	Listen(addr string) error
 	Disconnect(identity []byte) error
 	GetPeer(identity []byte) (Peer, error)
@@ -24,7 +23,6 @@ type PeerManager interface {
 type peerManager struct {
 	mu              sync.RWMutex
 	peers           map[string]*peer
-	expectedInbound map[string]struct{}
 
 	localIdent *crypto.NodeIdentity
 	telemetry  TelemetryRecorder
@@ -48,7 +46,6 @@ func NewPeerManager(localIdent *crypto.NodeIdentity, telemetry TelemetryRecorder
 
 	pm := &peerManager{
 		peers:           make(map[string]*peer),
-		expectedInbound: make(map[string]struct{}),
 		localIdent:      localIdent,
 		telemetry:       telemetry,
 		onMsg:           onMsg,
@@ -91,18 +88,9 @@ func (pm *peerManager) telemetryWorker() {
 	}
 }
 
-func (pm *peerManager) ExpectInbound(identity []byte) {
-	pm.mu.Lock()
-	defer pm.mu.Unlock()
-	pm.expectedInbound[string(identity)] = struct{}{}
-}
 
-func (pm *peerManager) isExpectedInbound(identity []byte) bool {
-	pm.mu.RLock()
-	defer pm.mu.RUnlock()
-	_, ok := pm.expectedInbound[string(identity)]
-	return ok
-}
+
+
 
 func (pm *peerManager) Connect(ctx context.Context, endpoint string, expectedIdentity []byte) error {
 	if pm.shuttingDown.Load() {
