@@ -1,5 +1,6 @@
 # Obsidian Vault Index
 
+-   [[00-governance/06-Architecture-Review-M8]]
 -   [[00-governance/05-Architecture-Review-M7]]
 -   [[00-governance/04-Architecture-Review-M6]]
 -   [[00-governance/03-Architecture-Review-M5]]
@@ -50,6 +51,8 @@
 -   [[07-testing/06-Test-Evidence-Standard]]
 -   [[07-testing/08-M6-Acceptance-Evidence]]
 -   [[07-testing/09-M7-Acceptance-Evidence]]
+-   [[07-testing/10-M8.1-Acceptance-Evidence]]
+-   [[07-testing/11-M8.2-Acceptance-Evidence]]
 -   [[08-implementation/01-Milestones]]
 -   [[08-implementation/02-Task-Template]]
 -   [[08-implementation/03-Code-Review-Checklist]]

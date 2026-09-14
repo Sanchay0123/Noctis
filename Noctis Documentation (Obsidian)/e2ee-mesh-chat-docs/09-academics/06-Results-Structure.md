@@ -2,9 +2,10 @@
 
 > **Staged results document — final results remain incomplete.**
 >
-> M2, M3 and M4 provide implementation and test evidence for identity,
-> authenticated session/message protection and direct secure messaging. Mesh
-> routing results remain TBD.
+> M2–M8.2 provide staged implementation and test evidence for identity,
+> authenticated session/message protection, direct networking, bounded mesh
+> routing, security hardening, the application boundary and the GUI foundation.
+> Final observability and demonstration results remain incomplete.
 
 ## Functional results
 
@@ -24,8 +25,9 @@
   Integrity              Tampering               Verified   M4 tamper evidence
   Replay resistance      Replay injection        Verified*  M3 session evidence
   Authentication         Invalid identity       Verified   M3/M4 evidence
-  MITM resistance        Key substitution    TBD          TBD
-  Routing containment    TTL/loop             TBD          TBD
+  MITM resistance        Key substitution    Limited/TBD  M3/TOFU limitation
+  Routing containment    TTL/loop             Verified      M6/M7 evidence
+  Relay plaintext access  Relay inspection    Verified      M6/M8.1 boundary
 
 ## Performance results
 
@@ -92,3 +94,24 @@ The acceptance record reports successful one-, two- and three-hop routing, cycli
 ## M6 Reference
 
 - [[00-governance/04-Architecture-Review-M6]] — authoritative M6 architecture and acceptance record
+
+## M8 preliminary results
+
+### M8.1 application boundary
+
+M8.1 establishes an application-service path in which routed APP_DATA remains
+opaque until it reaches the local application/session boundary. This preserves
+the relay-blind E2EE property while allowing authenticated plaintext delivery
+to application consumers.
+
+### M8.2 GUI foundation
+
+M8.2 establishes a Fyne presentation layer using the application service rather
+than direct access to cryptographic or routing internals. Concurrent GUI state,
+event processing and shutdown behavior received dedicated test coverage and
+race-detector validation.
+
+Interactive GUI runtime smoke testing was not available in the review
+environment, so this result should be presented as a verified implementation
+and test result rather than as a full usability/runtime demonstration.
+Concrete Prometheus/Grafana metrics and dashboards remain future M8 work.

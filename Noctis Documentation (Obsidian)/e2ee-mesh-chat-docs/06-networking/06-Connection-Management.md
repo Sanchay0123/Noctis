@@ -110,3 +110,10 @@ M3 cryptographic session through M4; session resumption is not implemented.
 The runtime was validated with race detection, repeated race runs, explicit
 four-case duplicate-arbitration tests and a deliberate Docker simultaneous-dial
 collision between Dave and Bob.
+
+## M8 application dialing
+
+The application service exposes explicit dialing by network address. The GUI
+may request a dial through this service, but does not own raw TCP connections.
+After authentication, the resulting PeerID is the canonical identity used by
+the conversation layer.

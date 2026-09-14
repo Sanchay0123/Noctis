@@ -114,3 +114,21 @@ outbound connection lifecycle, resource limits, deterministic duplicate
 connection arbitration, lifecycle race safety, telemetry isolation and a
 containerized multi-node runtime. It does not establish multi-hop routing or
 network-wide forwarding behavior.
+
+## Phase 8A --- Application service and UI integration
+
+After mesh security hardening, introduce a narrow application-service boundary
+that exposes authenticated messaging to presentation code without exposing
+cryptographic/session/routing internals. Verify that routing remains blind to
+plaintext and that endpoint decryption occurs only at the application/session
+boundary.
+
+## Phase 8B --- GUI integration
+
+Add the primary Fyne GUI behind an isolated GUI build tag. Validate application
+service behavior, synchronized GUI state, event delivery and shutdown/lifecycle
+handling. Separate GUI build/runtime environment evidence from headless backend
+validation.
+
+M8.2 does not by itself constitute complete observability implementation or
+final demonstration evidence.

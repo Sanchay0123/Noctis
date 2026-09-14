@@ -2,7 +2,7 @@
 
 ## Current Authoritative Status
 
-> **M7 — Security Hardening: COMPLETE / VERIFIED / APPROVED**
+> **M8.2 — Fyne GUI Foundation: COMPLETE / VERIFIED / APPROVED**
 >
 > M0–M5 remain part of the project history and architectural baseline. M6 extends that baseline with bounded managed flooding, TTL propagation control, PacketID duplicate suppression, bounded per-peer forwarding queues, endpoint-session separation from transport peers, multi-hop handshake correlation, and relay-blind E2EE.
 >
@@ -11,7 +11,7 @@
 
 ## Current phase
 
-**M7 complete — post-milestone documentation synchronization**
+**M8.2 complete — post-milestone documentation synchronization for M8.1/M8.2**
 
 ## Status
 
@@ -23,19 +23,19 @@
 | Cryptographic architecture | M3 implemented / verified for session crypto scope |
 | Protocol | Frozen baseline / M3 implementation verified |
 | Networking | M6 bounded mesh routing / multi-hop runtime complete and verified |
-| Observability | Approved supporting design / runtime telemetry hooks; concrete Prometheus exporter deferred to M8 |
+| Observability | Approved supporting design / runtime telemetry hooks; concrete Prometheus exporter not yet implemented |
 | Containerization | Required / foundation implemented |
 | GitHub synchronization | Required / not yet verified in this gate |
 | Testing strategy | Documented / M3 crypto evidence added |
-| Implementation | M7 security hardening implemented and verified above M6 runtime |
-| Security verification | M7 hardening verified; M6 routing, handshake-correlation, relay-boundary and resource-boundary evidence retained |
-| UI | Not started |
+| Implementation | M8.2 application/UI foundation implemented and verified above M7 runtime |
+| Security verification | M8.2 approved above M7 hardening; M6/M7 routing, relay-boundary, replay and resource-boundary evidence retained |
+| UI | M8.2 Fyne GUI foundation implemented / verified / approved |
 | Demo | Not started |
 | Final academic material | Draft |
 
 ## Current gate
 
-**M7 — Security Hardening: COMPLETE / APPROVED**
+**M8.2 — Fyne GUI Foundation: COMPLETE / VERIFIED / APPROVED**
 
 M0, M0.1, M1.1, M2.1/M2.1-B/M2.1-C, M3.1, M3.2 and M3.3 have been
 completed within their approved scopes.
@@ -62,9 +62,9 @@ that its implementation exists.
 
 ## Next action
 
-M7 documentation synchronization is complete. M8 — Observability and UI — is
-the next milestone and requires its own architecture/design and implementation
-gates.
+M8.1 and M8.2 documentation synchronization is complete. M8.3 requires a
+separate architecture/design and implementation authorization; no M8.3 work is
+authorized by the current gate.
 
 ## M3 Completion Gate
 
@@ -208,6 +208,8 @@ See [[00-governance/04-Architecture-Review-M6]] and [[07-testing/08-M6-Acceptanc
 
 - [[00-governance/03-Architecture-Review-M5]] — M5 architecture review
 - [[00-governance/04-Architecture-Review-M6]] — M6 architecture review
+- [[00-governance/05-Architecture-Review-M7]] — M7 security-hardening review
+- [[00-governance/06-Architecture-Review-M8]] — M8 architecture and M8.1/M8.2 implementation review
 
 
 ## M7 --- Security hardening
@@ -248,3 +250,49 @@ See [[00-governance/05-Architecture-Review-M7]] and
 M7 does not provide anonymity, complete metadata hiding, global Sybil/flood
 resistance, endpoint compromise resistance or guaranteed delivery.
 
+
+
+## M8 Phase 1 Architecture Gate
+
+**Status:** 🟢 APPROVED
+
+M8 Phase 1 established the application-service boundary required to expose
+secure messaging to a UI without allowing the UI to depend directly on
+cryptographic/session/routing internals. Manual peer dialing is the initial
+discovery mechanism. PeerID, network address, conversation and routing path
+are distinct concepts.
+
+## M8.1 Completion Gate
+
+**M8.1 — Application Service / UI Boundary: 🟢 COMPLETE / VERIFIED / APPROVED**
+
+M8.1 implemented `internal/app` and the session/application lookup path.
+Routing remains ciphertext-blind: `internal/routing` does not call
+`DecryptMessage` or otherwise process application plaintext. The application
+service performs endpoint session lookup and decryption before emitting a
+message-received event. PeerID-to-session mappings are removed conditionally
+to avoid stale-session deletion races.
+
+Reported formatting, vet, tests, race-detector and build validation passed.
+
+## M8.2 Completion Gate
+
+**M8.2 — Fyne GUI Foundation: 🟢 COMPLETE / VERIFIED / APPROVED**
+
+M8.2 adds a Fyne GUI isolated behind the `gui` build tag. The GUI uses the
+application service rather than crypto, session, mesh or routing internals.
+Mutable conversation/peer-selection state is protected by synchronized
+`UIState`, and GUI shutdown coordinates event-consumer termination with
+application-service shutdown.
+
+M8.2 added application-service and GUI-state tests, including concurrent state
+access and event/lifecycle coverage. The GUI runtime was not available for
+interactive smoke testing in the review environment; this limitation is part
+of the acceptance evidence.
+
+See [[00-governance/06-Architecture-Review-M8]],
+[[07-testing/10-M8.1-Acceptance-Evidence]] and
+[[07-testing/11-M8.2-Acceptance-Evidence]].
+
+**Next action:** documentation synchronization is complete; M8.3 requires a
+separate implementation authorization.

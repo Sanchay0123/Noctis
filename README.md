@@ -1,6 +1,6 @@
 # E2EE Mesh Chat --- Documentation Hub
 
-> **Status:** M6 complete / verified\
+> **Status:** M8.2 complete / verified / approved\
 > **Project type:** Academic cybersecurity and networking prototype
 
 ## Purpose
@@ -48,6 +48,8 @@ evidence and tests.
 -   [[00-governance/01-Vault-Index]]
 -   [[00-governance/03-Architecture-Review-M5]]
 -   [[00-governance/04-Architecture-Review-M6]]
+-   [[00-governance/05-Architecture-Review-M7]]
+-   [[00-governance/06-Architecture-Review-M8]]
 
 ### Project
 
@@ -115,6 +117,9 @@ evidence and tests.
 -   [[07-testing/05-Security-Demonstrations]]
 -   [[07-testing/06-Test-Evidence-Standard]]
 -   [[07-testing/08-M6-Acceptance-Evidence]]
+-   [[07-testing/09-M7-Acceptance-Evidence]]
+-   [[07-testing/10-M8.1-Acceptance-Evidence]]
+-   [[07-testing/11-M8.2-Acceptance-Evidence]]
 
 ### Implementation
 
@@ -163,7 +168,7 @@ operate if monitoring is unavailable.
 
 ## Current Implementation Status
 
-**M6 — Mesh Routing / Multi-Hop E2EE: 🟢 Complete / Approved**
+**M8.2 — Fyne GUI Foundation: 🟢 Complete / Verified / Approved**
 
 The repository has completed and verified the long-term Ed25519 identity,
 fresh X25519 session establishment, transcript-bound HKDF-SHA-256 key
@@ -172,7 +177,12 @@ replay control, and direct TCP secure messaging integration.
 
 M4 provides the bounded direct secure channel, M5 provides authenticated multi-peer runtime networking, and M6 provides bounded multi-hop forwarding while preserving endpoint E2EE. Relays can route ciphertext but cannot decrypt endpoint application data.
 
-**M6 is complete and approved.**
+**M8.2 is complete and approved within its reviewed scope.**
+
+M8.1 established the application-service boundary while preserving relay-blind
+routing. M8.2 added the Fyne GUI foundation behind a GUI build tag with
+synchronized UI state and lifecycle handling. Concrete Prometheus/Grafana
+implementation remains future M8 work. M8.3 has not been authorized.
 
 See [[00-governance/00-Project-State]] and
 [[08-implementation/01-Milestones]] for the current gate.

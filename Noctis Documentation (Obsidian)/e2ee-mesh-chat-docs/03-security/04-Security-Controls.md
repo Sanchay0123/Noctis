@@ -183,3 +183,22 @@ The following hardening controls were implemented and verified:
 
 M7 does not add anonymity, metadata hiding or global network-wide DoS
 protection.
+
+## M8 Application/UI Controls
+
+1. The UI accesses secure messaging only through `internal/app`.
+2. PeerID is an authenticated identity identifier and is distinct from a
+   network address.
+3. The router does not decrypt APP_DATA; endpoint decryption occurs at the
+   application/session boundary.
+4. GUI-visible events exclude private keys, ephemeral private keys, session
+   keys, AEAD nonces and raw protocol/network internals.
+5. GUI mutable state is synchronized to prevent concurrent event/render state
+   races.
+6. GUI shutdown coordinates event-consumer termination with application
+   service shutdown.
+7. GUI is isolated behind a `gui` build tag, preserving the headless backend
+   dependency boundary.
+
+M8.1/M8.2 approval does not establish GUI runtime smoke-test evidence in the
+review environment or concrete Prometheus/Grafana implementation.

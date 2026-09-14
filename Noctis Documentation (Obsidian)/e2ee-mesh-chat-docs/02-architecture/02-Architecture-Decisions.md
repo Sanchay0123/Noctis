@@ -301,3 +301,54 @@ AEAD authentication.
 The project obtains a demonstrable direct encrypted messaging path while
 preserving separation between transport, protocol and cryptographic/session
 responsibilities. Session multiplexing and mesh forwarding remain future work.
+
+## ADR-014 --- Application-service boundary
+
+**Status:** Implemented / verified / approved in M8.1
+
+### Decision
+
+Expose secure messaging to presentation/UI code through a narrow application
+service rather than allowing the UI to call crypto, session, mesh or routing
+internals.
+
+### Security consequence
+
+The UI cannot directly access private keys, session keys, raw packets or
+transport internals. Endpoint decryption occurs behind the application
+boundary.
+
+### Routing consequence
+
+The router delivers opaque APP_DATA metadata/ciphertext upward and remains
+blind to plaintext.
+
+## ADR-015 --- Fyne GUI isolated by build tag
+
+**Status:** Implemented / verified / approved in M8.2
+
+### Decision
+
+Use Fyne as the primary GUI framework and isolate the GUI under the `gui`
+build tag so the headless backend remains independent of GUI/CGO dependencies.
+
+### Consequence
+
+The backend retains a clean containerized/headless build path, while GUI
+builds require the native graphical dependencies appropriate to the target
+environment.
+
+## ADR-016 --- Manual peer dialing for initial UI discovery
+
+**Status:** Accepted / implemented in M8
+
+### Decision
+
+The initial UI uses explicit manual peer address entry. PeerID is treated as
+an authenticated identity and network address as a transport locator; neither
+is used as a substitute for the other.
+
+### Scope
+
+No DHT, automatic decentralized discovery or blockchain mechanism is added by
+M8.1/M8.2.

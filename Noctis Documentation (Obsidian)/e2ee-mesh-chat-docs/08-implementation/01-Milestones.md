@@ -220,19 +220,47 @@ resistance, endpoint compromise resistance or guaranteed delivery.
 
 ## M8 --- Observability and UI
 
-### Observability
+**Status:** 🟡 IN PROGRESS — M8.1 and M8.2 complete/approved; later M8 work pending
 
--   Prometheus-compatible metrics
--   structured security-safe events
--   log aggregation
--   Grafana dashboard
--   telemetry failure isolation
+### M8 Phase 1 — Application boundary
 
-### UI
+**Status:** 🟢 APPROVED
 
-Only after protocol stability.
+Define and approve the application-service boundary before UI implementation.
+PeerID, network address, conversation and routing path must remain distinct.
+The GUI must not access raw crypto/session/routing internals.
 
-**Gate:** observability safety review + UI smoke tests.
+### M8.1 — Application service foundation
+
+**Status:** 🟢 COMPLETE / APPROVED
+
+Implemented `internal/app`, application events and session lookup while keeping
+routing blind to plaintext. The router passes opaque APP_DATA upward; endpoint
+decryption occurs in the application service.
+
+### M8.2 — Fyne GUI foundation
+
+**Status:** 🟢 COMPLETE / VERIFIED / APPROVED
+
+Implemented the primary Fyne GUI behind the `gui` build tag, manual peer entry,
+conversation/message presentation and application-service integration. GUI
+state is synchronized and shutdown is coordinated with application-service
+lifecycle.
+
+Interactive GUI runtime smoke testing was not available in the review
+environment. Backend Docker E2E rerun was externally blocked by DNS/proxy
+resolution, so prior approved E2E evidence remains authoritative.
+
+### Remaining M8 scope
+
+- Prometheus-compatible concrete metrics
+- structured security-safe events/log aggregation as implemented runtime
+- Grafana visualization/dashboard
+- telemetry failure isolation verification for the concrete stack
+- GUI/runtime smoke demonstration where the environment permits
+
+**Gate:** observability safety review + GUI/runtime evidence. Each later M8
+phase requires separate authorization; M8.3 has not been authorized.
 
 ## M9 --- Demonstration environment
 
