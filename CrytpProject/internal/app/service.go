@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/sanchayjain/meshchat/internal/crypto"
 	"github.com/sanchayjain/meshchat/internal/mesh"
@@ -156,16 +157,20 @@ func NewNode(role string) (ApplicationService, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	sm := session.NewManager()
 	router := routing.NewRouter(ident, nil, sm, nil)
 	mgr := mesh.NewPeerManager(ident, nil, router.OnMessage)
 	router.SetPeerManager(mgr)
 
 	appSvc := NewApplicationService(ident, mgr, sm, router)
-	
+
 	if role != "standalone" {
-		mgr.Listen("0.0.0.0:8000")
+		addr := os.Getenv("MESH_LISTEN_ADDR")
+		if addr == "" {
+			addr = "0.0.0.0:8000"
+		}
+		mgr.Listen(addr)
 	}
 
 	return appSvc, nil

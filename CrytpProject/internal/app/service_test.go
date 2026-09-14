@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/hex"
+	"os"
 	"testing"
 	"time"
 
@@ -214,5 +215,63 @@ func TestApplicationService_Shutdown(t *testing.T) {
 	err := appService.Stop()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestApplicationService_NewNode_ConfigurableListener(t *testing.T) {
+	// Test configured listener
+	os.Setenv("MESH_LISTEN_ADDR", "127.0.0.1:8088")
+	defer os.Unsetenv("MESH_LISTEN_ADDR")
+
+	node1, err := NewNode("peer")
+	if err != nil {
+		t.Fatalf("Failed to create node: %v", err)
+	}
+	defer node1.Stop()
+
+	// Verify we can connect to 127.0.0.1:8088
+	node2, err := NewNode("standalone")
+	if err != nil {
+		t.Fatalf("Failed to create standalone node: %v", err)
+	}
+	defer node2.Stop()
+
+	// node1 must expect node2's inbound connection
+	pub2, _ := hex.DecodeString(node2.GetLocalIdentity())
+	node1.(*appService).meshManager.ExpectInbound(pub2)
+	time.Sleep(50 * time.Millisecond) // Wait for listener to bind
+
+	peerIDHex := node1.GetLocalIdentity()
+	err = node2.DialNode(context.Background(), "127.0.0.1:8088", peerIDHex)
+	if err != nil {
+		t.Fatalf("Expected connection to succeed on configured port, got %v", err)
+	}
+}
+
+func TestApplicationService_NewNode_DefaultListener(t *testing.T) {
+	// Ensure unset
+	os.Unsetenv("MESH_LISTEN_ADDR")
+
+	node1, err := NewNode("peer")
+	if err != nil {
+		t.Fatalf("Failed to create node: %v", err)
+	}
+	defer node1.Stop()
+
+	// Verify we can connect to 0.0.0.0:8000
+	node2, err := NewNode("standalone")
+	if err != nil {
+		t.Fatalf("Failed to create standalone node: %v", err)
+	}
+	defer node2.Stop()
+
+	pub2, _ := hex.DecodeString(node2.GetLocalIdentity())
+	node1.(*appService).meshManager.ExpectInbound(pub2)
+	time.Sleep(50 * time.Millisecond) // Wait for listener to bind
+
+	peerIDHex := node1.GetLocalIdentity()
+	err = node2.DialNode(context.Background(), "127.0.0.1:8000", peerIDHex)
+	if err != nil {
+		t.Fatalf("Expected connection to succeed on default port, got %v", err)
 	}
 }

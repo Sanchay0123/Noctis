@@ -169,7 +169,7 @@ func main() {
 		addrEntry := widget.NewEntry()
 		addrEntry.PlaceHolder = "127.0.0.1:8100"
 		peerEntry := widget.NewEntry()
-		peerEntry.PlaceHolder = "Optional expected PeerID (hex)"
+		peerEntry.PlaceHolder = "Required PeerID (hex)"
 
 		items := []*widget.FormItem{
 			widget.NewFormItem("Address", addrEntry),
@@ -180,30 +180,7 @@ func main() {
 			if !b {
 				return
 			}
-			addr := strings.TrimSpace(addrEntry.Text)
-			pid := strings.TrimSpace(peerEntry.Text)
-
-			if addr == "" || pid == "" {
-				return
-			}
-
-			statusLabel.SetText("Status: Connecting to " + addr)
-
-			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				err := appService.DialNode(ctx, addr, pid)
-
-				if err != nil {
-					statusLabel.SetText("Status: Connection failed: " + err.Error())
-				} else {
-					statusLabel.SetText("Status: Connected to " + addr + ". Handshaking...")
-					errStart := appService.StartConversation(pid)
-					if errStart != nil {
-						statusLabel.SetText("Status: Handshake init failed: " + errStart.Error())
-					}
-				}
-			}()
+			ValidateAndDialPeer(addrEntry.Text, peerEntry.Text, statusLabel, appService)
 		}, window)
 	})
 
@@ -315,6 +292,44 @@ func RunEventConsumer(events <-chan apppkg.AppEvent, state *UIState, shutdown <-
 					if statusLabel != nil {
 						statusLabel.SetText("Status: Security Alert - " + e.Message)
 					}
+				}
+			}
+		}
+	}()
+}
+
+func ValidateAndDialPeer(addrRaw, pidRaw string, statusLabel *widget.Label, appService apppkg.ApplicationService) {
+	addr := strings.TrimSpace(addrRaw)
+	pid := strings.TrimSpace(pidRaw)
+
+	if addr == "" || pid == "" {
+		if statusLabel != nil {
+			statusLabel.SetText("Status: Address and PeerID are required")
+		}
+		return
+	}
+
+	if statusLabel != nil {
+		statusLabel.SetText("Status: Connecting to " + addr)
+	}
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		err := appService.DialNode(ctx, addr, pid)
+
+		if err != nil {
+			if statusLabel != nil {
+				statusLabel.SetText("Status: Connection failed: " + err.Error())
+			}
+		} else {
+			if statusLabel != nil {
+				statusLabel.SetText("Status: Connected to " + addr + ". Handshaking...")
+			}
+			errStart := appService.StartConversation(pid)
+			if errStart != nil {
+				if statusLabel != nil {
+					statusLabel.SetText("Status: Handshake init failed: " + errStart.Error())
 				}
 			}
 		}
