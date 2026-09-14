@@ -87,7 +87,7 @@ func TestRouterTTL(t *testing.T) {
 	mp := &mockPeer{id: remoteIdent.PublicKey(), queue: make(chan []byte, 100)}
 	pm.peers[string(remoteIdent.PublicKey())] = mp
 
-	router := NewRouter(localIdent, pm, sm, telemetry, nil)
+	router := NewRouter(localIdent, pm, sm, telemetry)
 
 	tests := []struct {
 		name          string
@@ -193,7 +193,7 @@ func TestRouterPacketValidation(t *testing.T) {
 	telemetry := &mockTelemetry{}
 	pm := &mockPeerManager{peers: make(map[string]mesh.Peer)}
 	sm := session.NewManager()
-	router := NewRouter(localIdent, pm, sm, telemetry, nil)
+	router := NewRouter(localIdent, pm, sm, telemetry)
 
 	t.Run("PacketID lengths", func(t *testing.T) {
 		pkt := &protocol.MeshPacket{
@@ -341,7 +341,7 @@ func TestSustainedFloodMemoryBounds(t *testing.T) {
 	// We'll create a router and multiple dummy peers.
 	ident, _ := crypto.GenerateIdentity()
 	sm := session.NewManager()
-	r := NewRouter(ident, nil, sm, nil, func(s [32]byte, m []byte) {})
+	r := NewRouter(ident, nil, sm, nil)
 
 	pm := &dummyPM{
 		peers: []mesh.Peer{
@@ -430,7 +430,7 @@ func TestRouterValidationBoundary(t *testing.T) {
 	pm := &mockPeerManager{peers: make(map[string]mesh.Peer)}
 	sm := session.NewManager()
 
-	router := NewRouter(localIdent, pm, sm, telemetry, nil)
+	router := NewRouter(localIdent, pm, sm, telemetry)
 
 	// Valid packet template
 	validPkt := &protocol.MeshPacket{

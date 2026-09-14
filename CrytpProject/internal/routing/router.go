@@ -3,7 +3,6 @@ package routing
 import (
 	"bytes"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -26,10 +25,10 @@ type Router struct {
 	pendingInits map[[32]byte]map[[32]byte]*crypto.InitiatorHandshake // map[remoteID]map[PendingHandshakeKey]
 	telemetry    mesh.TelemetryRecorder
 
-	onAppData func(sessionID [32]byte, plaintext []byte)
+	OnAppData func(sessionID [32]byte, sequenceNum uint64, ciphertext []byte)
 }
 
-func NewRouter(localIdent *crypto.NodeIdentity, pm mesh.PeerManager, sm *session.Manager, t mesh.TelemetryRecorder, onAppData func([32]byte, []byte)) *Router {
+func NewRouter(localIdent *crypto.NodeIdentity, pm mesh.PeerManager, sm *session.Manager, t mesh.TelemetryRecorder) *Router {
 	return &Router{
 		localIdent:     localIdent,
 		peerManager:    pm,
@@ -37,7 +36,6 @@ func NewRouter(localIdent *crypto.NodeIdentity, pm mesh.PeerManager, sm *session
 		cache:          NewPacketCache(10000, 2*time.Minute),
 		pendingInits:   make(map[[32]byte]map[[32]byte]*crypto.InitiatorHandshake),
 		telemetry:      t,
-		onAppData:      onAppData,
 	}
 }
 
@@ -239,18 +237,10 @@ func (r *Router) handleAppData(payload *protocol.AppDataPayload) {
 	var sid [32]byte
 	copy(sid[:], payload.SessionId)
 
-	session, ok := r.sessionManager.Lookup(sid)
-	if !ok {
-		return
-	}
-
-	plaintext, err := session.DecryptMessage(payload.SequenceNum, payload.Ciphertext)
-	if err != nil {
-		return
-	}
-
-	if r.onAppData != nil {
-		r.onAppData(sid, plaintext)
+	// Opaque payload delivery.
+	// We do NOT decrypt here. We just route it to the application layer.
+	if r.OnAppData != nil {
+		r.OnAppData(sid, payload.SequenceNum, payload.Ciphertext)
 	}
 }
 
@@ -321,36 +311,6 @@ func (r *Router) StartInitiator(dest []byte) error {
 	return nil
 }
 
-func (r *Router) SendAppData(dest []byte, sessionID [32]byte, plaintext []byte) error {
-	session, ok := r.sessionManager.Lookup(sessionID)
-	if !ok {
-		return errors.New("session not found")
-	}
-	seq, ciphertext, err := session.EncryptMessage(plaintext)
-	if err != nil {
-		return err
-	}
-
-	pkt := &protocol.MeshPacket{
-		Version:  1,
-		Type:     protocol.PacketType_PACKET_TYPE_APP_DATA,
-		PacketId: genPID(),
-
-		Ttl:        16,
-		SourceNode: r.localIdent.PublicKey(),
-		DestNode:   dest,
-		Payload: &protocol.MeshPacket_AppData{
-			AppData: &protocol.AppDataPayload{
-				SessionId:   sessionID[:],
-				SequenceNum: seq,
-				Ciphertext:  ciphertext,
-			},
-		},
-	}
-	r.routeOut(pkt)
-	return nil
-}
-
 func (r *Router) routeOut(pkt *protocol.MeshPacket) {
 	peers := r.peerManager.GetActivePeersSnapshot()
 	fmt.Printf("Router routeOut: sending type %d to %d peers\n", pkt.Type, len(peers))
@@ -378,35 +338,22 @@ func (r *Router) SetPeerManager(pm mesh.PeerManager) {
 	r.peerManager = pm
 }
 
-func (r *Router) BroadcastAppData(dest []byte, plaintext []byte) error {
-
-	s, id, ok := r.sessionManager.GetFirstSession()
-	if ok {
-		// Just send to first session that we are initiator of? Or we don't have dest info in session easily.
-		// Actually, we can just look up by iterating.
-		// Wait, a quick hack for main.go:
-		seq, ciphertext, err := s.EncryptMessage(plaintext)
-		if err != nil {
-			return err
-		}
-
-		pkt := &protocol.MeshPacket{
-			Version:    1,
-			Type:       protocol.PacketType_PACKET_TYPE_APP_DATA,
-			PacketId:   genPID(),
-			Ttl:        16,
-			SourceNode: r.localIdent.PublicKey(),
-			DestNode:   dest,
-			Payload: &protocol.MeshPacket_AppData{
-				AppData: &protocol.AppDataPayload{
-					SessionId:   id[:],
-					SequenceNum: seq,
-					Ciphertext:  ciphertext,
-				},
+func (r *Router) RouteAppData(destPubKey []byte, sessionID [32]byte, seq uint64, ciphertext []byte) error {
+	pkt := &protocol.MeshPacket{
+		Version:    1,
+		Type:       protocol.PacketType_PACKET_TYPE_APP_DATA,
+		PacketId:   genPID(),
+		Ttl:        16,
+		SourceNode: r.localIdent.PublicKey(),
+		DestNode:   destPubKey,
+		Payload: &protocol.MeshPacket_AppData{
+			AppData: &protocol.AppDataPayload{
+				SessionId:   sessionID[:],
+				SequenceNum: seq,
+				Ciphertext:  ciphertext,
 			},
-		}
-		r.routeOut(pkt)
-		return nil
+		},
 	}
-	return errors.New("no session")
+	r.routeOut(pkt)
+	return nil
 }

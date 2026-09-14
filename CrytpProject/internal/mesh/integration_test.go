@@ -2,6 +2,8 @@ package mesh_test
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"testing"
 	"time"
 
@@ -21,17 +23,34 @@ func TestRelayCannotDecryptEndpointSession(t *testing.T) {
 	bobSM := session.NewManager()
 	carolSM := session.NewManager()
 
-	aliceOnMsg := func(sid [32]byte, msg []byte) {}
-	bobOnMsg := func(sid [32]byte, msg []byte) {}
-	carolOnMsg := func(sid [32]byte, msg []byte) {
-		if string(msg) != "Hello Carol" {
+	aliceOnMsg := func(sessionID [32]byte, seq uint64, ciphertext []byte) {}
+	bobOnMsg := func(sessionID [32]byte, seq uint64, ciphertext []byte) {}
+	carolOnMsg := func(sessionID [32]byte, seq uint64, ciphertext []byte) {
+		if string(ciphertext) == "Hello Carol" {
+			t.Errorf("Router decrypted the payload! Architectural violation.")
+		}
+
+		session, ok := carolSM.Lookup(sessionID)
+		if !ok {
+			t.Errorf("Carol session not found")
+			return
+		}
+		plaintext, err := session.DecryptMessage(seq, ciphertext)
+		if err != nil {
+			t.Errorf("carol decryption failed: %v", err)
+			return
+		}
+		if string(plaintext) != "Hello Carol" {
 			t.Errorf("carol received wrong message")
 		}
 	}
 
-	aliceRouter := routing.NewRouter(aliceIdent, nil, aliceSM, nil, aliceOnMsg)
-	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil, bobOnMsg)
-	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil, carolOnMsg)
+	aliceRouter := routing.NewRouter(aliceIdent, nil, aliceSM, nil)
+	aliceRouter.OnAppData = aliceOnMsg
+	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil)
+	bobRouter.OnAppData = bobOnMsg
+	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil)
+	carolRouter.OnAppData = carolOnMsg
 
 	alicePM := mesh.NewPeerManager(aliceIdent, nil, aliceRouter.OnMessage)
 	bobPM := mesh.NewPeerManager(bobIdent, nil, bobRouter.OnMessage)
@@ -61,18 +80,18 @@ func TestRelayCannotDecryptEndpointSession(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Verify Alice and Carol have endpoint sessions, Bob does NOT have Alice<->Carol session
-	if _, _, ok := aliceSM.GetFirstSession(); !ok {
+	if _, _, ok := aliceSM.LookupByPeer(hex.EncodeToString(carolIdent.PublicKey())); !ok {
 		t.Errorf("Alice SM has no session")
 	}
-	if _, _, ok := carolSM.GetFirstSession(); !ok {
+	if _, _, ok := carolSM.LookupByPeer(hex.EncodeToString(aliceIdent.PublicKey())); !ok {
 		t.Errorf("Carol SM has no session")
 	}
-	if _, _, ok := bobSM.GetFirstSession(); ok {
+	if _, _, ok := bobSM.LookupByPeer(hex.EncodeToString(carolIdent.PublicKey())); ok {
 		t.Errorf("Bob should have NO endpoint sessions")
 	}
 
 	// Send APP_DATA
-	aliceRouter.BroadcastAppData(carolIdent.PublicKey(), []byte("Hello Carol"))
+	sendAppDataHelper(aliceRouter, aliceSM, carolIdent.PublicKey(), []byte("Hello Carol"))
 	time.Sleep(200 * time.Millisecond)
 
 	alicePM.Shutdown()
@@ -89,13 +108,16 @@ func TestPeerLossDoesNotInvalidateEndpointSession(t *testing.T) {
 	bobSM := session.NewManager()
 	carolSM := session.NewManager()
 
-	aliceOnMsg := func(sid [32]byte, msg []byte) {}
-	bobOnMsg := func(sid [32]byte, msg []byte) {}
-	carolOnMsg := func(sid [32]byte, msg []byte) {}
+	aliceOnMsg := func(sessionID [32]byte, seq uint64, ciphertext []byte) {}
+	bobOnMsg := func(sessionID [32]byte, seq uint64, ciphertext []byte) {}
+	carolOnMsg := func(sessionID [32]byte, seq uint64, ciphertext []byte) {}
 
-	aliceRouter := routing.NewRouter(aliceIdent, nil, aliceSM, nil, aliceOnMsg)
-	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil, bobOnMsg)
-	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil, carolOnMsg)
+	aliceRouter := routing.NewRouter(aliceIdent, nil, aliceSM, nil)
+	aliceRouter.OnAppData = aliceOnMsg
+	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil)
+	bobRouter.OnAppData = bobOnMsg
+	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil)
+	carolRouter.OnAppData = carolOnMsg
 
 	alicePM := mesh.NewPeerManager(aliceIdent, nil, aliceRouter.OnMessage)
 	bobPM := mesh.NewPeerManager(bobIdent, nil, bobRouter.OnMessage)
@@ -123,10 +145,10 @@ func TestPeerLossDoesNotInvalidateEndpointSession(t *testing.T) {
 	aliceRouter.StartInitiator(carolIdent.PublicKey())
 	time.Sleep(500 * time.Millisecond)
 
-	if _, _, ok := aliceSM.GetFirstSession(); !ok {
+	if _, _, ok := aliceSM.LookupByPeer(hex.EncodeToString(carolIdent.PublicKey())); !ok {
 		t.Fatalf("Session failed to establish on Alice")
 	}
-	if _, _, ok := carolSM.GetFirstSession(); !ok {
+	if _, _, ok := carolSM.LookupByPeer(hex.EncodeToString(aliceIdent.PublicKey())); !ok {
 		t.Fatalf("Session failed to establish on Carol")
 	}
 
@@ -135,10 +157,10 @@ func TestPeerLossDoesNotInvalidateEndpointSession(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Confirm SessionManager still has Alice <-> Carol
-	if _, _, ok := aliceSM.GetFirstSession(); !ok {
+	if _, _, ok := aliceSM.LookupByPeer(hex.EncodeToString(carolIdent.PublicKey())); !ok {
 		t.Errorf("Alice SM lost session after peer loss")
 	}
-	if _, _, ok := carolSM.GetFirstSession(); !ok {
+	if _, _, ok := carolSM.LookupByPeer(hex.EncodeToString(aliceIdent.PublicKey())); !ok {
 		t.Errorf("Carol SM lost session after peer loss")
 	}
 
@@ -182,15 +204,18 @@ func TestRelayCiphertextBoundary(t *testing.T) {
 	bobSM := session.NewManager()
 	carolSM := session.NewManager()
 
-	aliceOnMsg := func(sid [32]byte, msg []byte) {}
+	aliceOnMsg := func(sessionID [32]byte, seq uint64, ciphertext []byte) {}
 
 	capturedBeforeBob := make(chan []byte, 100)
 
-	carolOnMsg := func(sid [32]byte, msg []byte) {}
+	carolOnMsg := func(sessionID [32]byte, seq uint64, ciphertext []byte) {}
 
-	aliceRouter := routing.NewRouter(aliceIdent, nil, aliceSM, nil, aliceOnMsg)
-	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil, func(s [32]byte, m []byte) {})
-	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil, carolOnMsg)
+	aliceRouter := routing.NewRouter(aliceIdent, nil, aliceSM, nil)
+	aliceRouter.OnAppData = aliceOnMsg
+	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil)
+	bobRouter.OnAppData = func(sessionID [32]byte, seq uint64, ciphertext []byte) {}
+	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil)
+	carolRouter.OnAppData = carolOnMsg
 
 	alicePM := mesh.NewPeerManager(aliceIdent, nil, aliceRouter.OnMessage)
 
@@ -236,7 +261,7 @@ func TestRelayCiphertextBoundary(t *testing.T) {
 	}
 
 	// Send APP_DATA
-	aliceRouter.BroadcastAppData(carolIdent.PublicKey(), []byte("SECRET_RELAY_TEST"))
+	sendAppDataHelper(aliceRouter, aliceSM, carolIdent.PublicKey(), []byte("SECRET_RELAY_TEST"))
 	time.Sleep(200 * time.Millisecond)
 
 	if len(capturedBeforeBob) == 0 {
@@ -272,11 +297,23 @@ func TestRelayCiphertextBoundary(t *testing.T) {
 		t.Fatalf("Ciphertext altered in more than 1 byte (TTL). Diffs: %d", diffCount)
 	}
 
-	if _, _, ok := bobSM.GetFirstSession(); ok {
+	if _, _, ok := bobSM.LookupByPeer(hex.EncodeToString(carolIdent.PublicKey())); ok {
 		t.Fatalf("Bob possesses endpoint M4 session state")
 	}
 
 	alicePM.Shutdown()
 	baseBobPM.Shutdown()
 	carolPM.Shutdown()
+}
+
+func sendAppDataHelper(r *routing.Router, sm *session.Manager, destPubKey []byte, plaintext []byte) error {
+	session, id, ok := sm.LookupByPeer(hex.EncodeToString(destPubKey))
+	if !ok {
+		return fmt.Errorf("no session")
+	}
+	seq, ciphertext, err := session.EncryptMessage(plaintext)
+	if err != nil {
+		return err
+	}
+	return r.RouteAppData(destPubKey, id, seq, ciphertext)
 }

@@ -50,6 +50,7 @@ const (
 )
 
 type Session struct {
+	peerID      []byte
 	id          []byte
 	sendKey     []byte
 	receiveKey  []byte
@@ -61,6 +62,12 @@ type Session struct {
 	receiveMu       sync.Mutex
 	highestReceived uint64
 	replayBitmap    uint64
+}
+
+func (s *Session) PeerID() []byte {
+	out := make([]byte, len(s.peerID))
+	copy(out, s.peerID)
+	return out
 }
 
 func (s *Session) ID() []byte {
@@ -304,7 +311,7 @@ func (h *InitiatorHandshake) ProcessResp(msg *RespMessage) error {
 		return err
 	}
 
-	h.session = deriveSession(tResp, ss, true)
+	h.session = deriveSession(tResp, ss, true, h.peerID)
 	h.ephemeral.Destroy()
 	h.ephemeral = nil
 	h.state = InitiatorStateEstablished
@@ -401,7 +408,7 @@ func (h *ResponderHandshake) GenerateResp() (*RespMessage, error) {
 		return nil, err
 	}
 
-	h.session = deriveSession(tResp, ss, false)
+	h.session = deriveSession(tResp, ss, false, h.peerID)
 	h.ephemeral.Destroy()
 	h.ephemeral = nil
 	h.state = ResponderStateEstablished
@@ -419,7 +426,7 @@ func (h *ResponderHandshake) Session() (*Session, error) {
 	return h.session, nil
 }
 
-func deriveSession(tResp []byte, ss []byte, isInitiator bool) *Session {
+func deriveSession(tResp []byte, ss []byte, isInitiator bool, peerID []byte) *Session {
 	tRespHd := sha256.Sum256(tResp)
 	salt := make([]byte, 32)
 	copy(salt, tRespHd[:])
@@ -434,7 +441,11 @@ func deriveSession(tResp []byte, ss []byte, isInitiator bool) *Session {
 	io.ReadFull(ka2bReader, ka2b)
 	io.ReadFull(kb2aReader, kb2a)
 
+	pid := make([]byte, len(peerID))
+	copy(pid, peerID)
+
 	s := &Session{
+		peerID:      pid,
 		id:          salt,
 		isInitiator: isInitiator,
 	}

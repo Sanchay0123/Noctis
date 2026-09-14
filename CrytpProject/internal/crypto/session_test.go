@@ -196,7 +196,7 @@ func TestHKDFKnownAnswer(t *testing.T) {
 	if !bytes.Equal(tRespSum[:], expectedSessionID) {
 		t.Fatalf("T_RESP construction mismatch")
 	}
-	session := deriveSession(tResp, ss, true)
+	session := deriveSession(tResp, ss, true, make([]byte, 32))
 	expectedSend, _ := hex.DecodeString("750b44a95d57c29b536ca57990a2e2e19e5265bf64262e8aebd970785c76e6f1")
 	expectedReceive, _ := hex.DecodeString("d016ddec6d26a85c38a3fdedb084d018ded4b75ad6d04b579035c75848e17e91")
 	if !bytes.Equal(session.ID(), expectedSessionID) {
