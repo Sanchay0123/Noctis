@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,10 +19,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	apppkg "github.com/sanchayjain/meshchat/internal/app"
-	"github.com/sanchayjain/meshchat/internal/crypto"
-	"github.com/sanchayjain/meshchat/internal/mesh"
-	"github.com/sanchayjain/meshchat/internal/routing"
-	"github.com/sanchayjain/meshchat/internal/session"
 )
 
 type Message struct {
@@ -238,22 +233,20 @@ func main() {
 			role = "standalone"
 		}
 
-		ident, _ := crypto.GenerateIdentity()
+		appSvc, err := apppkg.NewNode(role)
+		if err != nil {
+			statusLabel.SetText("Status: Initialization failed")
+			return
+		}
+		appService = appSvc
+
 		if role != "standalone" {
-			os.WriteFile(filepath.Join("/shared", role+".pub"), ident.PublicKey(), 0644)
+			os.WriteFile(filepath.Join("/shared", role+".pub"), appService.GetLocalIdentityBytes(), 0644)
 		}
 
-		myPeerID := hex.EncodeToString(ident.PublicKey())
-
+		myPeerID := appService.GetLocalIdentity()
 		identityLabel.SetText("Identity: " + myPeerID[:8] + "...")
 		statusLabel.SetText("Status: Disconnected")
-
-		sm := session.NewManager()
-		router := routing.NewRouter(ident, nil, sm, nil)
-		mgr := mesh.NewPeerManager(ident, nil, router.OnMessage)
-		router.SetPeerManager(mgr)
-
-		appService = apppkg.NewApplicationService(ident, mgr, sm, router)
 		appService.Start()
 
 		go func() {
@@ -298,11 +291,6 @@ func main() {
 				}
 			}
 		}()
-
-		if role != "standalone" {
-			mgr.Listen("0.0.0.0:8000")
-			statusLabel.SetText("Status: Listening on 0.0.0.0:8000")
-		}
 	}()
 
 	window.ShowAndRun()

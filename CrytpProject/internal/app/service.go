@@ -21,6 +21,7 @@ var (
 
 type ApplicationService interface {
 	GetLocalIdentity() string
+	GetLocalIdentityBytes() []byte
 	DialNode(ctx context.Context, address string, expectedPeerID string) error
 	StartConversation(peerID string) error
 	SendMessage(peerID string, plaintext string) error
@@ -55,6 +56,10 @@ func NewApplicationService(
 	s.router.OnAppData = s.handleAppDataReceived
 	s.router.OnSessionEstablished = s.handleSessionEstablished
 	return s
+}
+
+func (s *appService) GetLocalIdentityBytes() []byte {
+	return s.localIdent.PublicKey()
 }
 
 func (s *appService) GetLocalIdentity() string {
@@ -144,4 +149,24 @@ func (s *appService) handleSessionEstablished(peerID []byte) {
 	default:
 		fmt.Println("[AppService] Warning: Event channel full, dropping session event")
 	}
+}
+
+func NewNode(role string) (ApplicationService, error) {
+	ident, err := crypto.GenerateIdentity()
+	if err != nil {
+		return nil, err
+	}
+	
+	sm := session.NewManager()
+	router := routing.NewRouter(ident, nil, sm, nil)
+	mgr := mesh.NewPeerManager(ident, nil, router.OnMessage)
+	router.SetPeerManager(mgr)
+
+	appSvc := NewApplicationService(ident, mgr, sm, router)
+	
+	if role != "standalone" {
+		mgr.Listen("0.0.0.0:8000")
+	}
+
+	return appSvc, nil
 }
