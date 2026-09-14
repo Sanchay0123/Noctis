@@ -226,6 +226,7 @@ func main() {
 	window.SetContent(split)
 
 	shutdown := make(chan struct{})
+	var consumerWg sync.WaitGroup
 
 	go func() {
 		role := os.Getenv("MESH_ROLE")
@@ -249,54 +250,73 @@ func main() {
 		statusLabel.SetText("Status: Disconnected")
 		appService.Start()
 
-		go func() {
-			for {
-				select {
-				case <-shutdown:
-					return
-				case e, ok := <-appService.SubscribeEvents():
-					if !ok {
-						return
-					}
-					switch e.Type {
-					case apppkg.EventTypeMessageReceived:
-						isNew := state.AddMessage(e.PeerID, Message{
-							Sender:    "Peer",
-							Text:      e.Message,
-							Timestamp: time.Now(),
-						})
-						if isNew {
-							conversationList.Refresh()
-						}
-
-						curr := state.GetCurrentPeer()
-						if curr == e.PeerID {
-							refreshChat()
-						} else {
-							statusLabel.SetText("Status: New message from " + e.PeerID[:8])
-						}
-					case apppkg.EventTypePeerConnected:
-						statusLabel.SetText("Status: Peer connected " + e.PeerID[:8])
-					case apppkg.EventTypePeerDisconnected:
-						statusLabel.SetText("Status: Peer disconnected " + e.PeerID[:8])
-					case apppkg.EventTypeSessionEstablished:
-						statusLabel.SetText("Status: Secure Session Established with " + e.PeerID[:8])
-					case apppkg.EventTypeConnectionFailed:
-						statusLabel.SetText("Status: Connection Failed for " + e.PeerID[:8])
-					case apppkg.EventTypeSessionFailed:
-						statusLabel.SetText("Status: Authentication Failed for " + e.PeerID[:8])
-					case apppkg.EventTypeSecurityAlert:
-						statusLabel.SetText("Status: Security Alert - " + e.Message)
-					}
-				}
-			}
-		}()
+		RunEventConsumer(appService.SubscribeEvents(), state, shutdown, &consumerWg, refreshChat, conversationList, statusLabel)
 	}()
 
 	window.ShowAndRun()
 
 	close(shutdown)
+	consumerWg.Wait()
 	if appService != nil {
 		appService.Stop()
 	}
+}
+
+func RunEventConsumer(events <-chan apppkg.AppEvent, state *UIState, shutdown <-chan struct{}, wg *sync.WaitGroup, refreshChat func(), conversationList *widget.List, statusLabel *widget.Label) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-shutdown:
+				return
+			case e, ok := <-events:
+				if !ok {
+					return
+				}
+				switch e.Type {
+				case apppkg.EventTypeMessageReceived:
+					isNew := state.AddMessage(e.PeerID, Message{
+						Sender:    "Peer",
+						Text:      e.Message,
+						Timestamp: time.Now(),
+					})
+					if isNew && conversationList != nil {
+						conversationList.Refresh()
+					}
+
+					curr := state.GetCurrentPeer()
+					if curr == e.PeerID && refreshChat != nil {
+						refreshChat()
+					} else if statusLabel != nil {
+						statusLabel.SetText("Status: New message from " + e.PeerID[:8])
+					}
+				case apppkg.EventTypePeerConnected:
+					if statusLabel != nil {
+						statusLabel.SetText("Status: Peer connected " + e.PeerID[:8])
+					}
+				case apppkg.EventTypePeerDisconnected:
+					if statusLabel != nil {
+						statusLabel.SetText("Status: Peer disconnected " + e.PeerID[:8])
+					}
+				case apppkg.EventTypeSessionEstablished:
+					if statusLabel != nil {
+						statusLabel.SetText("Status: Secure Session Established with " + e.PeerID[:8])
+					}
+				case apppkg.EventTypeConnectionFailed:
+					if statusLabel != nil {
+						statusLabel.SetText("Status: Connection Failed for " + e.PeerID[:8])
+					}
+				case apppkg.EventTypeSessionFailed:
+					if statusLabel != nil {
+						statusLabel.SetText("Status: Authentication Failed for " + e.PeerID[:8])
+					}
+				case apppkg.EventTypeSecurityAlert:
+					if statusLabel != nil {
+						statusLabel.SetText("Status: Security Alert - " + e.Message)
+					}
+				}
+			}
+		}
+	}()
 }
