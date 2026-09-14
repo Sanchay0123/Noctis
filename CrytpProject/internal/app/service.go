@@ -53,6 +53,7 @@ func NewApplicationService(
 		done:        make(chan struct{}),
 	}
 	s.router.OnAppData = s.handleAppDataReceived
+	s.router.OnSessionEstablished = s.handleSessionEstablished
 	return s
 }
 
@@ -130,4 +131,17 @@ func (s *appService) DialNode(ctx context.Context, address string, expectedPeerI
 	}
 	s.meshManager.ExpectInbound(peerPubKey)
 	return s.meshManager.Connect(ctx, address, peerPubKey)
+}
+
+func (s *appService) handleSessionEstablished(peerID []byte) {
+	peerHex := hex.EncodeToString(peerID)
+	event := AppEvent{
+		Type:   EventTypeSessionEstablished,
+		PeerID: peerHex,
+	}
+	select {
+	case s.events <- event:
+	default:
+		fmt.Println("[AppService] Warning: Event channel full, dropping session event")
+	}
 }

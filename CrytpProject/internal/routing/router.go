@@ -25,7 +25,8 @@ type Router struct {
 	pendingInits map[[32]byte]map[[32]byte]*crypto.InitiatorHandshake // map[remoteID]map[PendingHandshakeKey]
 	telemetry    mesh.TelemetryRecorder
 
-	OnAppData func(sessionID [32]byte, sequenceNum uint64, ciphertext []byte)
+	OnAppData            func(sessionID [32]byte, sequenceNum uint64, ciphertext []byte)
+	OnSessionEstablished func(peerID []byte)
 }
 
 func NewRouter(localIdent *crypto.NodeIdentity, pm mesh.PeerManager, sm *session.Manager, t mesh.TelemetryRecorder) *Router {
@@ -163,6 +164,9 @@ func (r *Router) handleInit(sourceID []byte, payload *protocol.InitPayload) {
 		return
 	}
 	r.sessionManager.Register(session)
+	if r.OnSessionEstablished != nil {
+		go r.OnSessionEstablished(session.PeerID())
+	}
 
 	// Send back RESP
 	respPkt := &protocol.MeshPacket{
@@ -228,6 +232,9 @@ func (r *Router) handleResp(sourceID []byte, payload *protocol.RespPayload) {
 		return
 	}
 	r.sessionManager.Register(session)
+	if r.OnSessionEstablished != nil {
+		go r.OnSessionEstablished(session.PeerID())
+	}
 }
 
 func (r *Router) handleAppData(payload *protocol.AppDataPayload) {

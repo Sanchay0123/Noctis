@@ -8,6 +8,9 @@ const (
 	EventTypePeerConnected
 	EventTypePeerDisconnected
 	EventTypeSecurityAlert
+	EventTypeSessionEstablished
+	EventTypeSessionFailed
+	EventTypeConnectionFailed
 )
 
 // AppEvent is the bounded structure pushed to the GUI.

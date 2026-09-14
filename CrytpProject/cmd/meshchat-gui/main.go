@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,20 +26,26 @@ import (
 	"github.com/sanchayjain/meshchat/internal/session"
 )
 
+type Message struct {
+	Sender    string
+	Text      string
+	Timestamp time.Time
+}
+
 type UIState struct {
 	mu            sync.RWMutex
-	conversations map[string]string
+	conversations map[string][]Message
 	peerList      []string
 	currentPeer   string
 }
 
 func NewUIState() *UIState {
 	return &UIState{
-		conversations: make(map[string]string),
+		conversations: make(map[string][]Message),
 	}
 }
 
-func (s *UIState) AddMessage(peerID, message string) bool {
+func (s *UIState) AddMessage(peerID string, msg Message) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -49,7 +54,7 @@ func (s *UIState) AddMessage(peerID, message string) bool {
 		s.peerList = append(s.peerList, peerID)
 		isNew = true
 	}
-	s.conversations[peerID] += message + "\n"
+	s.conversations[peerID] = append(s.conversations[peerID], msg)
 	return isNew
 }
 
@@ -71,7 +76,12 @@ func (s *UIState) GetPeerAt(index int) string {
 func (s *UIState) GetConversation(peerID string) string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.conversations[peerID]
+	msgs := s.conversations[peerID]
+	var sb strings.Builder
+	for _, m := range msgs {
+		sb.WriteString(fmt.Sprintf("[%s] %s: %s\n", m.Timestamp.Format("15:04:05"), m.Sender, m.Text))
+	}
+	return sb.String()
 }
 
 func (s *UIState) SetCurrentPeer(peerID string) {
@@ -86,28 +96,22 @@ func (s *UIState) GetCurrentPeer() string {
 	return s.currentPeer
 }
 
-func waitForKey(role string) []byte {
-	path := filepath.Join("/shared", role+".pub")
-	for {
-		b, err := ioutil.ReadFile(path)
-		if err == nil && len(b) == 32 {
-			return b
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-}
-
 func main() {
 	fyneApp := app.New()
 	window := fyneApp.NewWindow("MeshChat")
 	window.Resize(fyne.NewSize(800, 600))
 
 	var appService apppkg.ApplicationService
-	var myPeerID string
 	state := NewUIState()
 
 	statusLabel := widget.NewLabel("Status: Starting...")
 	identityLabel := widget.NewLabel("Identity: Unknown")
+
+	copyIdBtn := widget.NewButton("Copy ID", func() {
+		if appService != nil {
+			window.Clipboard().SetContent(appService.GetLocalIdentity())
+		}
+	})
 
 	chatHistory := widget.NewLabel("Select a conversation to start chatting.")
 	chatHistory.Wrapping = fyne.TextWrapWord
@@ -157,7 +161,11 @@ func main() {
 			return
 		}
 
-		state.AddMessage(curr, fmt.Sprintf("You: %s", text))
+		state.AddMessage(curr, Message{
+			Sender:    "You",
+			Text:      text,
+			Timestamp: time.Now(),
+		})
 		messageInput.SetText("")
 		refreshChat()
 	})
@@ -194,7 +202,11 @@ func main() {
 				if err != nil {
 					statusLabel.SetText("Status: Connection failed: " + err.Error())
 				} else {
-					statusLabel.SetText("Status: Connected to " + addr)
+					statusLabel.SetText("Status: Connected to " + addr + ". Handshaking...")
+					errStart := appService.StartConversation(pid)
+					if errStart != nil {
+						statusLabel.SetText("Status: Handshake init failed: " + errStart.Error())
+					}
 				}
 			}()
 		}, window)
@@ -207,7 +219,8 @@ func main() {
 		conversationList,
 	)
 
-	rightTop := container.NewVBox(identityLabel, statusLabel)
+	identBox := container.NewHBox(identityLabel, copyIdBtn)
+	rightTop := container.NewVBox(identBox, statusLabel)
 	rightBottom := container.NewBorder(nil, nil, nil, sendButton, messageInput)
 
 	rightPanel := container.NewBorder(rightTop, rightBottom, nil, nil, scrollContainer)
@@ -227,10 +240,10 @@ func main() {
 
 		ident, _ := crypto.GenerateIdentity()
 		if role != "standalone" {
-			ioutil.WriteFile(filepath.Join("/shared", role+".pub"), ident.PublicKey(), 0644)
+			os.WriteFile(filepath.Join("/shared", role+".pub"), ident.PublicKey(), 0644)
 		}
 
-		myPeerID = hex.EncodeToString(ident.PublicKey())
+		myPeerID := hex.EncodeToString(ident.PublicKey())
 
 		identityLabel.SetText("Identity: " + myPeerID[:8] + "...")
 		statusLabel.SetText("Status: Disconnected")
@@ -240,8 +253,8 @@ func main() {
 		mgr := mesh.NewPeerManager(ident, nil, router.OnMessage)
 		router.SetPeerManager(mgr)
 
-		appSvc := apppkg.NewApplicationService(ident, mgr, sm, router)
-		appService = appSvc
+		appService = apppkg.NewApplicationService(ident, mgr, sm, router)
+		appService.Start()
 
 		go func() {
 			for {
@@ -254,7 +267,11 @@ func main() {
 					}
 					switch e.Type {
 					case apppkg.EventTypeMessageReceived:
-						isNew := state.AddMessage(e.PeerID, fmt.Sprintf("Peer: %s", e.Message))
+						isNew := state.AddMessage(e.PeerID, Message{
+							Sender:    "Peer",
+							Text:      e.Message,
+							Timestamp: time.Now(),
+						})
 						if isNew {
 							conversationList.Refresh()
 						}
@@ -269,6 +286,12 @@ func main() {
 						statusLabel.SetText("Status: Peer connected " + e.PeerID[:8])
 					case apppkg.EventTypePeerDisconnected:
 						statusLabel.SetText("Status: Peer disconnected " + e.PeerID[:8])
+					case apppkg.EventTypeSessionEstablished:
+						statusLabel.SetText("Status: Secure Session Established with " + e.PeerID[:8])
+					case apppkg.EventTypeConnectionFailed:
+						statusLabel.SetText("Status: Connection Failed for " + e.PeerID[:8])
+					case apppkg.EventTypeSessionFailed:
+						statusLabel.SetText("Status: Authentication Failed for " + e.PeerID[:8])
 					case apppkg.EventTypeSecurityAlert:
 						statusLabel.SetText("Status: Security Alert - " + e.Message)
 					}

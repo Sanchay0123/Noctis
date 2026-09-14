@@ -21,8 +21,8 @@ func TestUIState_Concurrency(t *testing.T) {
 			peerA := "PeerA"
 			peerB := "PeerB"
 
-			state.AddMessage(peerA, fmt.Sprintf("Message %d", id))
-			state.AddMessage(peerB, fmt.Sprintf("Message %d", id))
+			state.AddMessage(peerA, Message{Sender: "Peer", Text: fmt.Sprintf("Message %d", id)})
+			state.AddMessage(peerB, Message{Sender: "Peer", Text: fmt.Sprintf("Message %d", id)})
 
 			state.GetPeerCount()
 			state.GetPeerAt(0)
