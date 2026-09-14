@@ -275,3 +275,55 @@ func TestApplicationService_NewNode_DefaultListener(t *testing.T) {
 		t.Fatalf("Expected connection to succeed on default port, got %v", err)
 	}
 }
+
+func TestDialNode_States(t *testing.T) {
+	n1, _ := NewNode("node1")
+	node1 := n1.(*appService)
+	n2, _ := NewNode("node2")
+	node2 := n2.(*appService)
+	defer node1.Stop()
+	defer node2.Stop()
+	
+	addr2 := "127.0.0.1:9199"
+	node2.meshManager.Listen(addr2)
+	node2.meshManager.ExpectInbound(node1.localIdent.PublicKey())
+	
+	pId := node2.GetLocalIdentityBytes()
+	pIdHex := hex.EncodeToString(pId)
+	
+	// Test 4: No Peer -> dial succeeds (or network error if closed, but here listener is active)
+	err := node1.DialNode(context.Background(), addr2, pIdHex)
+	if err != nil {
+		t.Fatalf("Expected initial DialNode to succeed, got: %v", err)
+	}
+	
+	time.Sleep(100 * time.Millisecond) // Wait for register
+	
+	// Test 2: TransportButNoSession -> DialNode returns nil
+	err = node1.DialNode(context.Background(), addr2, pIdHex)
+	if err != nil {
+		t.Fatalf("Expected nil for TransportButNoSession, got: %v", err)
+	}
+	
+	// Setup session
+	node1.StartConversation(pIdHex)
+	time.Sleep(200 * time.Millisecond) // Wait for M4 handshake
+
+	
+	// Test 1: AlreadyConnected -> returns ErrAlreadyConnected
+	err = node1.DialNode(context.Background(), addr2, pIdHex)
+	if err != ErrAlreadyConnected {
+		t.Fatalf("Expected ErrAlreadyConnected, got: %v", err)
+	}
+	
+	// Test 3: StalePeer
+	p, _ := node1.meshManager.GetPeer(pId)
+	p.Close()
+	
+	// dial again, should succeed because old peer is stale
+	node2.meshManager.ExpectInbound(node1.localIdent.PublicKey())
+	err = node1.DialNode(context.Background(), addr2, pIdHex)
+	if err != nil {
+		t.Fatalf("Expected DialNode to succeed with stale peer, got: %v", err)
+	}
+}

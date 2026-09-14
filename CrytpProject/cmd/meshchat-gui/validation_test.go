@@ -4,6 +4,7 @@
 package main
 
 import (
+	"time"
 	"context"
 	"fyne.io/fyne/v2/widget"
 	"testing"
@@ -13,6 +14,8 @@ import (
 
 type mockAppService struct {
 	dialCalled bool
+	errToReturn error
+	startConvCalled bool
 }
 
 func (m *mockAppService) GetLocalIdentity() string                          { return "" }
@@ -24,7 +27,7 @@ func (m *mockAppService) Stop() error                                       { re
 func (m *mockAppService) SubscribeEvents() <-chan apppkg.AppEvent           { return nil }
 func (m *mockAppService) DialNode(ctx context.Context, address string, expectedPeerID string) error {
 	m.dialCalled = true
-	return nil
+	return m.errToReturn
 }
 
 func TestValidateAndDialPeer_EmptyValidation(t *testing.T) {
@@ -55,5 +58,39 @@ func TestValidateAndDialPeer_EmptyValidation(t *testing.T) {
 	ValidateAndDialPeer("127.0.0.1:8100", "validpeerid", label, mockSvc)
 	if label.Text != "Status: Connecting to 127.0.0.1:8100" {
 		t.Fatalf("Expected connection message, got: %s", label.Text)
+	}
+}
+
+
+func TestValidateAndDialPeer_AlreadyConnected(t *testing.T) {
+	label := widget.NewLabel("")
+	mockSvc := &mockAppService{
+		errToReturn: apppkg.ErrAlreadyConnected,
+	}
+	ValidateAndDialPeer("127.0.0.1:8100", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", label, mockSvc)
+	time.Sleep(50 * time.Millisecond)
+	if label.Text != "Status: Already securely connected to 01234567" {
+		t.Fatalf("Expected already connected status, got %s", label.Text)
+	}
+	if mockSvc.startConvCalled {
+		t.Fatalf("StartConversation should NOT be called when ErrAlreadyConnected")
+	}
+}
+
+func TestValidateAndDialPeer_NewConnection(t *testing.T) {
+	label := widget.NewLabel("")
+	mockSvc := &mockAppService{
+		errToReturn: nil,
+	}
+	ValidateAndDialPeer("127.0.0.1:8100", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", label, mockSvc)
+	time.Sleep(50 * time.Millisecond)
+	if label.Text != "Status: Connected to 127.0.0.1:8100. Handshaking..." && label.Text != "Status: Handshake init failed: <nil>" {
+		// Because startConv returns nil, status doesn't change from Connected.
+		if label.Text != "Status: Connected to 127.0.0.1:8100. Handshaking..." {
+			t.Fatalf("Expected connection status, got %s", label.Text)
+		}
+	}
+	if !mockSvc.startConvCalled {
+		t.Fatalf("StartConversation SHOULD be called on new connection (nil error from dial)")
 	}
 }

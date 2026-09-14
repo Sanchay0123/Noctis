@@ -334,7 +334,12 @@ func ValidateAndDialPeer(addrRaw, pidRaw string, statusLabel *widget.Label, appS
 		defer cancel()
 		err := appService.DialNode(ctx, addr, pid)
 
-		if err != nil {
+		if err == apppkg.ErrAlreadyConnected {
+			if statusLabel != nil {
+				statusLabel.SetText("Status: Already securely connected to " + pid[:8])
+			}
+			return
+		} else if err != nil {
 			if statusLabel != nil {
 				statusLabel.SetText("Status: Connection failed: " + err.Error())
 			}

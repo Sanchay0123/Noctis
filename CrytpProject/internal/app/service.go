@@ -18,6 +18,7 @@ var (
 	ErrSessionUnavailable = errors.New("session unavailable")
 	ErrMessageRejected    = errors.New("message rejected")
 	ErrInvalidIdentity    = errors.New("invalid identity")
+	ErrAlreadyConnected   = errors.New("already connected")
 )
 
 type ApplicationService interface {
@@ -135,6 +136,15 @@ func (s *appService) DialNode(ctx context.Context, address string, expectedPeerI
 	if err != nil || len(peerPubKey) != 32 {
 		return ErrInvalidIdentity
 	}
+
+	p, err := s.meshManager.GetPeer(peerPubKey)
+	if err == nil && p.State() == mesh.PeerStateEstablished {
+		if _, _, ok := s.sessions.LookupByPeer(expectedPeerID); ok {
+			return ErrAlreadyConnected
+		}
+		return nil
+	}
+
 	s.meshManager.ExpectInbound(peerPubKey)
 	return s.meshManager.Connect(ctx, address, peerPubKey)
 }
