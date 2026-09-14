@@ -23616,6 +23616,1604 @@ STOP after the report and wait for Project Overseer review.
 
 
 ```
+You are now authorized to begin M8.3 of the project:
+
+“Design and Implementation of an End-to-End Encrypted Messaging System over a Decentralized Mesh Network.”
+
+ROLE
+You are the implementation agent. I am acting as Project Overseer / Security Architect / Technical Lead.
+
+PROJECT DIRECTORY
+The ONLY authoritative implementation directory is:
+
+~/Documents/Noctis/CrytpProject
+
+Do NOT rename, move, clone, copy, recreate, or create a parallel project directory.
+
+CURRENT APPROVED STATE
+M0–M7: APPROVED
+M8 Phase 1 architecture: APPROVED
+M8.1: APPROVED
+M8.2: APPROVED
+
+M8.2 established the Fyne GUI foundation and application-service integration.
+
+The authoritative Obsidian documentation vault has already been synchronized through M8.2.
+
+NEXT AUTHORIZED MILESTONE
+M8.3 — Functional GUI Integration
+
+IMPORTANT:
+Do NOT begin M9.
+Do NOT perform unrelated refactoring.
+Do NOT change the frozen protocol.
+Do NOT redesign the cryptographic architecture.
+Do NOT modify security boundaries merely for convenience.
+
+==================================================
+M8.3 OBJECTIVE
+==================================================
+
+Turn the existing M8.2 GUI foundation into a genuinely usable application interface for the existing secure mesh-chat backend.
+
+After M8.3, the system should allow a user to:
+
+1. Launch the GUI.
+2. See their local identity in a safe human-readable form.
+3. Manually add/connect to a peer using a network address.
+4. See known/connected peers or conversations.
+5. Select a conversation.
+6. Enter plaintext into the message composer.
+7. Send the plaintext through ApplicationService.
+8. Have the existing session/crypto/routing layers perform the actual encryption and transport.
+9. Receive a remote plaintext message through the existing receive path.
+10. Display the received plaintext in the appropriate conversation.
+11. Clearly distinguish connection/security/error states.
+12. Shut down cleanly without leaking goroutines/resources.
+
+The GUI is a client of the application layer.
+
+It MUST NOT become a second implementation of the networking or cryptographic layers.
+
+==================================================
+ARCHITECTURAL BOUNDARIES — NON-NEGOTIABLE
+==================================================
+
+The following boundaries remain authoritative.
+
+GUI
+ ↓
+internal/app
+ ↓
+internal/session / internal/mesh / internal/routing / internal/crypto
+
+The GUI MUST NOT directly import or manipulate:
+
+- internal/crypto
+- internal/session
+- internal/mesh
+- internal/routing
+
+The GUI must communicate through the application-facing API/events.
+
+The GUI must never receive or store:
+
+- Ed25519 private keys
+- X25519 private keys
+- ephemeral private keys
+- session keys
+- AEAD keys
+- AEAD nonces
+- raw cryptographic state
+- raw protobuf packets
+- ciphertext for display
+- routing internals
+- TCP socket objects
+
+The GUI may receive:
+
+- local PeerID / identity representation
+- remote authenticated PeerIDs
+- conversation identifiers
+- connection state
+- sanitized security/application events
+- decrypted plaintext messages
+- user-facing errors
+
+IMPORTANT SECURITY BOUNDARY
+
+internal/routing MUST remain completely blind to application plaintext.
+
+Routing must NOT call:
+
+DecryptMessage()
+
+or otherwise decrypt application payloads.
+
+Endpoint decryption belongs in internal/app after the appropriate authenticated session is resolved.
+
+Do not regress the M8.1 remediation.
+
+==================================================
+CURRENT PROTOCOL — DO NOT CHANGE
+==================================================
+
+The following protocol decisions are frozen.
+
+Ed25519:
+- long-term identity
+
+X25519:
+- ephemeral key agreement
+
+ChaCha20-Poly1305:
+- application AEAD
+
+HKDF-SHA-256:
+- session key derivation
+
+Canonical handshake transcript:
+
+DOMAIN = "MeshChat-Handshake-v1"
+
+T_INIT =
+DOMAIN || u8(PROTOCOL_VERSION) || ID_A || ID_B || E_A || ZERO32
+
+T_RESP =
+DOMAIN || u8(PROTOCOL_VERSION) || ID_A || ID_B || E_A || E_B
+
+Session ID:
+
+SHA256(T_RESP)
+
+Directional session keys:
+
+K_A_to_B =
+HKDF-Expand(
+    PRK,
+    "MeshChat-v1|session|initiator->responder",
+    32
+)
+
+K_B_to_A =
+HKDF-Expand(
+    PRK,
+    "MeshChat-v1|session|responder->initiator",
+    32
+)
+
+AEAD:
+ChaCha20-Poly1305
+
+Do NOT replace it with AES-GCM or another AEAD.
+
+==================================================
+CURRENT PACKET FORMAT — DO NOT MODIFY
+==================================================
+
+protobuf:
+
+message MeshPacket {
+  uint32 version = 1;
+  PacketType type = 2;
+  bytes packet_id = 3;
+  uint32 ttl = 4;
+  bytes source_node = 5;
+  bytes dest_node = 6;
+  oneof payload {
+    InitPayload init = 7;
+    RespPayload resp = 8;
+    AppDataPayload app_data = 9;
+  }
+}
+
+Do not add protocol fields as part of M8.3.
+
+==================================================
+M8.3 FUNCTIONAL GUI REQUIREMENTS
+==================================================
+
+Implement the minimum complete usable chat workflow.
+
+A. APPLICATION STARTUP
+
+The GUI should start the ApplicationService correctly.
+
+The lifecycle must be explicit:
+
+Start
+ ↓
+GUI running
+ ↓
+events consumed
+ ↓
+user interaction
+ ↓
+shutdown
+ ↓
+ApplicationService.Stop()
+
+Avoid goroutine leaks.
+
+Do not create duplicate backend services accidentally.
+
+B. LOCAL IDENTITY
+
+Display the local identity in a safe form.
+
+Prefer a shortened representation in the primary UI, for example:
+
+abcd1234…7890
+
+Provide a sensible way for the user to identify the full PeerID if needed.
+
+Do NOT display private key material.
+
+C. ADD PEER / CONNECT
+
+Provide a GUI workflow for manually entering a peer network address.
+
+The GUI should invoke:
+
+ApplicationService.DialNode(
+    ctx,
+    address,
+    expectedPeerID
+)
+
+according to the existing API.
+
+Do not implement automatic peer discovery.
+
+Do not introduce DHT.
+
+Do not introduce a new routing protocol.
+
+If expectedPeerID is optional in the existing implementation, preserve the security semantics already established by M8.1/M8.2 rather than weakening authentication.
+
+Validate obvious malformed user input before sending it to the backend.
+
+D. PEER / CONVERSATION LIST
+
+Display available authenticated peers/conversations.
+
+The GUI must distinguish conceptually between:
+
+PeerID
+Network address
+Conversation
+
+Do not treat a TCP address as a cryptographic identity.
+
+Conversation identity should remain based on the authenticated remote PeerID.
+
+E. MESSAGE HISTORY
+
+Maintain an in-memory conversation history suitable for the current project scope.
+
+Each displayed message should contain at least:
+
+- sender
+- plaintext
+- timestamp or local ordering information
+
+Do not persist sensitive plaintext to disk unless persistence has explicitly been authorized.
+
+Do not log message plaintext.
+
+Do not log ciphertext unnecessarily.
+
+F. SEND MESSAGE
+
+When the user presses Send:
+
+GUI
+ ↓
+ApplicationService.SendMessage(peerID, plaintext)
+ ↓
+session lookup
+ ↓
+AEAD encryption
+ ↓
+routing
+ ↓
+mesh transport
+
+The GUI must NOT encrypt the message itself.
+
+The GUI must NOT construct AppDataPayload itself.
+
+The GUI must NOT manipulate sequence numbers.
+
+The GUI must NOT generate nonces.
+
+Do not duplicate backend security logic in the GUI.
+
+G. RECEIVE MESSAGE
+
+The existing application event path should deliver received plaintext to the GUI.
+
+Expected conceptual path:
+
+remote ciphertext
+ ↓
+mesh/routing
+ ↓
+opaque APP_DATA delivery
+ ↓
+internal/app session lookup
+ ↓
+DecryptMessage()
+ ↓
+EventMessageReceived
+ ↓
+GUI
+ ↓
+conversation history
+
+The routing layer must remain blind.
+
+The GUI should associate the message with the authenticated PeerID supplied by the application layer.
+
+H. ERROR HANDLING
+
+Provide user-visible errors for at least:
+
+- invalid peer address
+- invalid PeerID
+- connection failure
+- authentication failure
+- no established session
+- message send failure
+- message receive/security failure
+- shutdown/backend failure where applicable
+
+Do not expose raw stack traces or cryptographic secrets to normal users.
+
+Developer diagnostics may remain in structured logs, but must never contain:
+
+- private keys
+- session keys
+- plaintext messages
+- passwords
+- raw secret crypto material
+
+I. CONNECTION / SECURITY STATUS
+
+The UI should communicate useful state such as:
+
+- Disconnected
+- Connecting
+- Connected
+- Handshaking
+- Secure session established
+- Failed
+
+Do not claim that “Connected” automatically means “secure session established” unless that is actually the backend state.
+
+Prefer explicit terminology.
+
+==================================================
+FYNE CONCURRENCY REQUIREMENTS
+==================================================
+
+M8.2 introduced UIState synchronization.
+
+Do not regress it.
+
+All mutable GUI state must remain properly synchronized.
+
+Pay particular attention to:
+
+- conversations
+- peer list
+- current peer
+- message history
+- connection status
+- event handling
+
+Do not introduce races between:
+
+- Fyne UI callbacks
+- backend event goroutines
+- network goroutines
+- application service callbacks
+
+If the Fyne version in go.mod requires UI-thread scheduling mechanisms, use the correct mechanism for that exact version.
+
+Do NOT assume generic UI calls are thread-safe.
+
+Verify the actual Fyne version being used.
+
+==================================================
+TESTING REQUIREMENTS
+==================================================
+
+M8.3 must include meaningful tests.
+
+At minimum add/extend tests for:
+
+1. GUI/application startup.
+2. Manual peer connection through ApplicationService.
+3. Successful conversation creation.
+4. SendMessage success.
+5. SendMessage failure.
+6. Receive-message event processing.
+7. Correct conversation association by PeerID.
+8. Multiple conversations do not cross-contaminate.
+9. UI state concurrency.
+10. Shutdown behavior.
+11. Invalid peer input.
+12. Invalid PeerID.
+13. Backend unavailable/failure path.
+
+Where practical, include an integration test demonstrating:
+
+Alice GUI/application
+        ↓
+Alice backend
+        ↓
+Bob relay/backend
+        ↓
+Bob application
+        ↓
+Bob GUI/application
+
+The GUI itself does NOT need to run in the same headless backend Docker test if the environment cannot support Fyne.
+
+However, provide the strongest reproducible GUI build/runtime evidence that the environment permits.
+
+==================================================
+BUILD / CONTAINER REQUIREMENTS
+==================================================
+
+The existing headless backend Docker workflow must remain intact.
+
+Do not reintroduce the M8.2 Dockerfile vendor workaround unless technically necessary and justified.
+
+The normal backend build must remain free of CGO/X11/Fyne runtime requirements.
+
+GUI-specific native dependencies may remain isolated from the headless backend.
+
+Do not contaminate the production/headless Docker image with unnecessary GUI dependencies.
+
+Verify:
+
+gofmt
+go vet ./...
+go test ./...
+go test -race ./...
+go build ./...
+
+Also verify the GUI-specific build using the appropriate environment for the selected Fyne version.
+
+If GUI runtime execution is impossible in the current environment, explicitly document:
+
+- what was attempted
+- why it could not run
+- what build/static/integration evidence was obtained
+- what remains unverified
+
+Do NOT falsely claim runtime verification.
+
+==================================================
+SECURITY AUDIT REQUIREMENTS
+==================================================
+
+Before reporting M8.3 complete, perform a targeted audit.
+
+Search for accidental GUI access to:
+
+- crypto internals
+- session keys
+- private keys
+- raw sockets
+- routing internals
+- raw protobuf packets
+- plaintext logging
+
+Verify:
+
+grep/search confirms routing contains no application decryption.
+
+Verify:
+
+internal/routing
+
+does not call:
+
+DecryptMessage()
+
+Verify no GUI code performs:
+
+AEAD encryption
+AEAD decryption
+nonce generation
+sequence management
+session-key derivation
+handshake signing
+X25519 operations
+
+Verify user-controlled strings are safely handled in logs/UI.
+
+Do not introduce attacker-controlled metric labels.
+
+Do not add peer IDs as unbounded telemetry labels.
+
+==================================================
+SCOPE CONTROL
+==================================================
+
+M8.3 is GUI functional integration.
+
+DO NOT implement:
+
+- DHT
+- automatic peer discovery
+- new routing algorithms
+- anonymity system
+- metadata-hiding system
+- persistence/database layer
+- message search/indexing
+- file transfer
+- voice/video
+- group chat
+- production-grade account management
+- cloud deployment
+- M9 demo automation
+- M10 documentation overhaul
+
+If something appears necessary but is outside this scope, STOP and report it rather than silently expanding scope.
+
+==================================================
+IMPLEMENTATION PROCESS
+==================================================
+
+Before modifying code:
+
+1. Inspect the current repository.
+2. Inspect M8.1/M8.2 implementation.
+3. Inspect current tests.
+4. Inspect current ApplicationService API.
+5. Inspect current GUI implementation.
+6. Identify exactly what is missing for M8.3.
+
+Then provide a short implementation plan.
+
+After implementation:
+
+1. Run formatting.
+2. Run unit tests.
+3. Run race tests.
+4. Run vet.
+5. Run build.
+6. Run GUI-specific build/runtime checks.
+7. Run relevant integration tests.
+8. Perform security-boundary searches.
+9. Inspect git diff.
+10. Produce a precise completion report.
+
+==================================================
+CRITICAL REPORTING RULE
+==================================================
+
+Do NOT declare M8.3 “complete” merely because the code compiles.
+
+Your final report must clearly separate:
+
+PASS
+- verified successfully
+
+LIMITATION
+- attempted but environment prevented verification
+
+NOT TESTED
+- not attempted
+
+REGRESSION
+- any existing behavior that changed
+
+For every test, include the actual command and result.
+
+For GUI runtime verification, provide exact commands and observed result.
+
+==================================================
+MILESTONE GATE
+==================================================
+
+Do NOT modify the documentation vault.
+
+Do NOT create M8.3 documentation.
+
+Do NOT update README/project-state documentation.
+
+Do NOT begin M9.
+
+When implementation and testing are complete, STOP and return an M8.3 implementation/audit report to me.
+
+I will independently audit your report and decide whether M8.3 is APPROVED.
+
+Only after explicit approval will documentation synchronization happen.
+
+==================================================
+SUCCESS CRITERION
+==================================================
+
+M8.3 succeeds only if the existing secure backend can be operated through the GUI without weakening the established architecture.
+
+The desired user experience is:
+
+Launch GUI
+    ↓
+See local identity
+    ↓
+Add/connect to peer
+    ↓
+See authenticated peer
+    ↓
+Open conversation
+    ↓
+Type plaintext
+    ↓
+Send
+    ↓
+Existing E2EE/session/routing stack handles security
+    ↓
+Remote peer receives/decrypts
+    ↓
+Message appears in remote GUI
+    ↓
+Replies work
+    ↓
+Both GUIs remain responsive
+    ↓
+Clean shutdown
+
+Security > correctness > simplicity > performance > UI features.
+
+Begin by inspecting the existing M8.2 implementation and report the M8.3 implementation plan before making changes.
+
+```
+
+
+
+```
+M8.3 IMPLEMENTATION AUTHORIZATION — PROCEED
+
+Project Overseer decision:
+
+M8.3 Functional GUI Integration is APPROVED WITH REQUIRED AMENDMENTS.
+
+You may now proceed with implementation in:
+
+~/Documents/Noctis/CrytpProject
+
+Do NOT modify, move, rename, clone, or recreate the project directory.
+
+Do NOT begin M9.
+Do NOT update the documentation vault.
+Do NOT create M8.3 documentation yet.
+
+==================================================
+REQUIRED AMENDMENTS
+==================================================
+
+1. EXPLICIT CONNECTION / SECURITY STATUS
+
+Do not infer cryptographic security from TCP connection success.
+
+TCP Connected != Secure Session Established.
+
+The GUI must receive application-level status/events from the backend for states such as:
+
+- Connecting
+- Connected
+- Handshaking
+- Secure Session Established
+- Connection Failed
+- Authentication Failed
+- Disconnected
+
+Use the existing ApplicationService/event architecture where possible.
+
+If an application-level event does not currently exist, add the narrowest appropriate application-layer event/API required.
+
+The GUI must NEVER inspect:
+
+- crypto state
+- session internals
+- routing state
+- raw sockets
+- handshake internals
+
+The GUI may display sanitized application-level status supplied by ApplicationService.
+
+"Secure Session Established" may only be displayed after the backend confirms successful authenticated session establishment.
+
+Do not make the GUI guess this state.
+
+==================================================
+2. END-TO-END APPLICATION TEST
+==================================================
+
+Implement the planned Alice → Bob → Carol integration test across the ApplicationService boundary.
+
+Required conceptual flow:
+
+Alice ApplicationService
+        |
+        | DialNode(Bob)
+        v
+      Bob
+        |
+        | mesh forwarding
+        v
+     Carol
+        |
+        v
+Carol ApplicationService
+        |
+        | decrypted message event
+        v
+    SubscribeEvents()
+
+The test must verify:
+
+1. Alice can connect to Bob.
+2. Bob can connect to Carol.
+3. Alice can start a conversation with Carol.
+4. Alice can send a plaintext message to Carol.
+5. The message is transported through the existing mesh.
+6. Carol receives the message through SubscribeEvents().
+7. Carol receives the correct authenticated sender PeerID.
+8. Carol receives the exact expected plaintext.
+9. The existing E2EE/session/routing architecture is used.
+
+IMPORTANT SECURITY REQUIREMENT:
+
+The test and source audit must preserve the M8.1 security boundary:
+
+internal/routing MUST remain completely blind to application plaintext.
+
+Verify that routing does NOT call:
+
+DecryptMessage()
+
+and does not otherwise decrypt APP_DATA.
+
+Endpoint decryption must remain in internal/app after the correct session is resolved.
+
+Do NOT move decryption back into routing for convenience.
+
+==================================================
+3. STRUCTURED MESSAGE MODEL
+==================================================
+
+For message history, prefer a proper message structure rather than storing only preformatted strings.
+
+For example:
+
+type Message struct {
+    Sender    string
+    Text      string
+    Timestamp time.Time
+}
+
+Adapt naming/types to the existing codebase.
+
+The underlying model should retain:
+
+- sender
+- plaintext
+- timestamp/local ordering information
+
+The GUI may format this for display, e.g.:
+
+[15:04] <Sender>: Message
+
+But presentation formatting should not be the underlying data model.
+
+Message history remains in-memory for M8.3.
+
+Do NOT introduce persistent plaintext storage.
+
+Do NOT log plaintext messages.
+
+==================================================
+4. COPY IDENTITY
+==================================================
+
+Implement the Copy Identity feature.
+
+The GUI must obtain the local identity exclusively through:
+
+ApplicationService.GetLocalIdentity()
+
+It must never access the identity keypair directly.
+
+Display a shortened PeerID in the normal UI, for example:
+
+abcd1234...7890
+
+Provide a Copy action that copies the complete public 64-character hexadecimal PeerID.
+
+Never expose or access private key material.
+
+Do not add the full PeerID to ordinary logs.
+
+==================================================
+5. GUI FUNCTIONAL WORKFLOW
+==================================================
+
+The GUI should now support this complete workflow:
+
+Launch
+  ↓
+ApplicationService.Start()
+  ↓
+Display local identity
+  ↓
+Add Peer
+  ↓
+DialNode()
+  ↓
+Connected
+  ↓
+StartConversation(expectedPeerID)
+  ↓
+Handshaking
+  ↓
+Authenticated secure session established
+  ↓
+Conversation becomes available
+  ↓
+Select conversation
+  ↓
+Type message
+  ↓
+SendMessage(peerID, plaintext)
+  ↓
+Existing Session/E2EE stack
+  ↓
+Existing mesh routing
+  ↓
+Remote ApplicationService
+  ↓
+Endpoint decryption
+  ↓
+MessageReceived event
+  ↓
+Remote GUI displays plaintext
+
+The GUI must remain a thin application-layer client.
+
+==================================================
+6. CONVERSATION MODEL
+==================================================
+
+Maintain the distinction between:
+
+PeerID
+Network address
+Conversation
+
+A network address is NOT a cryptographic identity.
+
+Conversation identity remains based on the authenticated remote PeerID.
+
+Support multiple conversations without cross-contamination.
+
+Test that messages received from one peer do not appear in another peer's conversation.
+
+==================================================
+7. UI STATE / CONCURRENCY
+==================================================
+
+Preserve the M8.2 remediation:
+
+UIState uses synchronized access.
+
+Do not regress the sync.RWMutex protection.
+
+Guard all mutable state including, where applicable:
+
+- conversations
+- peer list
+- current peer
+- message history
+- connection status
+
+Audit interactions between:
+
+- Fyne callbacks
+- backend event goroutines
+- network goroutines
+- ApplicationService
+
+Do not assume Fyne API calls are generically thread-safe.
+
+Use the correct scheduling mechanism for the exact Fyne version in go.mod if required.
+
+==================================================
+8. ERROR HANDLING
+==================================================
+
+Provide user-visible handling for:
+
+- invalid peer address
+- invalid PeerID
+- connection failure
+- authentication failure
+- no secure session
+- message send failure
+- receive/security failure
+- backend shutdown failure where applicable
+
+Do not expose raw stack traces or cryptographic internals to normal users.
+
+Developer logs must not contain:
+
+- private keys
+- session keys
+- plaintext messages
+- passwords
+- secret crypto material
+
+==================================================
+9. TEST REQUIREMENTS
+==================================================
+
+Keep all existing M8.2 tests.
+
+Add/extend tests for:
+
+- application startup
+- peer connection
+- successful conversation creation
+- send success
+- send failure
+- receive event processing
+- correct PeerID association
+- multiple conversations
+- conversation isolation
+- timestamp/message ordering
+- connection/security status events
+- invalid peer input
+- invalid PeerID
+- UIState concurrency
+- shutdown behavior
+
+Include the Alice → Bob → Carol ApplicationService integration test.
+
+Use race testing wherever practical.
+
+==================================================
+10. BUILD / REGRESSION VERIFICATION
+==================================================
+
+Run:
+
+gofmt
+
+go vet ./...
+
+go test ./...
+
+go test -race ./...
+
+go build ./...
+
+GUI-specific:
+
+go build -tags gui ./cmd/meshchat-gui
+
+Also perform the strongest available GUI runtime test.
+
+If GUI runtime cannot be executed because of environment limitations, do NOT claim runtime verification.
+
+Clearly report:
+
+PASS
+LIMITATION
+NOT TESTED
+
+as appropriate.
+
+For headless Docker regression, attempt:
+
+docker compose build
+docker compose up -d
+
+Then perform an appropriate health/functionality check and clean shutdown.
+
+IMPORTANT:
+
+If Docker or dependency resolution fails because of external infrastructure such as DNS/proxy/network availability, report that accurately.
+
+Do NOT describe an old successful test as a new successful run.
+
+==================================================
+11. SECURITY AUDIT
+==================================================
+
+Before reporting completion, perform targeted source searches/audits confirming:
+
+A. GUI has no direct access to:
+
+- internal/crypto
+- internal/session
+- internal/mesh
+- internal/routing
+
+B. GUI performs no:
+
+- encryption
+- decryption
+- nonce generation
+- sequence management
+- session-key derivation
+- handshake signing
+- X25519 operations
+
+C. Routing performs no application decryption.
+
+Verify:
+
+internal/routing
+
+contains no:
+
+DecryptMessage()
+
+D. No plaintext logging.
+
+E. No secret crypto material in UI events/logs.
+
+F. No attacker-controlled peer IDs used as unbounded telemetry labels.
+
+G. No AES-GCM terminology is introduced.
+
+The project's application AEAD remains:
+
+ChaCha20-Poly1305
+
+==================================================
+12. SCOPE CONTROL
+==================================================
+
+M8.3 is ONLY functional GUI integration.
+
+Do NOT implement:
+
+- DHT
+- automatic discovery
+- new routing algorithms
+- anonymity mechanisms
+- metadata-hiding mechanisms
+- persistent message database
+- file transfer
+- voice/video
+- group chat
+- cloud deployment
+- M9 demo automation
+- M10 documentation work
+
+If implementation appears to require a significant architectural change outside this scope, STOP and report it rather than silently expanding scope.
+
+==================================================
+13. FINAL REPORT
+==================================================
+
+When finished, STOP and provide an M8.3 implementation/audit report.
+
+The report must include:
+
+1. Files changed.
+2. Summary of implementation.
+3. ApplicationService changes.
+4. GUI changes.
+5. Message model changes.
+6. Connection/security status implementation.
+7. Integration-test architecture.
+8. Exact test commands.
+9. Exact test results.
+10. GUI build result.
+11. GUI runtime result/limitation.
+12. Docker regression result/limitation.
+13. Security audit results.
+14. Confirmation that routing remains plaintext-blind.
+15. Confirmation that no AES-GCM terminology exists.
+16. Any known limitations.
+17. Git diff/status summary.
+
+For every verification item, distinguish:
+
+PASS
+LIMITATION
+NOT TESTED
+REGRESSION
+
+Do NOT claim M8.3 is approved.
+
+The Project Overseer will independently audit the report and decide whether M8.3 passes the milestone gate.
+
+==================================================
+FINAL SUCCESS CONDITION
+==================================================
+
+M8.3 is successful when the system can be operated as an actual chat client:
+
+Alice GUI
+   ↓
+connect to Bob
+   ↓
+establish authenticated secure session with Carol through mesh
+   ↓
+select Carol conversation
+   ↓
+send plaintext
+   ↓
+existing E2EE + mesh stack transports it
+   ↓
+Carol endpoint decrypts
+   ↓
+Carol GUI displays plaintext
+
+while preserving every security boundary established in M0–M8.2.
+
+Security > correctness > simplicity > performance > UI features.
+
+Proceed with implementation now.
+
+```
+
+
+```
+M8.3 AUDIT FOLLOW-UP — VERIFICATION REQUIRED
+
+The implementation direction is acceptable, but M8.3 is NOT APPROVED yet.
+
+Do not perform unrelated changes and do not begin M9.
+
+Complete the following verification gaps only.
+
+1. Run and report:
+
+go test ./...
+go test -race ./...
+go vet ./...
+go build ./...
+go build -tags gui ./cmd/meshchat-gui
+
+Include the actual result for every command.
+
+2. Inspect internal/app/integration_test.go and provide a precise explanation of whether TestApplicationService_AliceBobCarol_Integration exercises the REAL mesh path:
+
+Alice
+  ↓
+real network connection
+  ↓
+Bob
+  ↓
+real routing/forwarding
+  ↓
+Carol
+  ↓
+endpoint session lookup/decryption
+  ↓
+SubscribeEvents()
+
+Explicitly identify any test-only injection/mocking.
+
+If ExpectInbound or another test helper bypasses real transport/routing, state exactly what is bypassed.
+
+Do not call a simulated path a full E2E test.
+
+3. Perform a targeted source audit:
+
+grep -R "DecryptMessage" internal/routing
+grep -R -i "AES-GCM" .
+grep -R "internal/crypto" cmd/meshchat-gui
+grep -R "internal/session" cmd/meshchat-gui
+grep -R "internal/mesh" cmd/meshchat-gui
+grep -R "internal/routing" cmd/meshchat-gui
+
+Report the exact results.
+
+4. Inspect the GUI event/status implementation and confirm:
+
+- TCP Connected is not presented as Secure Session Established.
+- Secure Session Established is emitted only after authenticated session establishment.
+- GUI does not infer cryptographic state itself.
+- GUI receives status through ApplicationService events.
+
+5. Inspect GUI shutdown and event-consumer lifecycle.
+
+Confirm that:
+
+- ApplicationService.Stop() is called on GUI shutdown.
+- event consumers terminate.
+- no goroutine leak is introduced.
+
+6. Inspect message ordering/conversation isolation.
+
+Confirm that:
+
+- Message contains sender/text/timestamp or equivalent.
+- multiple messages retain deterministic local ordering.
+- messages are associated with the correct PeerID.
+- one conversation cannot display another peer's messages.
+
+7. GUI runtime:
+
+Attempt the strongest possible real GUI runtime test in an environment with the required Fyne/native graphical dependencies.
+
+If runtime is impossible in the current environment, DO NOT claim PASS.
+
+Report exactly:
+
+PASS
+LIMITATION
+NOT TESTED
+
+and explain the environmental blocker.
+
+8. Docker:
+
+Attempt the requested Docker regression again only if the environment permits.
+
+If proxy/DNS prevents it, report:
+
+Docker regression: NOT VERIFIED — external environment limitation.
+
+Do not introduce Dockerfile workarounds.
+
+9. Do NOT modify the documentation vault.
+
+10. Do NOT declare M8.3 approved.
+
+Return only the updated M8.3 verification/audit report after completing these checks.
+
+```
+
+
+
+```
+M8.3 FINAL EVIDENCE REQUEST
+
+M8.3 remains NOT APPROVED.
+
+Do not modify implementation unless a concrete defect is discovered.
+Do not begin M9.
+Do not touch the documentation vault.
+
+The previous report did not answer the verification questions requested in the audit follow-up.
+
+Return an evidence-only report addressing EXACTLY the following.
+
+==================================================
+1. MISSING REQUIRED COMMANDS
+==================================================
+
+Actually run and report the result of:
+
+go test ./...
+
+go build ./...
+
+These were explicitly required and were missing from the previous report.
+
+Also repeat/report:
+
+go vet ./...
+go test -race ./...
+go build -tags gui ./cmd/meshchat-gui
+
+Give the actual exit/result for each.
+
+==================================================
+2. CRITICAL: INSPECT THE INTEGRATION TEST
+==================================================
+
+Open and inspect:
+
+internal/app/integration_test.go
+
+Explain precisely what:
+
+ExpectInbound
+
+does.
+
+Answer these questions explicitly:
+
+A. Does the test use real TCP connections between Alice/Bob/Carol?
+
+B. Does it use the real PeerManager?
+
+C. Does it use the real routing forwarding path?
+
+D. Does it use the real ApplicationService session establishment?
+
+E. Does it use real ChaCha20-Poly1305 encryption/decryption?
+
+F. Does it deliver the message through the actual SubscribeEvents() boundary?
+
+G. What exact portions, if any, are mocked/injected/bypassed?
+
+Provide the actual call/data flow of the test.
+
+Do NOT call the test "full E2E" if any network/routing layer is injected or bypassed.
+
+Classify it honestly as one of:
+
+FULL E2E
+APPLICATION-LAYER INTEGRATION
+PARTIAL INTEGRATION
+UNIT/COMPONENT TEST
+
+and explain why.
+
+==================================================
+3. SHUTDOWN / GOROUTINE LIFECYCLE
+==================================================
+
+Inspect the actual implementation.
+
+Confirm exactly:
+
+- what starts the event-consumer goroutine
+- what stops it
+- what closes the event channel, if anything
+- when ApplicationService.Stop() executes
+- whether GUI shutdown waits for relevant goroutines
+
+Do not merely state "no leak".
+
+Give the actual lifecycle.
+
+==================================================
+4. MESSAGE / CONVERSATION TEST COVERAGE
+==================================================
+
+Identify the exact tests covering:
+
+- timestamps
+- message ordering
+- multiple conversations
+- conversation isolation
+- correct PeerID association
+- send failure
+- receive event
+- UIState concurrent access
+- shutdown
+
+Give test names.
+
+If a requirement has no dedicated test, say:
+
+NOT DIRECTLY TESTED
+
+Do not infer coverage.
+
+==================================================
+5. SECURITY SEARCHES
+==================================================
+
+Actually perform and report:
+
+grep -R "DecryptMessage" internal/routing
+
+grep -R "internal/crypto" cmd/meshchat-gui
+
+grep -R "internal/session" cmd/meshchat-gui
+
+grep -R "internal/mesh" cmd/meshchat-gui
+
+grep -R "internal/routing" cmd/meshchat-gui
+
+grep -R -i "AES-GCM" --exclude-dir=.git --exclude-dir=vendor .
+
+Also inspect for:
+
+- plaintext logging
+- private key access
+- session key access
+- nonce generation in GUI
+- sequence number management in GUI
+
+Report exact findings.
+
+==================================================
+6. GUI RUNTIME
+==================================================
+
+Attempt the strongest possible GUI runtime test.
+
+If it cannot run, explicitly report:
+
+GUI runtime: NOT VERIFIED
+
+and the exact environmental reason.
+
+Do NOT claim the automated tests prove visual runtime.
+
+==================================================
+7. DOCKER
+==================================================
+
+If Docker can run, perform the regression.
+
+If proxy/DNS prevents it, report:
+
+Docker regression: NOT VERIFIED — external environment limitation.
+
+Do not alter Dockerfile or introduce dependency workarounds.
+
+==================================================
+8. FINAL CLASSIFICATION
+==================================================
+
+At the end classify every item as:
+
+PASS
+NOT VERIFIED
+NOT TESTED
+LIMITATION
+REGRESSION
+
+Do NOT declare M8.3 APPROVED.
+
+Do not modify the documentation vault.
+
+Return only this evidence report.
+
+```
+
+
+
+```
+M8.3 FINAL REMEDIATION — SHUTDOWN LIFECYCLE
+
+M8.3 is very close to approval.
+
+Do NOT begin M9.
+Do NOT modify the documentation vault.
+Do NOT perform unrelated refactoring.
+
+There is one required implementation remediation.
+
+==================================================
+1. FIX GUI EVENT-CONSUMER SHUTDOWN
+==================================================
+
+Current implementation:
+
+ShowAndRun()
+    ↓
+close(shutdown)
+    ↓
+ApplicationService.Stop()
+    ↓
+main exits
+
+The event-consumer goroutine is not explicitly synchronized before ApplicationService.Stop() and process termination.
+
+Remediate this using an explicit lifecycle synchronization mechanism such as sync.WaitGroup.
+
+Required lifecycle:
+
+start event consumer
+    ↓
+wg.Add(1)
+    ↓
+event-consumer goroutine
+    ↓
+shutdown signal
+    ↓
+goroutine exits
+    ↓
+wg.Done()
+    ↓
+wg.Wait()
+    ↓
+ApplicationService.Stop()
+    ↓
+main exits
+
+The implementation must guarantee that the event-consumer goroutine has terminated before final backend shutdown.
+
+Do not rely on OS process teardown.
+
+Preserve the existing shutdown channel and UIState synchronization unless a simpler correct design is appropriate.
+
+==================================================
+2. VERIFY IDENTITY API BOUNDARY
+==================================================
+
+Inspect the reported GUI use of:
+
+GetLocalIdentityBytes()
+
+Determine whether this API exists and exactly what it returns.
+
+The GUI should only receive the public identity.
+
+If GetLocalIdentityBytes() exposes an unnecessary byte-oriented identity API, prefer using the existing:
+
+GetLocalIdentity() string
+
+for display/copy operations.
+
+If the byte API is genuinely required, verify that:
+
+- it returns only the public Ed25519 identity
+- it returns a defensive copy where applicable
+- it exposes no private key material
+- it is not actually exposing crypto internals unnecessarily
+
+Do not change the cryptographic identity implementation.
+
+==================================================
+3. TEST SHUTDOWN
+==================================================
+
+Add or update a test proving the GUI event-consumer lifecycle terminates cleanly.
+
+The test should verify the shutdown mechanism rather than merely calling Stop().
+
+If direct Fyne testing is impractical, test the underlying lifecycle helper/state mechanism independently.
+
+==================================================
+4. REQUIRED VERIFICATION
+==================================================
+
+After remediation run:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+
+Also run:
+
+grep -R "DecryptMessage" internal/routing
+grep -R "internal/crypto" cmd/meshchat-gui
+grep -R "internal/session" cmd/meshchat-gui
+grep -R "internal/mesh" cmd/meshchat-gui
+grep -R "internal/routing" cmd/meshchat-gui
+
+Report exact results.
+
+Do NOT claim GUI runtime verification if native graphical dependencies remain unavailable.
+
+Do NOT introduce Dockerfile workarounds.
+
+==================================================
+5. FINAL REPORT
+==================================================
+
+Return a concise M8.3 remediation report containing:
+
+- files changed
+- shutdown lifecycle before/after
+- identity API finding
+- tests added/changed
+- exact verification commands/results
+- remaining GUI runtime limitation
+- remaining Docker limitation
+- security-boundary confirmation
+
+Do NOT declare M8.3 approved.
+
+STOP after the report.
+
+The Project Overseer will make the final milestone decision.
+
+```
+
+
+```
 
 
 ```
