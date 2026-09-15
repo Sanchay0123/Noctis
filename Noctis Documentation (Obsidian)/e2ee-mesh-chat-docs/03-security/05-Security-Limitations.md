@@ -67,7 +67,7 @@ Forbidden claims unless independently demonstrated:
 -   "military-grade"
 -   "completely secure"
 
-See [[03-security/06-Security-Review-Checklist]].
+See [06-Security-Review-Checklist](06-Security-Review-Checklist.md).
 
 ## M6 Limitations
 

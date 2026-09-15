@@ -134,7 +134,7 @@ Every significant design decision should record:
 -   operational consequences
 -   status
 
-See [[08-implementation/03-Code-Review-Checklist]].
+See [03-Code-Review-Checklist](../08-implementation/03-Code-Review-Checklist.md).
 
 ------------------------------------------------------------------------
 
@@ -177,7 +177,7 @@ minimization.
 Do not add a large observability stack solely for visual complexity.
 Additional systems require an explicit architectural justification.
 
-See [[02-architecture/07-Observability-and-Security-Telemetry]].
+See [07-Observability-and-Security-Telemetry](07-Observability-and-Security-Telemetry.md).
 
 ------------------------------------------------------------------------
 
@@ -227,7 +227,7 @@ The exact canonical transcript, wire messages, KDF context, session ID,
 handshake replay behavior and failure state machine must be specified
 before implementation.
 
-See [[00-governance/01-Architecture-Review-M0]].
+See [01-Architecture-Review-M0](../00-governance/01-Architecture-Review-M0.md).
 
 ## M3 Decision Record
 

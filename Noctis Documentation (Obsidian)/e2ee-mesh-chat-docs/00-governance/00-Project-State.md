@@ -203,12 +203,12 @@ The final acceptance record reports passing handshake-correlation, TTL, packet-v
 
 M6 remains deliberately limited to bounded managed flooding. DHT, route discovery, route selection, anonymity, complete metadata hiding and guaranteed delivery remain out of scope.
 
-See [[00-governance/04-Architecture-Review-M6]] and [[07-testing/08-M6-Acceptance-Evidence]].
+See [04-Architecture-Review-M6](04-Architecture-Review-M6.md) and [08-M6-Acceptance-Evidence](../07-testing/08-M6-Acceptance-Evidence.md).
 
 ## Governance Reviews
 
-- [[00-governance/03-Architecture-Review-M5]] — M5 architecture review
-- [[00-governance/04-Architecture-Review-M6]] — M6 architecture review
+- [03-Architecture-Review-M5](03-Architecture-Review-M5.md) — M5 architecture review
+- [04-Architecture-Review-M6](04-Architecture-Review-M6.md) — M6 architecture review
 
 
 ## M7 --- Security hardening
@@ -243,8 +243,8 @@ paths were reviewed.
 Final validation passed `go vet ./...`, `go test ./...`,
 `go test -race ./...` and `go build ./...`.
 
-See [[00-governance/05-Architecture-Review-M7]] and
-[[07-testing/09-M7-Acceptance-Evidence]].
+See [05-Architecture-Review-M7](05-Architecture-Review-M7.md) and
+[09-M7-Acceptance-Evidence](../07-testing/09-M7-Acceptance-Evidence.md).
 
 M7 does not provide anonymity, complete metadata hiding, global Sybil/flood
 resistance, endpoint compromise resistance or guaranteed delivery.
@@ -332,7 +332,7 @@ interaction is claimed.
 **🟢 PASS / CLOSED** — M9 evidence records and documentation synchronization
 have been assembled and audited. The package preserves evidence provenance,
 distinguishes manual GUI verification from automated validation, and records
-Docker/Prometheus limitations without overclaiming. See [[00-governance/07-Architecture-Review-M9]] and [[07-testing/21-M9.4-Overseer-Audit]].
+Docker/Prometheus limitations without overclaiming. See [07-Architecture-Review-M9](07-Architecture-Review-M9.md) and [21-M9.4-Overseer-Audit](../07-testing/21-M9.4-Overseer-Audit.md).
 
 Historical snapshot: M10 was the next milestone at the time of the M9.4 record. M10 is now complete and frozen.
 
@@ -357,7 +357,7 @@ The technical baseline documents the implemented architecture, components, crypt
 
 The approved M9 evidence was mapped to security properties, threat controls and experimental conclusions. Performance numbers were not invented where no controlled measurement campaign existed. Authentication, relay-blindness and resource-bound claims remain explicitly scoped to their evidence.
 
-See [[10-technical-documentation/10-Security-Analysis]], [[10-technical-documentation/11-Experimental-Methodology-and-Results]], and [[10-technical-documentation/12-Security-Evidence-Matrix]].
+See [10-Security-Analysis](../10-technical-documentation/10-Security-Analysis.md), [11-Experimental-Methodology-and-Results](../10-technical-documentation/11-Experimental-Methodology-and-Results.md), and [12-Security-Evidence-Matrix](../10-technical-documentation/12-Security-Evidence-Matrix.md).
 
 ### M10.3 — Final Academic Deliverables
 
@@ -372,4 +372,4 @@ Final academic report material, presentation structure, viva preparation and evi
 
 The final validation report records successful execution of the approved crypto, protocol, direct E2EE, mesh, routing, security-regression and resource-bound checks. Historical M10.2 performance evidence remains accepted as prior evidence and is not represented as a fresh final performance campaign.
 
-See [[07-testing/22-M10-Final-System-Validation]] and [[07-testing/23-M10-Final-Freeze-Record]].
+See [22-M10-Final-System-Validation](../07-testing/22-M10-Final-System-Validation.md) and [23-M10-Final-Freeze-Record](../07-testing/23-M10-Final-Freeze-Record.md).

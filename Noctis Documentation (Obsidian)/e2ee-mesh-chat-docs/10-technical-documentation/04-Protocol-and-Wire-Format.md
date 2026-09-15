@@ -152,8 +152,8 @@ endpoint application session keys.
 
 ## Related records
 
-- [[04-protocol/04-Message-Format]]
-- [[04-protocol/05-Mesh-Packet-Format]]
-- [[04-protocol/07-Protocol-State-Machines]]
-- [[06-networking/03-Routing]]
-- [[07-testing/16-M9-Attack-Evidence]]
+- [04-Message-Format](../04-protocol/04-Message-Format.md)
+- [05-Mesh-Packet-Format](../04-protocol/05-Mesh-Packet-Format.md)
+- [07-Protocol-State-Machines](../04-protocol/07-Protocol-State-Machines.md)
+- [03-Routing](../06-networking/03-Routing.md)
+- [16-M9-Attack-Evidence](../07-testing/16-M9-Attack-Evidence.md)

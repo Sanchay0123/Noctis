@@ -336,8 +336,8 @@ complexity. Elasticsearch/Logstash/Kibana, Jaeger, OpenTelemetry and
 other systems should only be introduced if a concrete project
 requirement justifies them.
 
-See [[02-architecture/02-Architecture-Decisions]] and
-[[07-testing/06-Test-Evidence-Standard]].
+See [02-Architecture-Decisions](02-Architecture-Decisions.md) and
+[06-Test-Evidence-Standard](../07-testing/06-Test-Evidence-Standard.md).
 
 ## M2 Telemetry Boundary
 

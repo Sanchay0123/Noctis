@@ -55,7 +55,7 @@ Invalid transitions fail closed and do not expose cryptographic secrets.
 The handshake state machine's duplicate/ordering checks are not a substitute
 for application-message replay protection. Application replay is enforced by
 the 64-message per-session receive window described in
-[[04-protocol/05-Replay-Protection]].
+[05-Replay-Protection](05-Replay-Protection.md).
 
 ## M6 Multi-Hop Session State
 

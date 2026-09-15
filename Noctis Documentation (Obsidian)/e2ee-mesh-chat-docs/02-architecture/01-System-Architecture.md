@@ -132,8 +132,8 @@ decryption.
 
 **Implemented / verified for the current milestone scope.**
 
-See [[02-architecture/02-Architecture-Decisions]] and
-[[02-architecture/07-Observability-and-Security-Telemetry]].
+See [02-Architecture-Decisions](02-Architecture-Decisions.md) and
+[07-Observability-and-Security-Telemetry](07-Observability-and-Security-Telemetry.md).
 
 ## M2 Implemented Boundary
 

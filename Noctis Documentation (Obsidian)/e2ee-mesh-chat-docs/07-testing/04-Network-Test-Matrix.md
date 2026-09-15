@@ -53,7 +53,7 @@ and network-wide PacketID suppression remain intentionally untested here.
 | Race safety | repository race-detector validation | PASS |
 | Container demo | Docker multi-hop E2EE delivery | PASS |
 
-Detailed evidence: [[07-testing/08-M6-Acceptance-Evidence]].
+Detailed evidence: [08-M6-Acceptance-Evidence](08-M6-Acceptance-Evidence.md).
 
 
 ## M7 Security-Hardening Matrix
@@ -73,4 +73,4 @@ Detailed evidence: [[07-testing/08-M6-Acceptance-Evidence]].
 | Telemetry identity cardinality | Arbitrary peer IDs absent from telemetry interface | PASS |
 | Full race validation | No race reported | PASS |
 
-Detailed evidence: [[07-testing/09-M7-Acceptance-Evidence]].
+Detailed evidence: [09-M7-Acceptance-Evidence](09-M7-Acceptance-Evidence.md).

@@ -160,7 +160,7 @@ Multi-hop INIT/RESP messages are correlated using remote identity plus `SHA256(T
 
 Validation evidence includes one-, two- and three-hop routing, cyclic-loop termination, handshake correlation, malformed/oversized input rejection, cache and queue bounds, relay-blind E2EE, peer-loss/session separation, sustained flood bounds, race validation and Docker multi-hop operation.
 
-See [[00-governance/04-Architecture-Review-M6]] and [[07-testing/08-M6-Acceptance-Evidence]].
+See [04-Architecture-Review-M6](../00-governance/04-Architecture-Review-M6.md) and [08-M6-Acceptance-Evidence](../07-testing/08-M6-Acceptance-Evidence.md).
 
 ## M7 --- Security hardening
 
@@ -212,8 +212,8 @@ go test -race ./...
 go build ./...
 ```
 
-See [[00-governance/05-Architecture-Review-M7]] and
-[[07-testing/09-M7-Acceptance-Evidence]].
+See [05-Architecture-Review-M7](../00-governance/05-Architecture-Review-M7.md) and
+[09-M7-Acceptance-Evidence](../07-testing/09-M7-Acceptance-Evidence.md).
 
 M7 does not establish anonymity, complete metadata hiding, global Sybil/flood
 resistance, endpoint compromise resistance or guaranteed delivery.
@@ -281,7 +281,7 @@ Alice → Bob → Carol demonstrates application ciphertext traversing a relay w
 the endpoint application session remains at the communicating endpoints in the
 demonstrated implementation.
 
-See [[07-testing/17-M9-Relay-Blindness.log]] and [[07-testing/19-M9-Evidence-Manifest]].
+See [17-M9-Relay-Blindness](../07-testing/17-M9-Relay-Blindness.log) and [19-M9-Evidence-Manifest](../07-testing/19-M9-Evidence-Manifest.md).
 
 ### M9.2 — Security Attack Demonstrations
 
@@ -292,7 +292,7 @@ AEAD replay, invalid signature, malformed packet, TTL enforcement, PacketID
 duplicate suppression and the production pending-handshake resource bound.
 The authoritative pending-handshake limit is 10.
 
-See [[07-testing/16-M9-Attack-Evidence]].
+See [16-M9-Attack-Evidence](../07-testing/16-M9-Attack-Evidence.md).
 
 ### M9.3 — GUI Demonstration
 
@@ -302,7 +302,7 @@ The two-node GUI workflow was manually verified by the Project Overseer on the
 desktop. Automated GUI interaction was unavailable in the headless implementation
 environment.
 
-See [[07-testing/18-M9-GUI-Evidence]].
+See [18-M9-GUI-Evidence](../07-testing/18-M9-GUI-Evidence.md).
 
 ### M9.4 — Final Evidence Assembly & Documentation Synchronization
 
@@ -312,15 +312,15 @@ M9 evidence records and documentation synchronization were assembled and audited
 The Project Overseer audit passed the package without requiring production-code
 changes. M9 is formally closed.
 
-See [[00-governance/07-Architecture-Review-M9]],
-[[07-testing/19-M9-Evidence-Manifest]], [[07-testing/20-M9-Final-Report]] and
-[[07-testing/21-M9.4-Overseer-Audit]].
+See [07-Architecture-Review-M9](../00-governance/07-Architecture-Review-M9.md),
+[19-M9-Evidence-Manifest](../07-testing/19-M9-Evidence-Manifest.md), [20-M9-Final-Report](../07-testing/20-M9-Final-Report.md) and
+[21-M9.4-Overseer-Audit](../07-testing/21-M9.4-Overseer-Audit.md).
 
 ## M10 --- Final Technical & Academic Documentation
 
 Final technical and academic documentation.
 
-See [[08-implementation/05-Definition-of-Done]].
+See [05-Definition-of-Done](05-Definition-of-Done.md).
 
 ## M2 Completion Record
 

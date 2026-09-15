@@ -3,7 +3,7 @@
 This document records the earlier M0 revised architecture review. Its
 historical M3 blockers have since been resolved at the specification level:
 the canonical handshake transcript, session identifier, and HKDF schedule
-are now frozen in [[04-protocol/03-Session-Establishment]].
+are now frozen in [03-Session-Establishment](../04-protocol/03-Session-Establishment.md).
 
 M3 implementation is still **blocked**, but the remaining gate is now
 implementation-level review and authorization, including the exact X25519

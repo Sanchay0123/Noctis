@@ -159,11 +159,11 @@ The implementation should be presented as a security-focused academic prototype 
 
 ## Related Records
 
-- [[03-security/01-Threat-Model]]
-- [[03-security/02-Security-Goals]]
-- [[03-security/04-Security-Controls]]
-- [[03-security/05-Security-Limitations]]
-- [[07-testing/16-M9-Attack-Evidence]]
-- [[07-testing/17-M9-Relay-Blindness.log]]
-- [[07-testing/18-M9-GUI-Evidence]]
-- [[07-testing/19-M9-Evidence-Manifest]]
+- [01-Threat-Model](../03-security/01-Threat-Model.md)
+- [02-Security-Goals](../03-security/02-Security-Goals.md)
+- [04-Security-Controls](../03-security/04-Security-Controls.md)
+- [05-Security-Limitations](../03-security/05-Security-Limitations.md)
+- [16-M9-Attack-Evidence](../07-testing/16-M9-Attack-Evidence.md)
+- [17-M9-Relay-Blindness](../07-testing/17-M9-Relay-Blindness.log)
+- [18-M9-GUI-Evidence](../07-testing/18-M9-GUI-Evidence.md)
+- [19-M9-Evidence-Manifest](../07-testing/19-M9-Evidence-Manifest.md)

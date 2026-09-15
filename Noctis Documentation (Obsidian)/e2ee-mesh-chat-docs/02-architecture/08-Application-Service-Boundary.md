@@ -334,11 +334,11 @@ support and had external proxy/DNS restrictions.
 
 ## Related Documentation
 
-- [[02-architecture/01-System-Architecture]]
-- [[02-architecture/03-Component-Architecture]]
-- [[02-architecture/04-Data-Flow]]
-- [[02-architecture/05-Trust-Boundaries]]
-- [[07-testing/10-M8.1-Acceptance-Evidence]]
-- [[07-testing/11-M8.2-Acceptance-Evidence]]
-- [[07-testing/12-M8.3-Acceptance-Evidence]]
-- [[00-governance/06-Architecture-Review-M8]]
+- [01-System-Architecture](01-System-Architecture.md)
+- [03-Component-Architecture](03-Component-Architecture.md)
+- [04-Data-Flow](04-Data-Flow.md)
+- [05-Trust-Boundaries](05-Trust-Boundaries.md)
+- [10-M8.1-Acceptance-Evidence](../07-testing/10-M8.1-Acceptance-Evidence.md)
+- [11-M8.2-Acceptance-Evidence](../07-testing/11-M8.2-Acceptance-Evidence.md)
+- [12-M8.3-Acceptance-Evidence](../07-testing/12-M8.3-Acceptance-Evidence.md)
+- [06-Architecture-Review-M8](../00-governance/06-Architecture-Review-M8.md)

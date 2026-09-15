@@ -23,7 +23,7 @@ Possible future work includes route discovery and route selection, stronger cong
 
 ## M6 Reference
 
-- [[00-governance/04-Architecture-Review-M6]] — authoritative M6 architecture and acceptance record
+- [04-Architecture-Review-M6](../00-governance/04-Architecture-Review-M6.md) — authoritative M6 architecture and acceptance record
 
 
 ## M8 Follow-on Work

@@ -110,7 +110,7 @@ not represented as automated evidence.
 
 ## Related records
 
-- [[02-architecture/08-Application-Service-Boundary]]
-- [[07-testing/12-M8.3-Acceptance-Evidence]]
-- [[07-testing/18-M9-GUI-Evidence]]
-- [[07-testing/20-M9-Final-Report]]
+- [08-Application-Service-Boundary](../02-architecture/08-Application-Service-Boundary.md)
+- [12-M8.3-Acceptance-Evidence](../07-testing/12-M8.3-Acceptance-Evidence.md)
+- [18-M9-GUI-Evidence](../07-testing/18-M9-GUI-Evidence.md)
+- [20-M9-Final-Report](../07-testing/20-M9-Final-Report.md)

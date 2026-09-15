@@ -49,4 +49,4 @@ The application must define whether the change is:
 -   explicitly re-enrolled
 -   treated as a new identity
 
-See [[05-cryptography/02-Identity-and-Signatures]].
+See [02-Identity-and-Signatures](../05-cryptography/02-Identity-and-Signatures.md).

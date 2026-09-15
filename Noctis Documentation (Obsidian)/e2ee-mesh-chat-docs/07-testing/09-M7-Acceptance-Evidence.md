@@ -197,4 +197,4 @@ The M7 gate is supported by:
 
 **🟢 M7 APPROVED**
 
-See [[00-governance/05-Architecture-Review-M7]].
+See [05-Architecture-Review-M7](../00-governance/05-Architecture-Review-M7.md).

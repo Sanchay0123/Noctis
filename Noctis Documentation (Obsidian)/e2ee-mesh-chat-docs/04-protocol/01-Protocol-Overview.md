@@ -58,7 +58,7 @@ Both identity keys remain Ed25519 keys. They are not reused as X25519
 keys.
 
 The canonical transcript construction is frozen and implemented in
-[[04-protocol/03-Session-Establishment]].
+[03-Session-Establishment](03-Session-Establishment.md).
 
 ## Encryption context
 
@@ -95,7 +95,7 @@ It must never need:
 - the sender's session key
 - application plaintext
 
-See [[02-architecture/07-Observability-and-Security-Telemetry]] for the
+See [07-Observability-and-Security-Telemetry](../02-architecture/07-Observability-and-Security-Telemetry.md) for the
 telemetry boundary.
 
 ## M3 Protocol Status

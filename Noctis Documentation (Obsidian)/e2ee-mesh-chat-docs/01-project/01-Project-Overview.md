@@ -68,5 +68,5 @@ A reproducible demonstration must establish:
 -   Basic impersonation attempts fail.
 -   Route failure is handled to the extent implemented.
 
-See [[01-project/02-Requirements]] and
-[[03-security/01-Threat-Model]].
+See [02-Requirements](02-Requirements.md) and
+[01-Threat-Model](../03-security/01-Threat-Model.md).

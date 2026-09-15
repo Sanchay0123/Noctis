@@ -136,7 +136,7 @@ M9 does not demonstrate:
 
 ## 10. Evidence Manifest
 
-See [[07-testing/19-M9-Evidence-Manifest]] and the individual M9 evidence records
+See [19-M9-Evidence-Manifest](19-M9-Evidence-Manifest.md) and the individual M9 evidence records
 in `07-testing`.
 
 ## 11. M9 Final Status

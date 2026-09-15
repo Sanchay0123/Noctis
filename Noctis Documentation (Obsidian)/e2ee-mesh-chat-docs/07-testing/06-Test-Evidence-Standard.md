@@ -58,14 +58,14 @@ rather than implying security.
 
 ## M6 Reference
 
-- [[00-governance/04-Architecture-Review-M6]] — authoritative M6 architecture and acceptance record
+- [04-Architecture-Review-M6](../00-governance/04-Architecture-Review-M6.md) — authoritative M6 architecture and acceptance record
 
 
 ## M7 Evidence Record
 
 M7 security-hardening evidence is recorded in
-[[07-testing/09-M7-Acceptance-Evidence]] and reviewed in
-[[00-governance/05-Architecture-Review-M7]].
+[09-M7-Acceptance-Evidence](09-M7-Acceptance-Evidence.md) and reviewed in
+[05-Architecture-Review-M7](../00-governance/05-Architecture-Review-M7.md).
 
 The M7 gate was approved only after focused adversarial tests, source review,
 race validation and full repository validation were completed.

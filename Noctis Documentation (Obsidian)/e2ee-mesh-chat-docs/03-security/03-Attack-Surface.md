@@ -92,7 +92,7 @@ Observability must not be able to decrypt application messages or
 access cryptographic secret material merely because it has access to
 node events.
 
-See [[02-architecture/07-Observability-and-Security-Telemetry]].
+See [07-Observability-and-Security-Telemetry](../02-architecture/07-Observability-and-Security-Telemetry.md).
 
 ## M2 Identity Attack Surface
 

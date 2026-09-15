@@ -155,8 +155,8 @@ metadata leakage and log-injection risk.
 -   synchronized implementation and documentation in GitHub
 -   cross-platform development where practical
 
-See [[01-project/03-Goals-and-Non-Goals]] and
-[[07-testing/06-Test-Evidence-Standard]].
+See [03-Goals-and-Non-Goals](03-Goals-and-Non-Goals.md) and
+[06-Test-Evidence-Standard](../07-testing/06-Test-Evidence-Standard.md).
 
 ## M2 Implementation Status
 

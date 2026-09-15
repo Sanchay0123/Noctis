@@ -2,11 +2,11 @@
 
 ## 1. Threat model
 
-Reference [[03-security/01-Threat-Model]].
+Reference [01-Threat-Model](../03-security/01-Threat-Model.md).
 
 ## 2. Security goals
 
-Reference [[03-security/02-Security-Goals]].
+Reference [02-Security-Goals](../03-security/02-Security-Goals.md).
 
 ## 3. Cryptographic analysis
 
@@ -68,4 +68,4 @@ Prefer all four for major security claims.
 
 ## Implemented Analysis Source
 
-Use [[10-technical-documentation/10-Security-Analysis]] as the implementation-grounded security analysis source for the final academic report.
+Use [10-Security-Analysis](../10-technical-documentation/10-Security-Analysis.md) as the implementation-grounded security analysis source for the final academic report.

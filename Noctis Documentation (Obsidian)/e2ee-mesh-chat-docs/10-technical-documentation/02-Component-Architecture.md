@@ -93,6 +93,6 @@ not telemetry payloads.
 
 ## Related records
 
-- [[02-architecture/03-Component-Architecture]]
-- [[02-architecture/08-Application-Service-Boundary]]
-- [[02-architecture/07-Observability-and-Security-Telemetry]]
+- [03-Component-Architecture](../02-architecture/03-Component-Architecture.md)
+- [08-Application-Service-Boundary](../02-architecture/08-Application-Service-Boundary.md)
+- [07-Observability-and-Security-Telemetry](../02-architecture/07-Observability-and-Security-Telemetry.md)

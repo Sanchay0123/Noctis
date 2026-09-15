@@ -11,7 +11,7 @@ Define:
 -   security goals
 -   non-goals
 
-See [[03-security/01-Threat-Model]].
+See [01-Threat-Model](../03-security/01-Threat-Model.md).
 
 ## Phase 2 --- Architecture
 
@@ -24,7 +24,7 @@ Define:
 -   cryptographic architecture
 -   routing model
 
-See [[02-architecture/01-System-Architecture]].
+See [01-System-Architecture](../02-architecture/01-System-Architecture.md).
 
 ## Phase 3 --- Cryptographic implementation
 

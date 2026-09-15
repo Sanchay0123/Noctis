@@ -93,7 +93,7 @@ The acceptance record reports successful one-, two- and three-hop routing, cycli
 
 ## M6 Reference
 
-- [[00-governance/04-Architecture-Review-M6]] — authoritative M6 architecture and acceptance record
+- [04-Architecture-Review-M6](../00-governance/04-Architecture-Review-M6.md) — authoritative M6 architecture and acceptance record
 
 
 ## M8 Results
@@ -117,10 +117,10 @@ M8 is therefore a verified application-integration milestone with explicit envir
 
 ## M8 Reference
 
-- [[00-governance/06-Architecture-Review-M8]] — authoritative M8 review and gate
-- [[07-testing/10-M8.1-Acceptance-Evidence]]
-- [[07-testing/11-M8.2-Acceptance-Evidence]]
-- [[07-testing/12-M8.3-Acceptance-Evidence]]
+- [06-Architecture-Review-M8](../00-governance/06-Architecture-Review-M8.md) — authoritative M8 review and gate
+- [10-M8.1-Acceptance-Evidence](../07-testing/10-M8.1-Acceptance-Evidence.md)
+- [11-M8.2-Acceptance-Evidence](../07-testing/11-M8.2-Acceptance-Evidence.md)
+- [12-M8.3-Acceptance-Evidence](../07-testing/12-M8.3-Acceptance-Evidence.md)
 
 
 ## M9 Results
@@ -140,9 +140,9 @@ regression remains unverified because of external proxy/DNS restrictions.
 
 ## M9 Reference
 
-- [[00-governance/07-Architecture-Review-M9]]
-- [[07-testing/19-M9-Evidence-Manifest]]
-- [[07-testing/20-M9-Final-Report]]
+- [07-Architecture-Review-M9](../00-governance/07-Architecture-Review-M9.md)
+- [19-M9-Evidence-Manifest](../07-testing/19-M9-Evidence-Manifest.md)
+- [20-M9-Final-Report](../07-testing/20-M9-Final-Report.md)
 
 
 ## M10 Technical Documentation Baseline
@@ -152,9 +152,9 @@ system. It consolidates the component boundaries, cryptographic construction,
 wire format, mesh forwarding model, application/GUI boundary, and
 reproducibility constraints without introducing new implementation claims.
 
-Reference: [[10-technical-documentation/08-M10.1-Technical-Documentation-Map]]
+Reference: [08-M10.1-Technical-Documentation-Map](../10-technical-documentation/08-M10.1-Technical-Documentation-Map.md)
 
 
 ## Implemented Results Source
 
-Use [[10-technical-documentation/11-Experimental-Methodology-and-Results]] and [[10-technical-documentation/12-Security-Evidence-Matrix]] as the evidence-grounded results sources. Do not add numerical performance results without a controlled measurement campaign.
+Use [11-Experimental-Methodology-and-Results](../10-technical-documentation/11-Experimental-Methodology-and-Results.md) and [12-Security-Evidence-Matrix](../10-technical-documentation/12-Security-Evidence-Matrix.md) as the evidence-grounded results sources. Do not add numerical performance results without a controlled measurement campaign.

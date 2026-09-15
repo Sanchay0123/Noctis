@@ -43,4 +43,4 @@ is weaker than:
 > destination session key and cannot successfully authenticate/decrypt
 > the ciphertext."
 
-See [[07-testing/06-Test-Evidence-Standard]].
+See [06-Test-Evidence-Standard](../07-testing/06-Test-Evidence-Standard.md).

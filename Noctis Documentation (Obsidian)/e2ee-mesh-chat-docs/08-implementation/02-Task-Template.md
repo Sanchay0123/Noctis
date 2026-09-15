@@ -64,4 +64,4 @@ COMMANDS:
 NEXT RECOMMENDATION:
 ```
 
-See [[08-implementation/04-Antigravity-Workflow]].
+See [04-Antigravity-Workflow](04-Antigravity-Workflow.md).

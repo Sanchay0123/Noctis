@@ -79,4 +79,4 @@ Handshake state handling is separate from application replay protection.
 Handshake state rejects invalid or duplicate state transitions, but it does
 not replace the application ciphertext replay window.
 
-See [[04-protocol/03-Session-Establishment]].
+See [03-Session-Establishment](03-Session-Establishment.md).

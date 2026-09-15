@@ -119,8 +119,8 @@ Not guaranteed:
 -   universal routing-attack resistance
 -   production-grade availability
 
-See [[03-security/02-Security-Goals]] and
-[[03-security/05-Security-Limitations]].
+See [02-Security-Goals](02-Security-Goals.md) and
+[05-Security-Limitations](05-Security-Limitations.md).
 
 ## M6 Threat-Model Extension
 

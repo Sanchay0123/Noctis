@@ -76,5 +76,5 @@ M3 does not implement direct networking or mesh routing. Relays therefore
 remain outside the cryptographic session layer and must never receive
 application plaintext or session keys.
 
-See [[04-protocol/03-Session-Establishment]] and
-[[05-cryptography/07-Cryptographic-Failure-Modes]].
+See [03-Session-Establishment](../04-protocol/03-Session-Establishment.md) and
+[07-Cryptographic-Failure-Modes](07-Cryptographic-Failure-Modes.md).

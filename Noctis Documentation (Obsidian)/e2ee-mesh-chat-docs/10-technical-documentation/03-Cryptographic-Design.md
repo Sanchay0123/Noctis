@@ -134,9 +134,9 @@ multi-hop relay behavior and adversarial demonstrations.
 
 ## Related records
 
-- [[04-protocol/03-Session-Establishment]]
-- [[04-protocol/04-Message-Format]]
-- [[05-cryptography/01-Cryptographic-Architecture]]
-- [[05-cryptography/04-Key-Derivation]]
-- [[05-cryptography/05-AEAD-and-Nonce-Management]]
-- [[03-security/05-Security-Limitations]]
+- [03-Session-Establishment](../04-protocol/03-Session-Establishment.md)
+- [04-Message-Format](../04-protocol/04-Message-Format.md)
+- [01-Cryptographic-Architecture](../05-cryptography/01-Cryptographic-Architecture.md)
+- [04-Key-Derivation](../05-cryptography/04-Key-Derivation.md)
+- [05-AEAD-and-Nonce-Management](../05-cryptography/05-AEAD-and-Nonce-Management.md)
+- [05-Security-Limitations](../03-security/05-Security-Limitations.md)

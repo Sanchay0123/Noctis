@@ -89,7 +89,7 @@ M9.1 demonstrates endpoint E2EE across a relay.
 
 ## Related records
 
-- [[07-testing/06-Test-Evidence-Standard]]
-- [[07-testing/19-M9-Evidence-Manifest]]
-- [[07-testing/20-M9-Final-Report]]
-- [[03-security/05-Security-Limitations]]
+- [06-Test-Evidence-Standard](../07-testing/06-Test-Evidence-Standard.md)
+- [19-M9-Evidence-Manifest](../07-testing/19-M9-Evidence-Manifest.md)
+- [20-M9-Final-Report](../07-testing/20-M9-Final-Report.md)
+- [05-Security-Limitations](../03-security/05-Security-Limitations.md)

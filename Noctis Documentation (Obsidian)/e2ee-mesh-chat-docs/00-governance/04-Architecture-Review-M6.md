@@ -1,4 +1,4 @@
-> Predecessor review: [[00-governance/03-Architecture-Review-M5]]
+> Predecessor review: [03-Architecture-Review-M5](03-Architecture-Review-M5.md)
 
 # Architecture Review — M6 Mesh Routing
 
@@ -62,4 +62,4 @@ The duplicate cache and forwarding queues are explicitly bounded. Queue insertio
 
 The M6 final acceptance record reports passing handshake-correlation, TTL, malformed/oversized packet, unknown-field, cache, queue-accounting, multi-hop routing, cyclic-routing, relay-confidentiality, peer-loss/session-separation, sustained-flood, race-detector, build, and Docker multi-hop validation.
 
-See [[07-testing/08-M6-Acceptance-Evidence]] for the detailed evidence record.
+See [08-M6-Acceptance-Evidence](../07-testing/08-M6-Acceptance-Evidence.md) for the detailed evidence record.

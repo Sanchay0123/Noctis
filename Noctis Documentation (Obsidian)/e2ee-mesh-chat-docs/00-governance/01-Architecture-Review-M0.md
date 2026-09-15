@@ -268,7 +268,7 @@ remains applicable.
 The proposal must add telemetry without making telemetry a dependency  
 of the cryptographic or routing path.
 
-See [[02-architecture/07-Observability-and-Security-Telemetry]].
+See [07-Observability-and-Security-Telemetry](../02-architecture/07-Observability-and-Security-Telemetry.md).
 
 ## Containerization and GitHub
 

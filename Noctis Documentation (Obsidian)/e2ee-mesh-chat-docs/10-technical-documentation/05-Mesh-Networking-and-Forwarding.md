@@ -110,10 +110,10 @@ dropping.
 
 ## Related records
 
-- [[06-networking/01-Mesh-Architecture]]
-- [[06-networking/03-Routing]]
-- [[06-networking/04-Forwarding]]
-- [[06-networking/05-TTL-and-Loop-Prevention]]
-- [[06-networking/06-Connection-Management]]
-- [[06-networking/08-M6-Resource-Bounds]]
-- [[07-testing/16-M9-Attack-Evidence]]
+- [01-Mesh-Architecture](../06-networking/01-Mesh-Architecture.md)
+- [03-Routing](../06-networking/03-Routing.md)
+- [04-Forwarding](../06-networking/04-Forwarding.md)
+- [05-TTL-and-Loop-Prevention](../06-networking/05-TTL-and-Loop-Prevention.md)
+- [06-Connection-Management](../06-networking/06-Connection-Management.md)
+- [08-M6-Resource-Bounds](../06-networking/08-M6-Resource-Bounds.md)
+- [16-M9-Attack-Evidence](../07-testing/16-M9-Attack-Evidence.md)

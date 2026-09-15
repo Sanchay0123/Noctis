@@ -49,7 +49,7 @@ Therefore:
 
 > **Confidentiality of message content is not equivalent to anonymity.**
 
-See [[03-security/05-Security-Limitations]].
+See [05-Security-Limitations](../03-security/05-Security-Limitations.md).
 
 ## Observability boundary
 

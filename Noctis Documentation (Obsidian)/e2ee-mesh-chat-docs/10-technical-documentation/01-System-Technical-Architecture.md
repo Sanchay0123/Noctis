@@ -117,9 +117,9 @@ carried through M9 relay-blindness testing.
 
 ## Related records
 
-- [[02-architecture/01-System-Architecture]]
-- [[02-architecture/03-Component-Architecture]]
-- [[02-architecture/04-Data-Flow]]
-- [[02-architecture/05-Trust-Boundaries]]
-- [[03-security/01-Threat-Model]]
-- [[07-testing/20-M9-Final-Report]]
+- [01-System-Architecture](../02-architecture/01-System-Architecture.md)
+- [03-Component-Architecture](../02-architecture/03-Component-Architecture.md)
+- [04-Data-Flow](../02-architecture/04-Data-Flow.md)
+- [05-Trust-Boundaries](../02-architecture/05-Trust-Boundaries.md)
+- [01-Threat-Model](../03-security/01-Threat-Model.md)
+- [20-M9-Final-Report](../07-testing/20-M9-Final-Report.md)

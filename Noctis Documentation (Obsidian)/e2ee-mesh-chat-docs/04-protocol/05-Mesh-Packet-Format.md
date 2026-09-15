@@ -46,7 +46,7 @@ so, this is metadata leakage and must be documented.
 
 The M1.1 implementation froze Protobuf 3 as the wire serialization format.
 The canonical handshake transcript is a separate byte-level construction
-defined in [[04-protocol/03-Session-Establishment]] and is not replaced by
+defined in [03-Session-Establishment](03-Session-Establishment.md) and is not replaced by
 ordinary Protobuf serialization.
 
 Runtime validation remains mandatory for fixed-width fields, packet-type

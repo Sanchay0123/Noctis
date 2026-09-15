@@ -43,7 +43,7 @@ can safely be resumed.
 
 The session policy must be explicit.
 
-See [[04-protocol/03-Session-Establishment]].
+See [03-Session-Establishment](../04-protocol/03-Session-Establishment.md).
 
 
 ## M4 Direct TCP Implementation

@@ -117,7 +117,7 @@ It must not:
 
 Telemetry interfaces should be bounded and non-blocking where practical.
 
-See [[02-architecture/07-Observability-and-Security-Telemetry]].
+See [07-Observability-and-Security-Telemetry](07-Observability-and-Security-Telemetry.md).
 
 ## M4 Component Status
 
@@ -192,7 +192,7 @@ The Fyne GUI consumes this boundary and maintains only presentation/application 
 
 The GUI maintains synchronized in-memory conversation state containing sender, plaintext and timestamp information. No persistent plaintext message store was introduced in M8.
 
-See [[02-architecture/08-Application-Service-Boundary]] for the detailed GUI/application trust and lifecycle boundary.
+See [08-Application-Service-Boundary](08-Application-Service-Boundary.md) for the detailed GUI/application trust and lifecycle boundary.
 
 
 ## M8.3 transport admission

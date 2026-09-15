@@ -58,4 +58,4 @@ Instead provide:
 Antigravity's completion statement is evidence of what it believes it
 did, not proof that the implementation is secure.
 
-See [[08-implementation/05-Definition-of-Done]].
+See [05-Definition-of-Done](05-Definition-of-Done.md).

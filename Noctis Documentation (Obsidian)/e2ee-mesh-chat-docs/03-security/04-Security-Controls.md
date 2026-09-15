@@ -41,7 +41,7 @@ For example:
 The dashboard is a visualization of evidence; it is not itself a
 security control.
 
-See [[02-architecture/07-Observability-and-Security-Telemetry]].
+See [07-Observability-and-Security-Telemetry](../02-architecture/07-Observability-and-Security-Telemetry.md).
 
 ## M2 Implemented Security Controls
 

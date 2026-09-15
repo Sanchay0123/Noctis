@@ -49,7 +49,7 @@ Examples:
 -   nonce: protocol field; never treated as secret
 -   ciphertext: transport-visible but confidential
 
-See [[05-cryptography/06-Key-Lifecycle]].
+See [06-Key-Lifecycle](../05-cryptography/06-Key-Lifecycle.md).
 
 
 ## M4 direct secure messaging flow

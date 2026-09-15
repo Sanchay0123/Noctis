@@ -77,8 +77,8 @@ the behavior of the routing layer.
 Whether automatic alternate routing is supported is an implementation
 decision and must not be claimed until tested.
 
-See [[02-architecture/07-Observability-and-Security-Telemetry]] and
-[[07-testing/05-Security-Demonstrations]].
+See [07-Observability-and-Security-Telemetry](07-Observability-and-Security-Telemetry.md) and
+[05-Security-Demonstrations](../07-testing/05-Security-Demonstrations.md).
 
 ## M2 Deployment Status
 

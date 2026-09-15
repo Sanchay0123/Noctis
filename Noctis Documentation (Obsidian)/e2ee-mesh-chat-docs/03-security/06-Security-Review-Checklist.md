@@ -112,5 +112,5 @@ demonstrations.
 - [x] Full repository race validation passed
 - [x] M7 acceptance evidence recorded
 
-See [[00-governance/05-Architecture-Review-M7]] and
-[[07-testing/09-M7-Acceptance-Evidence]].
+See [05-Architecture-Review-M7](../00-governance/05-Architecture-Review-M7.md) and
+[09-M7-Acceptance-Evidence](../07-testing/09-M7-Acceptance-Evidence.md).

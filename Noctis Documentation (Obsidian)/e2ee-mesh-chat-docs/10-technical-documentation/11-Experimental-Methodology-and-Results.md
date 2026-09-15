@@ -123,9 +123,9 @@ The evidence does not support claims of universal attack resistance, anonymity, 
 
 ## Related Records
 
-- [[07-testing/15-M9-Test-Suite.log]]
-- [[07-testing/16-M9-Attack-Evidence]]
-- [[07-testing/17-M9-Relay-Blindness.log]]
-- [[07-testing/18-M9-GUI-Evidence]]
-- [[07-testing/19-M9-Evidence-Manifest]]
-- [[10-technical-documentation/10-Security-Analysis]]
+- [15-M9-Test-Suite](../07-testing/15-M9-Test-Suite.log)
+- [16-M9-Attack-Evidence](../07-testing/16-M9-Attack-Evidence.md)
+- [17-M9-Relay-Blindness](../07-testing/17-M9-Relay-Blindness.log)
+- [18-M9-GUI-Evidence](../07-testing/18-M9-GUI-Evidence.md)
+- [19-M9-Evidence-Manifest](../07-testing/19-M9-Evidence-Manifest.md)
+- [10-Security-Analysis](10-Security-Analysis.md)
