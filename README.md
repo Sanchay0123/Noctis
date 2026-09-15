@@ -1,7 +1,22 @@
 # E2EE Mesh Chat --- Documentation Hub
 
-> **Status:** M10.3 academic documentation complete; final system validation pending\
+> **Status:** Final engineering validation PASS; documentation frozen\
 > **Project type:** Academic cybersecurity and networking prototype
+
+
+## GitHub / Obsidian compatibility
+
+This repository is maintained as an Obsidian vault but is also readable directly on GitHub.
+
+- Internal Obsidian ```[[wikilinks]]``` have been converted to standard relative Markdown links for GitHub.
+- Inline Mermaid diagrams are kept as `mermaid` code blocks so GitHub can render them.
+- The standalone M9 topology source (`.mmd`) is preserved, with a GitHub-renderable [`M9 Topology`](07-testing/14-M9-Topology.md) page added alongside it.
+- The `.obsidian` configuration is retained for vault behavior, while machine/session-specific workspace state is ignored.
+- No external image attachments were found in the vault, so there are no missing image assets to migrate.
+
+### Suggested entry points
+
+If you are reading this repository without Obsidian, start with this README and then follow the linked architecture, security, protocol, cryptography, testing, and academic documentation sections below.
 
 ## Purpose
 
@@ -30,131 +45,140 @@ evidence and tests.
 
 ## Start here
 
--   [[01-project/01-Project-Overview]]
--   [[01-project/02-Requirements]]
--   [[03-security/01-Threat-Model]]
--   [[02-architecture/01-System-Architecture]]
--   [[02-architecture/02-Architecture-Decisions]]
--   [[04-protocol/01-Protocol-Overview]]
--   [[05-cryptography/01-Cryptographic-Architecture]]
--   [[07-testing/01-Testing-Strategy]]
--   [[08-implementation/01-Milestones]]
+-   [01-Project-Overview](01-project/01-Project-Overview.md)
+-   [02-Requirements](01-project/02-Requirements.md)
+-   [01-Threat-Model](03-security/01-Threat-Model.md)
+-   [01-System-Architecture](02-architecture/01-System-Architecture.md)
+-   [02-Architecture-Decisions](02-architecture/02-Architecture-Decisions.md)
+-   [01-Protocol-Overview](04-protocol/01-Protocol-Overview.md)
+-   [01-Cryptographic-Architecture](05-cryptography/01-Cryptographic-Architecture.md)
+-   [01-Testing-Strategy](07-testing/01-Testing-Strategy.md)
+-   [01-Milestones](08-implementation/01-Milestones.md)
 
 ## Documentation map
 
 ### Governance
 
--   [[00-governance/00-Project-State]]
--   [[00-governance/01-Vault-Index]]
--   [[00-governance/03-Architecture-Review-M5]]
--   [[00-governance/07-Architecture-Review-M9]]
--   [[00-governance/06-Architecture-Review-M8]]
--   [[00-governance/05-Architecture-Review-M7]]
--   [[00-governance/04-Architecture-Review-M6]]
+-   [00-Project-State](00-governance/00-Project-State.md)
+-   [01-Vault-Index](00-governance/01-Vault-Index.md)
+-   [03-Architecture-Review-M5](00-governance/03-Architecture-Review-M5.md)
+-   [07-Architecture-Review-M9](00-governance/07-Architecture-Review-M9.md)
+-   [06-Architecture-Review-M8](00-governance/06-Architecture-Review-M8.md)
+-   [05-Architecture-Review-M7](00-governance/05-Architecture-Review-M7.md)
+-   [04-Architecture-Review-M6](00-governance/04-Architecture-Review-M6.md)
 
 ### Project
 
--   [[01-project/01-Project-Overview]]
--   [[01-project/02-Requirements]]
--   [[01-project/03-Goals-and-Non-Goals]]
--   [[01-project/04-Assumptions-and-Constraints]]
+-   [01-Project-Overview](01-project/01-Project-Overview.md)
+-   [02-Requirements](01-project/02-Requirements.md)
+-   [03-Goals-and-Non-Goals](01-project/03-Goals-and-Non-Goals.md)
+-   [04-Assumptions-and-Constraints](01-project/04-Assumptions-and-Constraints.md)
 
 ### Architecture
 
--   [[02-architecture/01-System-Architecture]]
--   [[02-architecture/02-Architecture-Decisions]]
--   [[02-architecture/03-Component-Architecture]]
--   [[02-architecture/04-Data-Flow]]
--   [[02-architecture/05-Trust-Boundaries]]
--   [[02-architecture/06-Deployment-Architecture]]
+-   [01-System-Architecture](02-architecture/01-System-Architecture.md)
+-   [02-Architecture-Decisions](02-architecture/02-Architecture-Decisions.md)
+-   [03-Component-Architecture](02-architecture/03-Component-Architecture.md)
+-   [04-Data-Flow](02-architecture/04-Data-Flow.md)
+-   [05-Trust-Boundaries](02-architecture/05-Trust-Boundaries.md)
+-   [06-Deployment-Architecture](02-architecture/06-Deployment-Architecture.md)
 
 ### Security
 
--   [[03-security/01-Threat-Model]]
--   [[03-security/02-Security-Goals]]
--   [[03-security/03-Attack-Surface]]
--   [[03-security/04-Security-Controls]]
--   [[03-security/05-Security-Limitations]]
--   [[03-security/06-Security-Review-Checklist]]
+-   [01-Threat-Model](03-security/01-Threat-Model.md)
+-   [02-Security-Goals](03-security/02-Security-Goals.md)
+-   [03-Attack-Surface](03-security/03-Attack-Surface.md)
+-   [04-Security-Controls](03-security/04-Security-Controls.md)
+-   [05-Security-Limitations](03-security/05-Security-Limitations.md)
+-   [06-Security-Review-Checklist](03-security/06-Security-Review-Checklist.md)
 
 ### Protocol
 
--   [[04-protocol/01-Protocol-Overview]]
--   [[04-protocol/02-Node-Identity]]
--   [[04-protocol/03-Session-Establishment]]
--   [[04-protocol/04-Message-Format]]
--   [[04-protocol/05-Mesh-Packet-Format]]
--   [[04-protocol/06-Replay-Protection]]
--   [[04-protocol/07-Protocol-State-Machines]]
--   [[04-protocol/08-Error-Handling]]
+-   [01-Protocol-Overview](04-protocol/01-Protocol-Overview.md)
+-   [02-Node-Identity](04-protocol/02-Node-Identity.md)
+-   [03-Session-Establishment](04-protocol/03-Session-Establishment.md)
+-   [04-Message-Format](04-protocol/04-Message-Format.md)
+-   [05-Mesh-Packet-Format](04-protocol/05-Mesh-Packet-Format.md)
+-   [06-Replay-Protection](04-protocol/06-Replay-Protection.md)
+-   [07-Protocol-State-Machines](04-protocol/07-Protocol-State-Machines.md)
+-   [08-Error-Handling](04-protocol/08-Error-Handling.md)
 
 ### Cryptography
 
--   [[05-cryptography/01-Cryptographic-Architecture]]
--   [[05-cryptography/02-Identity-and-Signatures]]
--   [[05-cryptography/03-Key-Agreement]]
--   [[05-cryptography/04-Key-Derivation]]
--   [[05-cryptography/05-AEAD-and-Nonce-Management]]
--   [[05-cryptography/06-Key-Lifecycle]]
--   [[05-cryptography/07-Cryptographic-Failure-Modes]]
+-   [01-Cryptographic-Architecture](05-cryptography/01-Cryptographic-Architecture.md)
+-   [02-Identity-and-Signatures](05-cryptography/02-Identity-and-Signatures.md)
+-   [03-Key-Agreement](05-cryptography/03-Key-Agreement.md)
+-   [04-Key-Derivation](05-cryptography/04-Key-Derivation.md)
+-   [05-AEAD-and-Nonce-Management](05-cryptography/05-AEAD-and-Nonce-Management.md)
+-   [06-Key-Lifecycle](05-cryptography/06-Key-Lifecycle.md)
+-   [07-Cryptographic-Failure-Modes](05-cryptography/07-Cryptographic-Failure-Modes.md)
 
 ### Networking
 
--   [[06-networking/01-Mesh-Architecture]]
--   [[06-networking/02-Peer-Discovery]]
--   [[06-networking/03-Routing]]
--   [[06-networking/04-Forwarding]]
--   [[06-networking/05-TTL-and-Loop-Prevention]]
--   [[06-networking/06-Connection-Management]]
--   [[06-networking/07-M6-Handshake-Correlation]]
--   [[06-networking/08-M6-Resource-Bounds]]
+-   [01-Mesh-Architecture](06-networking/01-Mesh-Architecture.md)
+-   [02-Peer-Discovery](06-networking/02-Peer-Discovery.md)
+-   [03-Routing](06-networking/03-Routing.md)
+-   [04-Forwarding](06-networking/04-Forwarding.md)
+-   [05-TTL-and-Loop-Prevention](06-networking/05-TTL-and-Loop-Prevention.md)
+-   [06-Connection-Management](06-networking/06-Connection-Management.md)
+-   [07-M6-Handshake-Correlation](06-networking/07-M6-Handshake-Correlation.md)
+-   [08-M6-Resource-Bounds](06-networking/08-M6-Resource-Bounds.md)
 
 ### Testing
 
--   [[07-testing/01-Testing-Strategy]]
--   [[07-testing/02-Cryptographic-Test-Matrix]]
--   [[07-testing/03-Protocol-Test-Matrix]]
--   [[07-testing/04-Network-Test-Matrix]]
--   [[07-testing/05-Security-Demonstrations]]
--   [[07-testing/06-Test-Evidence-Standard]]
--   [[07-testing/08-M6-Acceptance-Evidence]]
--   [[07-testing/09-M7-Acceptance-Evidence]]
--   [[07-testing/10-M8.1-Acceptance-Evidence]]
--   [[07-testing/11-M8.2-Acceptance-Evidence]]
--   [[07-testing/12-M8.3-Acceptance-Evidence]]
--   [[07-testing/13-M9-Environment.txt]]
--   [[07-testing/14-M9-Topology.mmd]]
--   [[07-testing/15-M9-Test-Suite.log]]
--   [[07-testing/16-M9-Attack-Evidence]]
--   [[07-testing/17-M9-Relay-Blindness.log]]
--   [[07-testing/18-M9-GUI-Evidence]]
--   [[07-testing/19-M9-Evidence-Manifest]]
--   [[07-testing/20-M9-Final-Report]]
+-   [01-Testing-Strategy](07-testing/01-Testing-Strategy.md)
+-   [02-Cryptographic-Test-Matrix](07-testing/02-Cryptographic-Test-Matrix.md)
+-   [03-Protocol-Test-Matrix](07-testing/03-Protocol-Test-Matrix.md)
+-   [04-Network-Test-Matrix](07-testing/04-Network-Test-Matrix.md)
+-   [05-Security-Demonstrations](07-testing/05-Security-Demonstrations.md)
+-   [06-Test-Evidence-Standard](07-testing/06-Test-Evidence-Standard.md)
+-   [08-M6-Acceptance-Evidence](07-testing/08-M6-Acceptance-Evidence.md)
+-   [09-M7-Acceptance-Evidence](07-testing/09-M7-Acceptance-Evidence.md)
+-   [10-M8.1-Acceptance-Evidence](07-testing/10-M8.1-Acceptance-Evidence.md)
+-   [11-M8.2-Acceptance-Evidence](07-testing/11-M8.2-Acceptance-Evidence.md)
+-   [12-M8.3-Acceptance-Evidence](07-testing/12-M8.3-Acceptance-Evidence.md)
+-   [13-M9-Environment](07-testing/13-M9-Environment.txt)
+-   [14-M9-Topology](07-testing/14-M9-Topology.md)
+-   [15-M9-Test-Suite](07-testing/15-M9-Test-Suite.log)
+-   [16-M9-Attack-Evidence](07-testing/16-M9-Attack-Evidence.md)
+-   [17-M9-Relay-Blindness](07-testing/17-M9-Relay-Blindness.log)
+-   [18-M9-GUI-Evidence](07-testing/18-M9-GUI-Evidence.md)
+-   [19-M9-Evidence-Manifest](07-testing/19-M9-Evidence-Manifest.md)
+-   [20-M9-Final-Report](07-testing/20-M9-Final-Report.md)
 
 ### Implementation
 
--   [[08-implementation/01-Milestones]]
--   [[08-implementation/02-Task-Template]]
--   [[08-implementation/03-Code-Review-Checklist]]
--   [[08-implementation/04-Antigravity-Workflow]]
--   [[08-implementation/05-Definition-of-Done]]
+-   [01-Milestones](08-implementation/01-Milestones.md)
+-   [02-Task-Template](08-implementation/02-Task-Template.md)
+-   [03-Code-Review-Checklist](08-implementation/03-Code-Review-Checklist.md)
+-   [04-Antigravity-Workflow](08-implementation/04-Antigravity-Workflow.md)
+-   [05-Definition-of-Done](08-implementation/05-Definition-of-Done.md)
 
 ### Technical Documentation (M10)
 
-- [[10-technical-documentation/08-M10.1-Technical-Documentation-Map]]
-- [[10-technical-documentation/09-M10.1-Documentation-Audit]]
+- [08-M10.1-Technical-Documentation-Map](10-technical-documentation/08-M10.1-Technical-Documentation-Map.md)
+- [09-M10.1-Documentation-Audit](10-technical-documentation/09-M10.1-Documentation-Audit.md)
+- [11-Experimental-Methodology-and-Results](10-technical-documentation/11-Experimental-Methodology-and-Results.md)
+- [13-M10.2-Security-Analysis-Audit](10-technical-documentation/13-M10.2-Security-Analysis-Audit.md)
 
 ### Academic
 
--   [[09-academics/01-Abstract-Draft]]
--   [[09-academics/02-Problem-Statement]]
--   [[09-academics/03-Objectives]]
--   [[09-academics/04-Methodology]]
--   [[09-academics/05-Security-Analysis-Structure]]
--   [[09-academics/06-Results-Structure]]
--   [[09-academics/07-Limitations]]
--   [[09-academics/08-Future-Work]]
--   [[09-academics/09-Viva-Question-Bank]]
+-   [01-Abstract-Draft](09-academics/01-Abstract-Draft.md)
+-   [02-Problem-Statement](09-academics/02-Problem-Statement.md)
+-   [03-Objectives](09-academics/03-Objectives.md)
+-   [04-Methodology](09-academics/04-Methodology.md)
+-   [05-Security-Analysis-Structure](09-academics/05-Security-Analysis-Structure.md)
+-   [06-Results-Structure](09-academics/06-Results-Structure.md)
+-   [07-Limitations](09-academics/07-Limitations.md)
+-   [08-Future-Work](09-academics/08-Future-Work.md)
+-   [09-Viva-Question-Bank](09-academics/09-Viva-Question-Bank.md)
+
+### Final Academic Package
+
+- [M10.3-Academic-Report](Summarized%20Presentable%20Structured%20Reports/M10.3-Academic-Report.md)
+- [M10.3-Presentation-Outline](Summarized%20Presentable%20Structured%20Reports/M10.3-Presentation-Outline.md)
+- [M10.3-Viva-QA](Summarized%20Presentable%20Structured%20Reports/M10.3-Viva-QA.md)
+- [M10.3-Evidence-Index](Summarized%20Presentable%20Structured%20Reports/M10.3-Evidence-Index.md)
 
 ## Decision status legend
 
@@ -174,7 +198,7 @@ Never silently convert a proposal into an implementation requirement.
 
 ## Supporting subsystem
 
-- [[02-architecture/07-Observability-and-Security-Telemetry]] —
+- [07-Observability-and-Security-Telemetry](02-architecture/07-Observability-and-Security-Telemetry.md) —
   Observability, security telemetry, Prometheus/Grafana/Loki boundary
   and telemetry security policy.
 
@@ -183,9 +207,11 @@ operate if monitoring is unavailable.
 
 ## Current Implementation Status
 
-**M9 — 🟢 Complete / Closed**
+**M0–M9 — 🟢 Complete / Closed**
 
-**M10.1 — 🟢 Technical Documentation Complete**
+**M10.0–M10.3 — 🟢 Complete / Closed**
+
+**Final System Validation — 🟢 PASS**
 
 The repository has completed the approved Ed25519 identity, X25519 authenticated session establishment, transcript-bound HKDF-SHA-256 key derivation, ChaCha20-Poly1305 application protection, replay control, bounded TCP transport, authenticated multi-peer networking, bounded multi-hop forwarding, security hardening, the ApplicationService boundary and functional Fyne GUI integration.
 
@@ -193,6 +219,8 @@ M8 preserves endpoint E2EE: relays can route ciphertext but cannot decrypt endpo
 
 M8.3 application integration passed repository tests, race validation, vetting and build validation. Final live two-node GUI acceptance passed in both first-initiator directions, including secure-session establishment, bidirectional encrypted messaging and idempotent duplicate Add Peer behavior. Docker regression remains unverified because external dependency resolution is blocked by proxy/DNS restrictions.
 
-**M9.1, M9.2 and M9.3 are complete and approved. M9.4 documentation/evidence assembly and final technical audit are complete; M9 is formally closed. M10.1 technical documentation, M10.2 security analysis and experimental evaluation, and M10.3 academic deliverables are complete. The project is now awaiting one final complete system validation before implementation/documentation freeze.**
+**M9.1, M9.2 and M9.3 are complete and approved. M9.4 documentation/evidence assembly and final technical audit are complete; M9 is formally closed. M10.0 reconnaissance, M10.1 technical documentation, M10.2 security analysis/experimental evaluation, and M10.3 academic deliverables are complete. Final system validation passed for all executable checks in the available environment. GUI final re-execution remains explicitly NOT MEASURED in the headless validation environment; previously accepted M8/M9 manual GUI evidence remains part of the evidence baseline.**
 
-See [[00-governance/00-Project-State]], [[00-governance/07-Architecture-Review-M9]] and [[08-implementation/01-Milestones]] for the current gate.
+The implementation is now in documentation freeze. No further feature development is authorized unless a final submission review identifies a genuine defect or factual inconsistency.
+
+See [00-Project-State](00-governance/00-Project-State.md), [01-Milestones](08-implementation/01-Milestones.md), [11-Experimental-Methodology-and-Results](10-technical-documentation/11-Experimental-Methodology-and-Results.md), and [13-M10.2-Security-Analysis-Audit](10-technical-documentation/13-M10.2-Security-Analysis-Audit.md) for the final gate.
