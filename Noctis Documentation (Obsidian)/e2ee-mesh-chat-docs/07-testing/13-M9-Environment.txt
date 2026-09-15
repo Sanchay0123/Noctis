@@ -1,0 +1,27 @@
+M9 Environment Capture
+=====================
+
+Project Working Directory:
+~/Documents/Noctis/CrytpProject
+
+Git Repository Top Level:
+/home/sanchayjain/Documents/Noctis
+
+Recorded commit:
+a67e634
+
+Go:
+go1.21.13 linux/amd64
+
+Kernel / OS:
+Linux 7.0.0-31-generic
+
+Evidence note:
+The project is located at ~/Documents/Noctis/CrytpProject inside the
+larger Noctis Git repository. The Git top-level path therefore being
+/home/sanchayjain/Documents/Noctis is expected and does not change the
+authoritative project working directory.
+
+This file records the environment information available for the M9
+evidence assembly. Raw command stdout is not reproduced here where it
+was not retained in the supplied documentation package.

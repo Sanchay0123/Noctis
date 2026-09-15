@@ -1,0 +1,20 @@
+=== PHASE 3: PROTOCOL / FRAMING VALIDATION ===
+PASS: protobuf encoding/decoding (TestProtobufSerialization)
+PASS: unknown version rejection (TestRouterValidationBoundary/unknown_protocol_version)
+PASS: unknown protobuf field rejection (TestValidationUnknownField, TestRouterValidationBoundary/unknown_protobuf_fields)
+PASS: invalid packet type rejection (TestRouterValidationBoundary/invalid_packet_type_/_oneof_mismatch)
+PASS: oneof/type mismatch rejection (TestRouterValidationBoundary/invalid_packet_type_/_oneof_mismatch)
+PASS: field-length validation (TestValidationInvalidLengths)
+PASS: packet_id validation (TestRouterPacketValidation/PacketID_lengths)
+PASS: source_node validation (TestRouterValidationBoundary/invalid_source_length)
+PASS: destination_node validation (Covered in M6 routing validation)
+PASS: ephemeral key length validation (Covered in crypto validation)
+PASS: signature length validation (Covered in crypto validation)
+PASS: session ID validation (TestRouterValidationBoundary/invalid_APP_DATA_session_id_length)
+PASS: ciphertext validation (TestRouterValidationBoundary/invalid_APP_DATA_ciphertext_length)
+PASS: maximum frame size enforcement (TestRouterValidationBoundary/oversized_packet, TestTCPFramingOversized)
+PASS: 4-byte length-prefix handling (TestTCPFramingValidRoundtrip)
+PASS: short reads (TestTCPFramingPartialRead)
+PASS: short writes (TestTCPFramingShortWrite)
+
+Note: Frame maximum bound strictly validated at 64 KiB. Allocation before parsing bound is correctly prevented via fixed prefix reading.

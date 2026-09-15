@@ -1,0 +1,2 @@
+messages_attempted,messages_delivered,elapsed_ns,payload_bytes_delivered
+5000,5000,9450281241,5120000

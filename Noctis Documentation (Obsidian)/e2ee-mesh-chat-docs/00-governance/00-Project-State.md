@@ -2,16 +2,17 @@
 
 ## Current Authoritative Status
 
-> **M8.3 — Functional GUI Integration: COMPLETE / VERIFIED / APPROVED**
+> **FINAL ENGINEERING VALIDATION — PASS / DOCUMENTATION FREEZE**
 >
-> M0–M7 remain the approved architectural and implementation baseline. M8 adds the ApplicationService boundary and a Fyne presentation layer while preserving endpoint E2EE and relay-blind routing.
+> M0–M9 are complete and formally closed. M10.0, M10.1, M10.2 and M10.3 are complete. The final system-validation campaign passed all executable validation checks available in the environment, including build, tests, race validation, cryptographic checks, protocol/framing validation, direct E2EE, three-node mesh routing, relay-blindness controls, security attack regression and resource bounds.
 >
-> M8.1, M8.2 and M8.3 acceptance records are the authoritative sources for the M8 implementation status. Historical review documents may describe earlier states; those descriptions are not the current project status.
-
+> GUI execution was **NOT MEASURED** during the final campaign because the validation environment was headless. Previously accepted manual GUI evidence from M8/M9 remains historical evidence and is not represented as a fresh final GUI execution.
+>
+> Historical milestone records may describe earlier states; this page is the current authoritative project status.
 
 ## Current phase
 
-**M8.3 complete — live acceptance passed / post-milestone documentation synchronization**
+**FINAL VALIDATION / DOCUMENTATION FREEZE**
 
 ## Status
 
@@ -25,17 +26,19 @@
 | Networking | M6 bounded mesh routing / multi-hop runtime complete and verified |
 | Observability | Approved supporting design / runtime telemetry hooks; concrete Prometheus exporter remains deferred |
 | Containerization | Required / foundation implemented |
-| GitHub synchronization | Required / not yet verified in this gate |
+| GitHub synchronization | Not part of final local validation; do not infer remote state |
 | Testing strategy | Documented / M3 crypto evidence added |
-| Implementation | M8.3 functional GUI integration implemented and approved above M7 security baseline |
-| Security verification | M8.3 GUI/application boundary and routing plaintext-blindness verified; M6/M7 security evidence retained |
-| UI | M8.1/M8.2/M8.3 implemented / functional integration approved; live two-node GUI acceptance passed |
-| Demo | Not started / M9 pending separate authorization |
-| Final academic material | Draft |
+| Implementation | M8.3 functional GUI integration implemented and approved; M9 validation evidence recorded |
+| Security verification | M9.1 relay-blindness, M9.2 adversarial tests and M9.3 GUI behavior verified; M6/M7 evidence retained |
+| UI | M8.1/M8.2/M8.3 approved; M9.3 live two-node GUI verification passed |
+| Demo | M9.1/M9.2/M9.3 verified; M9.4 evidence assembly and audit complete |
+| Final academic material | Complete / frozen |
 
 ## Current gate
 
-**M8.3 — Functional GUI Integration: COMPLETE / APPROVED**
+**FINAL DOCUMENTATION FREEZE — M10.3 COMPLETE / FINAL VALIDATION PASS**
+
+M9.4 documentation/evidence assembly and final audit are complete. M10.1 synchronized the technical implementation description, M10.2 completed the scoped security analysis and experimental evaluation, and M10.3 completed the final academic deliverables. The final validation campaign passed all executable checks available in the environment.
 
 M0, M0.1, M1.1, M2.1/M2.1-B/M2.1-C, M3.1, M3.2 and M3.3 have been
 completed within their approved scopes.
@@ -62,7 +65,7 @@ that its implementation exists.
 
 ## Next action
 
-M8 documentation synchronization is complete. M9 — Demonstration Environment — is the next milestone and requires a separate architecture/design and implementation authorization.
+Historical snapshot: at the time this record was written, M10.3 was the next authorized documentation gate. The current authoritative status is the final documentation freeze stated at the top of this page.
 
 ## M3 Completion Gate
 
@@ -294,3 +297,79 @@ frame-size validation and duplicate arbitration remain enforced.
 
 M8.3 is therefore formally closed. M9 remains subject to separate
 authorization.
+
+
+## M9 Completion Gate — Current Record
+
+**M9 Architecture — 🟢 APPROVED**
+
+### M9.1 — E2EE / Relay Blindness
+
+**🟢 PASS / CLOSED** — Alice → Bob → Carol demonstrated endpoint E2EE across a
+relay. Bob observed routing metadata and ciphertext; Bob's implemented session
+manager did not contain the Alice–Carol endpoint application session required
+to decrypt the packet. Carol successfully decrypted the message. The production
+routing layer remains plaintext-blind.
+
+### M9.2 — Security Attack Demonstrations
+
+**🟢 PASS / CLOSED** — Wrong PeerID, ciphertext tampering, AEAD replay, invalid
+signature, malformed packet, TTL enforcement, PacketID duplicate suppression
+and pending-handshake resource-bound demonstrations passed. The production
+`MaxPendingHandshakes` bound is 10; the resource test attempted 15 incomplete
+connections and observed simultaneous admission no greater than 10.
+
+### M9.3 — GUI Demonstration
+
+**🟢 PASS / CLOSED** — The Project Overseer manually verified the two-node GUI
+workflow on the desktop: both identities, secure-session establishment,
+bidirectional encrypted messaging, duplicate Add Peer behavior and wrong PeerID
+behavior. The implementation-agent environment was headless; no automated GUI
+interaction is claimed.
+
+### M9.4 — Final Evidence Assembly
+
+**🟢 PASS / CLOSED** — M9 evidence records and documentation synchronization
+have been assembled and audited. The package preserves evidence provenance,
+distinguishes manual GUI verification from automated validation, and records
+Docker/Prometheus limitations without overclaiming. See [[00-governance/07-Architecture-Review-M9]] and [[07-testing/21-M9.4-Overseer-Audit]].
+
+Historical snapshot: M10 was the next milestone at the time of the M9.4 record. M10 is now complete and frozen.
+
+
+## M10 Progress
+
+### M10.0 — Reconnaissance
+
+**🟢 PASS / CLOSED**
+
+The implementation was inventoried without modifying the repository.
+
+### M10.1 — Technical Documentation
+
+**🟢 PASS / CLOSED**
+
+The technical baseline documents the implemented architecture, components, cryptographic construction, protocol, mesh forwarding, application/GUI boundary and reproducibility constraints.
+
+### M10.2 — Security Analysis & Experimental Results
+
+**🟢 PASS / CLOSED**
+
+The approved M9 evidence was mapped to security properties, threat controls and experimental conclusions. Performance numbers were not invented where no controlled measurement campaign existed. Authentication, relay-blindness and resource-bound claims remain explicitly scoped to their evidence.
+
+See [[10-technical-documentation/10-Security-Analysis]], [[10-technical-documentation/11-Experimental-Methodology-and-Results]], and [[10-technical-documentation/12-Security-Evidence-Matrix]].
+
+### M10.3 — Final Academic Deliverables
+
+**🟢 PASS / COMPLETE / FROZEN**
+
+Final academic report material, presentation structure, viva preparation and evidence index are complete. The final documentation package is frozen subject only to correction of factual defects discovered during submission review.
+
+
+## Final Validation Gate
+
+**🟢 PASS — 2026-09-15**
+
+The final validation report records successful execution of the approved crypto, protocol, direct E2EE, mesh, routing, security-regression and resource-bound checks. Historical M10.2 performance evidence remains accepted as prior evidence and is not represented as a fresh final performance campaign.
+
+See [[07-testing/22-M10-Final-System-Validation]] and [[07-testing/23-M10-Final-Freeze-Record]].

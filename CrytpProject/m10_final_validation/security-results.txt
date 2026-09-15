@@ -1,0 +1,49 @@
+=== PHASE 7: SECURITY ATTACK REGRESSION ===
+
+TEST NAME: Wrong PeerID
+SETUP: Authenticating to a peer providing a different NodeID than requested.
+EXPECTED RESULT: Connection rejected during session establishment.
+OBSERVED RESULT: Error returned, session not established (TestAuthenticationWrongPeerID).
+PASS/FAIL: PASS
+
+TEST NAME: Ciphertext tampering
+SETUP: Modifying byte in APP_DATA payload before receiving endpoint decrypts it.
+EXPECTED RESULT: Poly1305 MAC failure; packet dropped.
+OBSERVED RESULT: Ciphertext rejected, decryption error returned (TestE2ESecurityBoundaryTamper).
+PASS/FAIL: PASS
+
+TEST NAME: AEAD replay
+SETUP: Intercepting and re-sending exact same APP_DATA packet.
+EXPECTED RESULT: Sequence number tracked in replay window; duplicate dropped.
+OBSERVED RESULT: Decryption fails with replay-protection error (TestExactM4Replay).
+PASS/FAIL: PASS
+
+TEST NAME: Invalid signature
+SETUP: Handshake packet contains invalid cryptographic signature.
+EXPECTED RESULT: Session initialization aborts.
+OBSERVED RESULT: Handshake verification fails, session aborted (Tested in internal/crypto/session_test.go).
+PASS/FAIL: PASS
+
+TEST NAME: Malformed packet
+SETUP: Sending invalid protobuf structure over transport.
+EXPECTED RESULT: Packet dropped upon semantic validation.
+OBSERVED RESULT: Packet rejected (TestMalformedPacketRejection, TestRouterValidationBoundary).
+PASS/FAIL: PASS
+
+TEST NAME: TTL enforcement
+SETUP: Sending a packet with TTL=0 or 33.
+EXPECTED RESULT: Packet dropped without forwarding.
+OBSERVED RESULT: Packet rejected/dropped (TestRouterTTL).
+PASS/FAIL: PASS
+
+TEST NAME: PacketID duplicate suppression
+SETUP: Sending the same source/PacketID tuple twice.
+EXPECTED RESULT: Second packet dropped by seen-cache.
+OBSERVED RESULT: Duplicate dropped, flooding terminated (TestRouting_DuplicateSuppression).
+PASS/FAIL: PASS
+
+TEST NAME: Pending-handshake resource bound
+SETUP: Creating >10 concurrent pending handshakes.
+EXPECTED RESULT: 11th handshake rejected.
+OBSERVED RESULT: Rejected by pending-handshake semaphore (TestMaxPendingHandshakesExhaustion).
+PASS/FAIL: PASS

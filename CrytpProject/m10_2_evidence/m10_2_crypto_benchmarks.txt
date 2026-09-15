@@ -1,0 +1,28 @@
+goos: linux
+goarch: amd64
+pkg: github.com/sanchayjain/meshchat/tests
+cpu: AMD Ryzen 7 5700G with Radeon Graphics         
+BenchmarkM10_Crypto_X25519
+BenchmarkM10_Crypto_X25519-16                          	   30254	     39511 ns/op
+BenchmarkM10_Crypto_Ed25519_Sign
+BenchmarkM10_Crypto_Ed25519_Sign-16                    	   59019	     20379 ns/op
+BenchmarkM10_Crypto_Ed25519_Verify
+BenchmarkM10_Crypto_Ed25519_Verify-16                  	   25585	     46106 ns/op
+BenchmarkM10_Crypto_ChaCha20Poly1305_Encrypt_64
+BenchmarkM10_Crypto_ChaCha20Poly1305_Encrypt_64-16     	 5111090	       235.3 ns/op
+BenchmarkM10_Crypto_ChaCha20Poly1305_Encrypt_256
+BenchmarkM10_Crypto_ChaCha20Poly1305_Encrypt_256-16    	 3799790	       318.6 ns/op
+BenchmarkM10_Crypto_ChaCha20Poly1305_Encrypt_1K
+BenchmarkM10_Crypto_ChaCha20Poly1305_Encrypt_1K-16     	 1880613	       677.3 ns/op
+BenchmarkM10_Crypto_ChaCha20Poly1305_Encrypt_4K
+BenchmarkM10_Crypto_ChaCha20Poly1305_Encrypt_4K-16     	  597548	      1914 ns/op
+BenchmarkM10_Crypto_ChaCha20Poly1305_Decrypt_64
+BenchmarkM10_Crypto_ChaCha20Poly1305_Decrypt_64-16     	157512316	         7.332 ns/op
+BenchmarkM10_Crypto_ChaCha20Poly1305_Decrypt_256
+BenchmarkM10_Crypto_ChaCha20Poly1305_Decrypt_256-16    	162488053	         7.373 ns/op
+BenchmarkM10_Crypto_ChaCha20Poly1305_Decrypt_1K
+BenchmarkM10_Crypto_ChaCha20Poly1305_Decrypt_1K-16     	162303843	         7.255 ns/op
+BenchmarkM10_Crypto_ChaCha20Poly1305_Decrypt_4K
+BenchmarkM10_Crypto_ChaCha20Poly1305_Decrypt_4K-16     	165780547	         7.241 ns/op
+PASS
+ok  	github.com/sanchayjain/meshchat/tests	18.474s

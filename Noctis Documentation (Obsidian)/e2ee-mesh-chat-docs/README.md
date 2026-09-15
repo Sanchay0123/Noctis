@@ -1,6 +1,6 @@
 # E2EE Mesh Chat --- Documentation Hub
 
-> **Status:** M8.3 complete / verified / approved\
+> **Status:** Final engineering validation PASS; documentation frozen\
 > **Project type:** Academic cybersecurity and networking prototype
 
 ## Purpose
@@ -47,6 +47,7 @@ evidence and tests.
 -   [[00-governance/00-Project-State]]
 -   [[00-governance/01-Vault-Index]]
 -   [[00-governance/03-Architecture-Review-M5]]
+-   [[00-governance/07-Architecture-Review-M9]]
 -   [[00-governance/06-Architecture-Review-M8]]
 -   [[00-governance/05-Architecture-Review-M7]]
 -   [[00-governance/04-Architecture-Review-M6]]
@@ -121,6 +122,14 @@ evidence and tests.
 -   [[07-testing/10-M8.1-Acceptance-Evidence]]
 -   [[07-testing/11-M8.2-Acceptance-Evidence]]
 -   [[07-testing/12-M8.3-Acceptance-Evidence]]
+-   [[07-testing/13-M9-Environment.txt]]
+-   [[07-testing/14-M9-Topology.mmd]]
+-   [[07-testing/15-M9-Test-Suite.log]]
+-   [[07-testing/16-M9-Attack-Evidence]]
+-   [[07-testing/17-M9-Relay-Blindness.log]]
+-   [[07-testing/18-M9-GUI-Evidence]]
+-   [[07-testing/19-M9-Evidence-Manifest]]
+-   [[07-testing/20-M9-Final-Report]]
 
 ### Implementation
 
@@ -129,6 +138,13 @@ evidence and tests.
 -   [[08-implementation/03-Code-Review-Checklist]]
 -   [[08-implementation/04-Antigravity-Workflow]]
 -   [[08-implementation/05-Definition-of-Done]]
+
+### Technical Documentation (M10)
+
+- [[10-technical-documentation/08-M10.1-Technical-Documentation-Map]]
+- [[10-technical-documentation/09-M10.1-Documentation-Audit]]
+- [[10-technical-documentation/11-Experimental-Methodology-and-Results]]
+- [[10-technical-documentation/13-M10.2-Security-Analysis-Audit]]
 
 ### Academic
 
@@ -141,6 +157,13 @@ evidence and tests.
 -   [[09-academics/07-Limitations]]
 -   [[09-academics/08-Future-Work]]
 -   [[09-academics/09-Viva-Question-Bank]]
+
+### Final Academic Package
+
+- [[Summarized Presentable Structured Reports/M10.3-Academic-Report]]
+- [[Summarized Presentable Structured Reports/M10.3-Presentation-Outline]]
+- [[Summarized Presentable Structured Reports/M10.3-Viva-QA]]
+- [[Summarized Presentable Structured Reports/M10.3-Evidence-Index]]
 
 ## Decision status legend
 
@@ -169,7 +192,11 @@ operate if monitoring is unavailable.
 
 ## Current Implementation Status
 
-**M8.3 — Functional GUI Integration: 🟢 Complete / Verified / Approved**
+**M0–M9 — 🟢 Complete / Closed**
+
+**M10.0–M10.3 — 🟢 Complete / Closed**
+
+**Final System Validation — 🟢 PASS**
 
 The repository has completed the approved Ed25519 identity, X25519 authenticated session establishment, transcript-bound HKDF-SHA-256 key derivation, ChaCha20-Poly1305 application protection, replay control, bounded TCP transport, authenticated multi-peer networking, bounded multi-hop forwarding, security hardening, the ApplicationService boundary and functional Fyne GUI integration.
 
@@ -177,6 +204,8 @@ M8 preserves endpoint E2EE: relays can route ciphertext but cannot decrypt endpo
 
 M8.3 application integration passed repository tests, race validation, vetting and build validation. Final live two-node GUI acceptance passed in both first-initiator directions, including secure-session establishment, bidirectional encrypted messaging and idempotent duplicate Add Peer behavior. Docker regression remains unverified because external dependency resolution is blocked by proxy/DNS restrictions.
 
-**M8.3 is complete, live accepted and approved. M9 requires separate authorization.**
+**M9.1, M9.2 and M9.3 are complete and approved. M9.4 documentation/evidence assembly and final technical audit are complete; M9 is formally closed. M10.0 reconnaissance, M10.1 technical documentation, M10.2 security analysis/experimental evaluation, and M10.3 academic deliverables are complete. Final system validation passed for all executable checks in the available environment. GUI final re-execution remains explicitly NOT MEASURED in the headless validation environment; previously accepted M8/M9 manual GUI evidence remains part of the evidence baseline.**
 
-See [[00-governance/00-Project-State]], [[00-governance/06-Architecture-Review-M8]] and [[08-implementation/01-Milestones]] for the current gate.
+The implementation is now in documentation freeze. No further feature development is authorized unless a final submission review identifies a genuine defect or factual inconsistency.
+
+See [[00-governance/00-Project-State]], [[08-implementation/01-Milestones]], [[10-technical-documentation/11-Experimental-Methodology-and-Results]], and [[10-technical-documentation/13-M10.2-Security-Analysis-Audit]] for the final gate.

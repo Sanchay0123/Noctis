@@ -1,0 +1,11 @@
+=== PHASE 8: RESOURCE / DoS CONTROLS ===
+PASS: maximum pending handshakes = 10 (TestMaxPendingHandshakesExhaustion)
+PASS: handshake timeout = 5 seconds (TestHandshakeTimeout)
+PASS: maximum active peers = 50 (TestMaxActivePeersExhaustion)
+PASS: maximum frame = 64 KiB (TestTCPFramingOversized, TestRouterValidationBoundary)
+PASS: bounded forwarding queue (TestPeerQueueAccounting_FailedCountLimit, TestPeerQueueAccounting_FailedByteLimit)
+PASS: bounded duplicate cache (TestPacketCache_Capacity10000)
+PASS: malformed input handling (TestMalformedDataRejection, TestRouterValidationBoundary)
+PASS: no obvious panic path from untrusted network input (Verified during sustained execution in TestSustainedFloodMemoryBounds)
+
+(Simultaneously admitted pending handshakes verified dynamically in TestMaxPendingHandshakesExhaustion not to exceed the production bound of 10).

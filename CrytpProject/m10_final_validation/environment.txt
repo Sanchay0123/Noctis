@@ -1,0 +1,52 @@
+/home/sanchayjain/Documents/Noctis/CrytpProject
+ M meshchat-gui
+ M "../Noctis Documentation (Obsidian)/.obsidian/graph.json"
+ M "../Noctis Documentation (Obsidian)/.obsidian/workspace.json"
+ M "../Noctis Documentation (Obsidian)/Prompts to Antigravity.md"
+ M "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/00-governance/00-Project-State.md"
+ M "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/00-governance/01-Vault-Index.md"
+ M "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/03-security/05-Security-Limitations.md"
+ M "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/08-implementation/01-Milestones.md"
+ M "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/09-academics/05-Security-Analysis-Structure.md"
+ M "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/09-academics/06-Results-Structure.md"
+ M "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/09-academics/08-Future-Work.md"
+ M "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/README.md"
+ M ../README.md
+?? m10_2_evidence/
+?? m10_3_evidence/
+?? m10_final_validation/
+?? tests/m10_benchmark_test.go
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/00-governance/07-Architecture-Review-M9.md"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/07-testing/13-M9-Environment.txt"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/07-testing/14-M9-Topology.mmd"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/07-testing/15-M9-Test-Suite.log"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/07-testing/16-M9-Attack-Evidence.md"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/07-testing/17-M9-Relay-Blindness.log"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/07-testing/18-M9-GUI-Evidence.md"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/07-testing/19-M9-Evidence-Manifest.md"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/07-testing/20-M9-Final-Report.md"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/07-testing/21-M9.4-Overseer-Audit.md"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/10-technical-documentation/"
+?? "../Noctis Documentation (Obsidian)/e2ee-mesh-chat-docs/Summarized Presentable Structured Reports/"
+/home/sanchayjain/Documents/Noctis
+07fa48fb63662345b9381fbd22b7791b8c6097ea
+go version go1.21.13 linux/amd64
+Linux sanchayjain-B550M-DS3H-AC-R2 7.0.0-31-generic #31~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Aug 10 09:38:02 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Address sizes:                           48 bits physical, 48 bits virtual
+Byte Order:                              Little Endian
+CPU(s):                                  16
+On-line CPU(s) list:                     0-15
+Vendor ID:                               AuthenticAMD
+Model name:                              AMD Ryzen 7 5700G with Radeon Graphics
+CPU family:                              25
+Model:                                   80
+Thread(s) per core:                      2
+Core(s) per socket:                      8
+Socket(s):                               1
+Stepping:                                0
+Frequency boost:                         enabled
+               total        used        free      shared  buff/cache   available
+Mem:            14Gi       9.7Gi       544Mi       133Mi       4.2Gi       5.3Gi
+Swap:          4.0Gi       1.6Gi       2.4Gi

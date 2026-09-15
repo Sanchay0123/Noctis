@@ -1,0 +1,13 @@
+=== PHASE 4: DIRECT TWO-NODE E2EE ===
+PASS: identities authenticate correctly (TestEndToEndDirectChannel)
+PASS: secure session is established (TestEndToEndDirectChannel)
+PASS: application messages are delivered (TestEndToEndDirectChannel)
+PASS: messages are encrypted in transit (TestEndToEndDirectChannel)
+PASS: modified ciphertext is rejected (TestE2ESecurityBoundaryTamper)
+PASS: replayed ciphertext is rejected (TestExactM4Replay)
+PASS: wrong expected peer identity is rejected (TestAuthenticationWrongPeerID)
+PASS: duplicate peer connection behavior follows smaller-identity-wins (TestDuplicateArbitration, TestDuplicateArbitrationCases)
+PASS: no plaintext/session-key leakage is introduced (Validated via structural isolation in SessionManager)
+
+GUI EXECUTION = NOT MEASURED
+(Environment lacks desktop GUI capability. The previous manual GUI evidence from M8/M9 remains valid historical evidence but is not re-executed here.)

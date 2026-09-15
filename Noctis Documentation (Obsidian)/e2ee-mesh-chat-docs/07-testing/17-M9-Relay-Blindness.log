@@ -1,0 +1,37 @@
+M9.1 Relay-Blindness Evidence
+============================
+
+Topology:
+Alice -> Bob -> Carol
+
+Bob is the forwarding relay.
+
+Observed APP_DATA evidence includes routing/protocol metadata such as:
+- packet type = APP_DATA
+- source identity
+- destination identity
+- packet ID
+- TTL
+- session ID
+- sequence number
+- ciphertext length
+
+The relay observation contains ciphertext rather than endpoint plaintext.
+Carol successfully receives and decrypts the message at the endpoint.
+
+Session-ownership statement:
+Bob's implemented session manager does not contain the Alice–Carol endpoint
+application session required to decrypt the packet.
+
+This is the precise implementation-level claim supported by the evidence. It is
+not a claim that a compromised relay can never possess endpoint keys by some
+other means.
+
+Architecture boundary:
+- routing forwards opaque APP_DATA
+- endpoint application/session logic performs decryption
+- no production routing-layer DecryptMessage path is used for APP_DATA
+- M9.1 test observation is local test wrapping of the existing message callback,
+  not a production observer API
+
+Result: PASS / CLOSED

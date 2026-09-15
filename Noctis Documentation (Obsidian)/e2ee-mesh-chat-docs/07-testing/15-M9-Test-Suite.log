@@ -1,0 +1,33 @@
+M9 Test Suite Evidence
+======================
+
+The following repository validation commands were reported as passing during
+M9 validation / acceptance:
+
+$ go vet ./...
+PASS
+
+$ go test ./...
+PASS
+
+$ go test -race -p 1 ./...
+PASS
+
+$ go build ./...
+PASS
+
+$ go build -tags gui -o meshchat-gui ./cmd/meshchat-gui
+PASS
+
+Evidence provenance:
+- The PASS results above are synchronized from the approved M9 implementation
+  evidence and current project state available to the Project Overseer.
+- The supplied documentation archive does not contain the complete raw stdout
+  of every command, so this file intentionally records results rather than
+  fabricating command transcripts.
+- The race suite uses -p 1 as previously established to avoid VM CPU starvation
+  causing spurious mesh handshake timeouts.
+
+Docker:
+Docker regression remains NOT VERIFIED because external dependency resolution
+was blocked by proxy/DNS restrictions. No Docker PASS claim is made here.

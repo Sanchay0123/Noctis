@@ -90,3 +90,15 @@ relays. No anonymity or complete metadata hiding is claimed.
 
 Global Sybil attacks, large-scale flood traffic, malicious packet dropping and
 endpoint compromise remain outside the guarantees of the prototype.
+
+
+## M9 Demonstration Limitations
+
+M9 provides evidence for the demonstrated E2EE relay boundary and selected
+adversarial controls, but does not expand the system's security guarantees.
+The relay can still observe routing metadata, traffic timing and packet sizes.
+M9 therefore does not establish anonymity or complete metadata hiding. The GUI
+demonstration was manually verified on the Project Overseer's desktop; automated
+GUI interaction was unavailable in the headless implementation environment.
+Docker regression remains unverified because of external proxy/DNS restrictions.
+A concrete Prometheus exporter remains not implemented.

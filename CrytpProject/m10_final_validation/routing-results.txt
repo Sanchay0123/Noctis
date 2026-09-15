@@ -1,0 +1,22 @@
+=== PHASE 6: ROUTING VALIDATION ===
+PASS: TTL handling (TestRouterTTL)
+PASS: destination-local delivery (TestRouting_LocalDestinationExactlyOnce)
+PASS: forwarding with TTL decrement (TestRouting_TTLTermination)
+PASS: TTL expiration/drop (TestRouting_TTLTermination, TestRouterTTL/TTL_0_local)
+PASS: maximum accepted TTL = 32 (TestRouterTTL/TTL_32_local vs TTL_33_local)
+PASS: default initial TTL = 16 (Verified in protocol design)
+PASS: PacketID duplicate suppression (TestRouting_DuplicateSuppression)
+PASS: bounded seen-cache (TestPacketCache_Capacity10000)
+PASS: queue bounds (TestPeerQueueAccounting_FailedCountLimit, TestPeerQueueAccounting_FailedByteLimit)
+PASS: peer limits (TestMaxActivePeersExhaustion)
+PASS: pending-handshake limits (TestMaxPendingHandshakesExhaustion)
+
+Duplicate suppression uses `(source_node, packet_id)`:
+PASS: (TestPacketCache_DifferentSourceSamePacketID validates that the same PacketID from a different source is NOT suppressed).
+PacketID is locally generated and cryptographic, NOT globally unique.
+
+Cache bounds verified via tests:
+- seen-cache: 10,000 entries / 2 min TTL (TestPacketCache_Capacity10000, TestPacketCache_Expiration)
+- forwarding queue: 1000 packets / 2 MiB (TestPeerQueueAccounting limits)
+- active peers maximum: 50 (TestMaxActivePeersExhaustion)
+- pending handshakes maximum: 10 (TestMaxPendingHandshakesExhaustion)

@@ -64,3 +64,8 @@ Every claim must point to either:
 -   demonstration evidence
 
 Prefer all four for major security claims.
+
+
+## Implemented Analysis Source
+
+Use [[10-technical-documentation/10-Security-Analysis]] as the implementation-grounded security analysis source for the final academic report.

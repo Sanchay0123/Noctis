@@ -29295,6 +29295,3244 @@ Proceed carefully and report actual observed state.
 
 
 ```
+M10.0 — FINAL DOCUMENTATION RECONNAISSANCE
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+M9 IS FORMALLY CLOSED.
+
+We are beginning M10 — Final Technical & Academic Documentation.
+
+You are NOT authorized to modify production code, tests, protocol,
+configuration, documentation, Git history, or project structure.
+
+This is an INFORMATION-GATHERING task only.
+
+============================================================
+OBJECTIVE
+============================================================
+
+Produce a factual implementation inventory that can be used by the
+Project Overseer to construct the final technical and academic
+documentation.
+
+Do not propose new features.
+
+Do not fix anything.
+
+Do not refactor anything.
+
+Do not modify files.
+
+============================================================
+1. REPOSITORY STRUCTURE
+============================================================
+
+Report the relevant project structure.
+
+Identify:
+
+- cmd/
+- internal/
+- protocol/
+- tests
+- Docker/Compose files
+- configuration
+- README
+- scripts
+- generated protocol files
+- GUI entrypoint
+- any other relevant runtime components
+
+Keep the report concise.
+
+============================================================
+2. CRYPTOGRAPHIC IMPLEMENTATION
+============================================================
+
+Identify the actual implementation files and APIs for:
+
+- Ed25519 identity
+- X25519 ephemeral key agreement
+- handshake transcript
+- signatures
+- HKDF
+- session establishment
+- ChaCha20-Poly1305
+- nonce construction
+- AAD
+- sequence numbers
+- replay window
+- key/session lifecycle
+
+For each, report:
+
+- file
+- relevant type/function
+- purpose
+
+Do not describe functionality that is not present.
+
+============================================================
+3. PROTOCOL
+============================================================
+
+Report the actual wire protocol.
+
+Confirm:
+
+- Protobuf schema
+- packet types
+- packet fields
+- field-size constraints
+- protocol version
+- length-prefix framing
+- maximum frame size
+- unknown-field behavior
+- structural validation
+- TTL behavior
+- PacketID behavior
+
+Do not propose protocol changes.
+
+============================================================
+4. NETWORKING
+============================================================
+
+Identify:
+
+- PeerManager
+- Peer lifecycle
+- inbound listener
+- outbound dialer
+- connection handling
+- duplicate arbitration
+- pending-handshake bound
+- active-peer bound
+- handshake timeout
+- forwarding queues
+- duplicate cache
+- TTL handling
+- shutdown behavior
+
+Clearly distinguish:
+
+DIRECT CONNECTION MANAGEMENT
+
+from:
+
+MESH FORWARDING
+
+============================================================
+5. APPLICATION LAYER
+============================================================
+
+Identify:
+
+- ApplicationService
+- session lookup
+- APP_DATA decryption boundary
+- event system
+- message representation
+- conversation state
+- send/receive path
+- GUI integration
+
+Confirm that routing does not decrypt APP_DATA.
+
+============================================================
+6. GUI
+============================================================
+
+Identify:
+
+- GUI framework
+- entrypoint
+- views/components
+- identity display
+- peer entry
+- conversation handling
+- message input
+- status/session events
+- shutdown handling
+
+Record build requirements.
+
+Do NOT claim automated GUI runtime verification.
+
+M9.3 was manually verified by the Project Overseer.
+
+============================================================
+7. SECURITY CONTROLS
+============================================================
+
+Create a factual inventory of implemented controls:
+
+- authentication
+- signatures
+- encryption
+- replay protection
+- nonce safety
+- malformed packet rejection
+- frame-size limits
+- TTL
+- duplicate suppression
+- queue bounds
+- peer bounds
+- handshake bounds
+- timeouts
+- telemetry isolation
+- shutdown/lifecycle controls
+
+============================================================
+8. TEST INVENTORY
+============================================================
+
+List the important test files and what they test.
+
+Organize by:
+
+Crypto
+Transport
+Mesh
+Routing
+Application
+Integration
+Security/adversarial
+
+Include the eight M9.2 demonstrations.
+
+Do not rerun tests unless necessary to identify an existing command.
+
+Do not create tests.
+
+============================================================
+9. CONTAINERIZATION
+============================================================
+
+Report:
+
+- Dockerfiles
+- Compose files
+- services
+- runtime dependencies
+- exposed ports
+- environment variables
+- whether the current implementation has a documented Docker
+  verification limitation
+
+Do not modify Docker configuration.
+
+============================================================
+10. OBSERVABILITY
+============================================================
+
+Report exactly what currently exists.
+
+Distinguish:
+
+IMPLEMENTED:
+- telemetry hooks
+- bounded recorder behavior
+- security event concepts, if present
+
+NOT IMPLEMENTED:
+- active Prometheus exporter
+- metric-vector implementation
+- Grafana deployment, if absent
+
+Do not overstate observability.
+
+============================================================
+11. KNOWN LIMITATIONS
+============================================================
+
+Report limitations that are explicitly supported by the existing
+implementation/documentation.
+
+At minimum distinguish:
+
+- anonymity
+- metadata hiding
+- traffic analysis
+- endpoint compromise
+- post-compromise security
+- guaranteed delivery
+- routing optimality
+- Sybil/global DoS
+- telemetry exporter
+- Docker verification
+
+Do not invent additional limitations.
+
+============================================================
+12. ACADEMIC-READY SYSTEM SUMMARY
+============================================================
+
+At the end provide a concise factual description of the implemented
+system suitable as raw material for the final academic report.
+
+It must explain:
+
+1. what the system is
+2. how identities work
+3. how secure sessions are established
+4. how messages are encrypted
+5. how packets traverse the mesh
+6. why relays do not need endpoint plaintext
+7. what security properties were demonstrated
+8. what remains outside scope
+
+Use precise terminology.
+
+Required terminology:
+
+ChaCha20-Poly1305
+X25519
+Ed25519
+HKDF-SHA-256
+bounded managed flooding
+PacketID duplicate suppression
+TTL
+end-to-end encryption
+
+Avoid:
+
+military-grade
+unhackable
+anonymous
+perfectly secure
+XChaCha20
+AES-GCM
+DHT
+route discovery
+route selection
+
+unless explicitly discussing rejected/out-of-scope alternatives.
+
+============================================================
+STRICT RULES
+============================================================
+
+NO FILE MODIFICATIONS.
+
+NO COMMITS.
+
+NO REFACTORS.
+
+NO FEATURE CHANGES.
+
+NO TEST CHANGES.
+
+NO DOCUMENTATION CHANGES.
+
+NO FABRICATED RESULTS.
+
+NO PERFORMANCE NUMBERS UNLESS THEY ALREADY EXIST.
+
+Return only the reconnaissance report.
+
+End with:
+
+"M10.0 reconnaissance complete; no files modified."
+
+```
 
 
 ```
+M10.2 — CONTROLLED EXPERIMENTAL CAMPAIGN
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+ROLE:
+You are the implementation/test execution agent.
+
+The Project Overseer (Jarvis) will independently analyze and audit
+your results.
+
+IMPORTANT:
+M9 is formally CLOSED.
+
+M10.2 is currently CONDITIONALLY COMPLETE:
+the security-analysis documentation exists, but quantitative
+experimental evidence is still required before M10.2 can be closed.
+
+============================================================
+PRIMARY OBJECTIVE
+============================================================
+
+Run a controlled, reproducible experimental campaign against the
+EXISTING IMPLEMENTATION.
+
+This is an EXPERIMENTAL MEASUREMENT task.
+
+You are NOT authorized to modify production behavior.
+
+The objective is to measure actual system behavior and produce raw
+evidence that can later be analyzed by the Project Overseer.
+
+============================================================
+ABSOLUTE RULES
+============================================================
+
+1. DO NOT modify production source code.
+
+2. DO NOT modify:
+   - internal/crypto/
+   - internal/mesh/
+   - internal/routing/
+   - internal/transport/
+   - internal/app/
+   - cmd/
+
+3. DO NOT modify protocol definitions.
+
+4. DO NOT modify security parameters.
+
+5. DO NOT modify resource limits.
+
+6. DO NOT add benchmark-only hooks to production APIs.
+
+7. DO NOT weaken authentication or encryption.
+
+8. DO NOT disable security controls.
+
+9. DO NOT alter TTL, PacketID, replay protection, queue limits,
+   handshake limits, or cryptographic parameters.
+
+10. DO NOT fabricate measurements.
+
+11. DO NOT estimate values when they can be measured.
+
+12. DO NOT report performance numbers from intuition.
+
+13. Do not treat a successful build as a performance result.
+
+14. Preserve the existing implementation exactly.
+
+15. Test artifacts/scripts may be created ONLY if they are isolated
+    from production code and do not alter runtime behavior.
+
+16. If an experiment cannot be performed reliably, report:
+    NOT MEASURED
+    and explain why.
+
+17. Keep all experimental data reproducible.
+
+============================================================
+EXPERIMENTAL PRINCIPLES
+============================================================
+
+Use the existing implementation.
+
+Prefer Go benchmark/test infrastructure or external test harnesses
+that exercise the real application/network stack.
+
+Do NOT benchmark an isolated fake implementation when the purpose is
+to characterize the actual MeshChat system.
+
+Separate:
+
+A. Cryptographic microbenchmarks
+B. Application/message latency
+C. Multi-hop mesh behavior
+D. Throughput
+E. Resource usage
+
+Do not mix these into one number.
+
+For repeated experiments, use enough repetitions to produce stable
+statistics.
+
+Where appropriate record:
+
+- number of trials
+- minimum
+- maximum
+- mean
+- median
+- standard deviation
+
+If the measurement distribution is highly variable, explicitly
+report that.
+
+============================================================
+EXPERIMENT A — CRYPTOGRAPHIC OPERATIONS
+============================================================
+
+Measure existing cryptographic operations where practical:
+
+A1. X25519 shared-secret computation
+
+A2. Ed25519 signature generation
+
+A3. Ed25519 signature verification
+
+A4. ChaCha20-Poly1305 encryption
+
+A5. ChaCha20-Poly1305 decryption
+
+A6. Session/handshake establishment
+
+Use realistic message/input sizes where applicable.
+
+At minimum test application payload sizes:
+
+- 64 bytes
+- 256 bytes
+- 1 KiB
+- 4 KiB
+
+For each operation report:
+
+- operation
+- input size
+- number of iterations/trials
+- total duration
+- average duration per operation
+- throughput where meaningful
+
+Do not confuse microbenchmark throughput with end-to-end
+network throughput.
+
+============================================================
+EXPERIMENT B — DIRECT MESSAGE LATENCY
+============================================================
+
+Use a real two-node topology:
+
+Alice <-> Bob
+
+Establish the actual authenticated session.
+
+Measure end-to-end application message latency.
+
+Use controlled payload sizes:
+
+- 64 B
+- 256 B
+- 1 KiB
+- 4 KiB
+
+Perform multiple trials per size.
+
+Measure from the sender's application send operation until the
+receiver's application-layer message receipt.
+
+Do NOT measure only TCP write completion.
+
+Report:
+
+- payload size
+- trial count
+- min
+- median
+- mean
+- max
+- standard deviation
+
+Clearly define the timestamp boundaries.
+
+============================================================
+EXPERIMENT C — MULTI-HOP LATENCY
+============================================================
+
+Use the real three-node topology:
+
+Alice -> Bob -> Carol
+
+Bob is a relay.
+
+Do NOT modify routing.
+
+Measure application-level latency from:
+
+Alice application send
+
+to:
+
+Carol application receive.
+
+Use:
+
+- 64 B
+- 256 B
+- 1 KiB
+- 4 KiB
+
+Compare with the corresponding direct Alice -> Bob measurement
+where meaningful.
+
+Do NOT claim that the difference represents "routing overhead"
+unless the experimental design supports that conclusion.
+
+Describe it as observed end-to-end latency difference.
+
+============================================================
+EXPERIMENT D — MESSAGE THROUGHPUT
+============================================================
+
+Measure sustained encrypted application messaging using the
+existing implementation.
+
+Use a controlled payload size such as:
+
+1 KiB
+
+If practical also test:
+
+4 KiB
+
+Measure:
+
+- total messages
+- total bytes
+- elapsed time
+- messages/sec
+- application payload bytes/sec
+
+Ensure the receiver actually receives and processes the messages.
+
+Do not count merely queued/sent packets as delivered throughput.
+
+If the implementation cannot reliably support a meaningful sustained
+throughput experiment, report that limitation rather than modifying
+the implementation.
+
+============================================================
+EXPERIMENT E — MESSAGE SIZE SCALING
+============================================================
+
+Characterize behavior across:
+
+64 B
+256 B
+1 KiB
+4 KiB
+and the largest practical message size supported by the existing
+implementation WITHOUT changing protocol limits.
+
+Record:
+
+- successful delivery
+- latency
+- ciphertext size
+- application payload size
+
+Do not exceed the existing 64 KiB transport frame limit.
+
+Do not alter the 64 KiB limit.
+
+If a larger payload cannot fit, record that as an observed protocol
+constraint.
+
+============================================================
+EXPERIMENT F — MESH FORWARDING
+============================================================
+
+Use:
+
+Alice -> Bob -> Carol
+
+Measure a controlled number of messages.
+
+Record:
+
+- messages originated
+- messages received at Carol
+- duplicate deliveries, if observable from existing test-level
+  behavior
+- packet forwarding behavior
+- TTL behavior where relevant
+
+Do not add production packet observers.
+
+Use test-local instrumentation only if it can be implemented without
+modifying production APIs.
+
+The existing M9.1 test-local callback wrapping approach is the
+preferred pattern if observation is required.
+
+============================================================
+EXPERIMENT G — RESOURCE USAGE
+============================================================
+
+Measure process-level resource usage for a representative workload
+if reliable measurement is possible without modifying production.
+
+At minimum attempt:
+
+- CPU utilization
+- resident memory usage
+
+Use a defined workload.
+
+For example:
+
+- idle node
+- active two-node messaging
+- active three-node relay topology
+
+Clearly state:
+
+- measurement tool
+- sampling interval
+- workload duration
+- process/node measured
+- environment
+
+Do not present a single instantaneous CPU reading as a rigorous
+performance benchmark.
+
+If reliable measurement cannot be collected, mark it NOT MEASURED.
+
+============================================================
+EXPERIMENT H — HANDSHAKE SCALING
+============================================================
+
+Measure legitimate authenticated session establishment where
+possible.
+
+Do NOT attack the handshake resource limit again; that was already
+validated in M9.2.
+
+This experiment is about normal handshake behavior.
+
+Measure:
+
+- successful handshakes
+- handshake completion time
+- repeated session establishment if the implementation permits it
+
+Do not modify key lifecycle or rotation settings.
+
+============================================================
+EXPERIMENT I — CONCURRENCY / RACE VALIDATION
+============================================================
+
+Do NOT create a new concurrency architecture.
+
+Use existing race testing:
+
+go test -race -p 1 ./...
+
+Record the result as a correctness/concurrency validation result,
+not as a performance measurement.
+
+============================================================
+ENVIRONMENT CAPTURE
+============================================================
+
+Before experiments record:
+
+pwd
+git status --short
+git rev-parse --show-toplevel
+git log -1 --oneline
+go version
+uname -a
+lscpu
+free -h
+
+If a command is unavailable, report it.
+
+Also record:
+
+- CPU model
+- core/thread count
+- RAM
+- OS/kernel
+- Go version
+- relevant build tags
+
+Do not expose private information unrelated to reproducibility.
+
+============================================================
+RAW DATA
+============================================================
+
+Create an M10.2 experimental evidence directory in an appropriate
+TEST/EVIDENCE location.
+
+Do not alter the existing Obsidian documentation vault.
+
+That documentation synchronization is handled separately by the
+Project Overseer.
+
+Suggested artifacts:
+
+m10_2_environment.txt
+m10_2_crypto_benchmarks.txt
+m10_2_direct_latency.csv
+m10_2_multihop_latency.csv
+m10_2_throughput.csv
+m10_2_message_size.csv
+m10_2_resource_usage.csv
+m10_2_handshake.csv
+m10_2_experiment_log.txt
+m10_2_results.md
+
+If CSV generation is appropriate, include raw per-trial measurements,
+not just summary statistics.
+
+Example:
+
+trial,payload_bytes,latency_ns
+
+1,64,....
+2,64,....
+3,64,....
+
+Then summary statistics can be derived later.
+
+============================================================
+REPRODUCIBILITY
+============================================================
+
+For every experiment document:
+
+- command used
+- test/benchmark used
+- configuration
+- topology
+- payload size
+- trial count
+- timestamp if useful
+- raw result location
+
+A third party should be able to understand exactly what was measured.
+
+============================================================
+RESULT CLASSIFICATION
+============================================================
+
+Every experiment must receive exactly one of:
+
+PASS — measurement successfully completed
+
+PARTIAL — measurement completed but has limitations
+
+NOT MEASURED — reliable measurement could not be obtained
+
+Do not convert NOT MEASURED into PASS.
+
+============================================================
+ACADEMIC INTERPRETATION
+============================================================
+
+Do NOT write broad conclusions such as:
+
+"the system is highly performant"
+
+unless the measurements justify it.
+
+Instead report factual observations:
+
+"Median application-level latency for 1 KiB payloads was X under
+the tested environment."
+
+Then identify limitations:
+
+"These measurements characterize loopback TCP execution on the
+test machine and should not be interpreted as Internet-wide
+performance."
+
+Do not claim statistical significance unless an appropriate
+statistical analysis was actually performed.
+
+============================================================
+FINAL VERIFICATION
+============================================================
+
+After experiments run:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+
+If the GUI build is available:
+
+go build -tags gui -o meshchat-gui ./cmd/meshchat-gui
+
+Do NOT modify anything if these fail.
+
+Report exact results.
+
+============================================================
+GIT SAFETY CHECK
+============================================================
+
+At the end run:
+
+git status --short
+git diff --stat
+
+Confirm:
+
+- no production source modifications
+- no protocol modifications
+- no security-control modifications
+
+Test/evidence artifacts may be present only if explicitly created
+for this experimental campaign.
+
+Do not commit anything.
+
+============================================================
+FINAL REPORT FORMAT
+============================================================
+
+Return:
+
+# M10.2 Experimental Campaign Report
+
+## 1. Environment
+
+## 2. Experimental Methodology
+
+## 3. Experiment A — Cryptography
+
+## 4. Experiment B — Direct Latency
+
+## 5. Experiment C — Multi-Hop Latency
+
+## 6. Experiment D — Throughput
+
+## 7. Experiment E — Message Size Scaling
+
+## 8. Experiment F — Mesh Forwarding
+
+## 9. Experiment G — Resource Usage
+
+## 10. Experiment H — Handshake Scaling
+
+## 11. Experiment I — Concurrency Validation
+
+## 12. Raw Evidence Files
+
+## 13. Reproducibility
+
+## 14. Limitations
+
+## 15. Test/Build Verification
+
+## 16. Git Integrity
+
+## 17. Results Summary
+
+Use a table:
+
+| Experiment | Status | Evidence |
+|---|---|---|
+| A | PASS/PARTIAL/NOT MEASURED | file |
+| B | ... | ... |
+| C | ... | ... |
+| D | ... | ... |
+| E | ... | ... |
+| F | ... | ... |
+| G | ... | ... |
+| H | ... | ... |
+| I | ... | ... |
+
+============================================================
+FINAL RULE
+============================================================
+
+Do NOT declare M10.2 CLOSED.
+
+Do NOT approve M10.2.
+
+Do NOT modify the Obsidian documentation.
+
+The Project Overseer will analyze the measurements, create the
+academic tables/graphs, synchronize the documentation, and decide
+whether M10.2 can be closed.
+
+End with exactly:
+
+"M10.2 experimental campaign complete; results are ready for Project Overseer audit."
+
+```
+
+
+```
+M10.2 PLAN AUDIT — REQUIRED AMENDMENTS
+
+The M10.2 experimental campaign is conditionally approved.
+
+Apply ALL amendments below before execution.
+
+============================================================
+1. LATENCY DEFINITION
+============================================================
+
+Do NOT mix round-trip and one-way latency.
+
+Primary latency metric:
+
+ONE-WAY APPLICATION-LEVEL DELIVERY LATENCY
+
+Start:
+Alice application-layer send operation
+
+End:
+Bob/Carol application-layer message-received event
+
+Use a shared monotonic timing basis where possible.
+
+Do not use TCP write completion as the receive timestamp.
+
+Do not call this RTT.
+
+If synchronized timestamps cannot be obtained reliably, report the
+experiment limitation rather than substituting an RTT measurement.
+
+============================================================
+2. SESSION WARM-UP
+============================================================
+
+For Experiments B and C:
+
+1. Establish the authenticated session first.
+2. Verify the session is operational.
+3. Send warm-up messages.
+4. Exclude warm-up messages from measurements.
+5. Then perform 100 measured message deliveries.
+
+Do not include handshake establishment in normal message latency.
+
+============================================================
+3. PAYLOAD-SIZE EXPERIMENT
+============================================================
+
+Experiment E must test:
+
+64 B
+256 B
+1 KiB
+4 KiB
+16 KiB
+32 KiB
+48 KiB
+60 KiB
+
+The existing 64 KiB transport frame limit MUST NOT be changed.
+
+Remember that application plaintext size is not equal to final wire
+frame size because of encryption and serialization overhead.
+
+If 60 KiB exceeds the 64 KiB framed packet limit:
+
+- record the failure
+- record why it failed
+- do NOT modify the limit
+- classify the result appropriately
+
+If a payload cannot be delivered because of the existing protocol
+limit, that is an experimental observation, not an implementation
+failure.
+
+============================================================
+4. THROUGHPUT SEMANTICS
+============================================================
+
+Experiment D must measure APPLICATION DELIVERY THROUGHPUT.
+
+Alice sends N messages.
+
+Bob must actually receive and process all N messages.
+
+Record:
+
+- messages attempted
+- messages delivered
+- missing messages
+- duplicates
+- elapsed delivery interval
+- application payload bytes delivered
+- messages/sec
+- payload bytes/sec
+
+If delivery is incomplete, do NOT calculate a misleading successful
+throughput figure.
+
+Clearly distinguish:
+
+APPLICATION DELIVERY THROUGHPUT
+
+from:
+
+TCP/network bandwidth
+
+Do not call queueing/enqueue speed "throughput."
+
+============================================================
+5. CRYPTO BENCHMARK METHODOLOGY
+============================================================
+
+Use testing.B only where appropriate.
+
+Separate setup from measurement.
+
+Do not accidentally include:
+
+- key generation
+- test fixture construction
+- session initialization
+
+inside an operation benchmark unless that operation explicitly
+includes those activities.
+
+Measure separately where useful:
+
+- X25519 shared-secret computation
+- Ed25519 signing
+- Ed25519 verification
+- ChaCha20-Poly1305 encryption
+- ChaCha20-Poly1305 decryption
+- complete session establishment
+
+For AEAD operations use:
+
+64 B
+256 B
+1 KiB
+4 KiB
+
+For each benchmark report the actual benchmark output.
+
+============================================================
+6. RESOURCE USAGE
+============================================================
+
+Do NOT use runtime.MemStats as a CPU-utilization measurement.
+
+For memory, Go runtime statistics may be used as supplementary
+information.
+
+For CPU, prefer an OS-level tool such as:
+
+pidstat
+
+or:
+
+/usr/bin/time -v
+
+or another available standard OS measurement mechanism.
+
+Record the actual tool used.
+
+If reliable CPU utilization cannot be measured:
+
+CPU UTILIZATION = NOT MEASURED
+
+Do not invent a "rough CPU percentage."
+
+For resource experiments define:
+
+- workload
+- duration
+- sampling interval
+- process measured
+- measurement tool
+
+============================================================
+7. EVIDENCE LOCATION
+============================================================
+
+All generated M10.2 evidence must remain inside:
+
+~/Documents/Noctis/CrytpProject
+
+For example:
+
+~/Documents/Noctis/CrytpProject/m10_2_evidence/
+
+DO NOT modify the sibling Obsidian documentation vault.
+
+The Project Overseer will perform documentation synchronization
+separately.
+
+============================================================
+8. RAW DATA
+============================================================
+
+Preserve per-trial raw measurements.
+
+For example:
+
+trial,payload_bytes,latency_ns
+
+Do not only provide averages.
+
+Where an experiment has multiple runs, preserve enough information
+to independently calculate:
+
+- min
+- median
+- mean
+- max
+- standard deviation
+
+Do not discard failed trials.
+
+============================================================
+9. MULTI-HOP EXPERIMENT
+============================================================
+
+For:
+
+Alice -> Bob -> Carol
+
+confirm that:
+
+- Bob is operating as relay
+- Alice and Carol establish/use the endpoint session
+- application payload remains encrypted through Bob
+- Carol receives the message
+
+Do not modify routing.
+
+Do not add production packet observers.
+
+Use existing test-local observation mechanisms only where necessary.
+
+============================================================
+10. EXPERIMENT CLASSIFICATION
+============================================================
+
+Every experiment must be classified:
+
+PASS
+PARTIAL
+NOT MEASURED
+
+A failed payload size is NOT automatically a failed experiment.
+
+Example:
+
+60 KiB:
+NOT DELIVERED because final framed packet exceeded 64 KiB
+
+This should be recorded as an observed protocol boundary.
+
+============================================================
+11. REPRODUCIBILITY
+============================================================
+
+Record:
+
+- hardware
+- OS/kernel
+- Go version
+- CPU
+- RAM
+- git commit
+- git status
+- exact commands
+- topology
+- payload size
+- trial count
+- warm-up count
+- timing boundaries
+- raw evidence filename
+
+============================================================
+12. FINAL TESTS
+============================================================
+
+After experiments:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+
+Also attempt:
+
+go build -tags gui -o meshchat-gui ./cmd/meshchat-gui
+
+Do not modify code if any command fails.
+
+============================================================
+13. SOURCE INTEGRITY
+============================================================
+
+At the end:
+
+git status --short
+git diff --stat
+
+Confirm explicitly that no production source was modified.
+
+No commits.
+
+============================================================
+14. NO DOCUMENTATION MODIFICATION
+============================================================
+
+Do not create or modify Obsidian documentation.
+
+Do not modify:
+
+../Noctis Documentation (Obsidian)/
+
+The Project Overseer will consume your evidence and perform the
+documentation work.
+
+============================================================
+FINAL REPORT
+============================================================
+
+Return:
+
+# M10.2 Experimental Campaign Report
+
+## 1. Environment
+## 2. Methodology
+## 3. Experiment A — Cryptography
+## 4. Experiment B — Direct Latency
+## 5. Experiment C — Multi-Hop Latency
+## 6. Experiment D — Delivery Throughput
+## 7. Experiment E — Message Size Scaling
+## 8. Experiment F — Mesh Forwarding
+## 9. Experiment G — Resource Usage
+## 10. Experiment H — Handshake Scaling
+## 11. Experiment I — Concurrency Validation
+## 12. Raw Evidence
+## 13. Reproducibility
+## 14. Limitations
+## 15. Test/Build Verification
+## 16. Git Integrity
+## 17. Results Summary
+
+For every experiment explicitly state:
+
+- Status
+- Evidence file
+- Method
+- Number of trials
+- Important observations
+- Limitations
+
+Do NOT declare M10.2 CLOSED.
+
+Do NOT modify documentation.
+
+Do NOT modify production code.
+
+End exactly with:
+
+"M10.2 experimental campaign complete; results are ready for Project Overseer audit."
+
+```
+
+
+```
+You are operating under the Project Overseer's M10.2 audit.
+
+Project Director: Sanchay Jain
+Project Overseer: Jarvis
+Implementation/Test Agent: Antigravity
+
+Project path MUST remain:
+~/Documents/Noctis/CrytpProject
+
+Do NOT rename, move, copy, recreate, or clone the project.
+Do NOT modify production source code, protocol schemas, configuration, cryptographic design, networking behavior, or security controls.
+Do NOT modify the Obsidian documentation vault.
+Do NOT commit anything.
+
+The Project Overseer has audited your submitted:
+"M10.2 Experimental Campaign Report"
+
+Current decision:
+M10.2 = CONDITIONAL PASS / AUDIT HOLD
+
+You must now perform a correction/evidence pass. Do not simply rewrite the report based on assumptions. Inspect the actual generated evidence files and benchmark implementation.
+
+==================================================
+1. EXPERIMENT A — CRYPTOGRAPHY
+==================================================
+
+Inspect:
+m10_2_evidence/m10_2_crypto_benchmarks.txt
+tests/m10_benchmark_test.go
+
+The reported ~7 ns/op AEAD decryption result is NOT a valid decryption-performance measurement because repeated sequential inputs triggered the production replay-protection window.
+
+You must either:
+
+A) Correctly rerun the decryption benchmark using fresh valid sequence numbers/nonces/ciphertexts for each iteration while preserving the production implementation unchanged,
+
+OR
+
+B) If rerunning is impractical, explicitly classify AEAD decryption performance as NOT MEASURED/PARTIAL.
+
+Do NOT modify production replay protection merely to make the benchmark pass.
+
+The final evidence/report must never present ~7 ns/op as AEAD decryption performance.
+
+Crypto benchmark setup must be separated from the measured operation where practical.
+
+==================================================
+2. EXPERIMENT B — DIRECT LATENCY
+==================================================
+
+Inspect the actual CSV:
+
+m10_2_evidence/m10_2_direct_latency.csv
+
+Verify that this represents:
+
+ONE-WAY APPLICATION-LEVEL DELIVERY LATENCY
+
+not RTT, TCP latency, or queueing latency.
+
+Session establishment and warm-up messages must be excluded from measured trials.
+
+For each payload size, verify the available 100 measured trials.
+
+Calculate/report, where raw data supports it:
+
+- count
+- minimum
+- mean
+- median
+- p95
+- p99
+- maximum
+
+Do not invent missing statistics.
+
+==================================================
+3. EXPERIMENT C — MULTI-HOP LATENCY
+==================================================
+
+Inspect:
+
+m10_2_evidence/m10_2_multihop_latency.csv
+
+Verify the Alice -> Bob -> Carol topology and that the measurement represents ONE-WAY APPLICATION-LEVEL DELIVERY LATENCY.
+
+Calculate/report the same statistics as B where the raw data supports them.
+
+Do not claim relay blindness solely from latency data.
+
+Relay confidentiality/blindness was independently established in M9.1.
+
+==================================================
+4. EXPERIMENT D — DELIVERY THROUGHPUT
+==================================================
+
+Inspect:
+
+m10_2_evidence/m10_2_throughput.csv
+
+Verify:
+
+- N attempted
+- N delivered
+- missing messages
+- duplicates
+- elapsed time
+- payload size
+
+The result must be described as:
+
+APPLICATION DELIVERY THROUGHPUT
+
+not raw TCP/network throughput.
+
+For the reported result:
+
+5000 messages
+1024-byte payload
+9.54 seconds
+
+verify the calculation:
+
+5000 / 9.54 ≈ 524 messages/sec
+
+and:
+
+5,120,000 / 9.54 ≈ 536,688 bytes/sec
+
+Do not confuse message throughput with byte throughput.
+
+==================================================
+5. EXPERIMENT E — MESSAGE SIZE SCALING
+==================================================
+
+Inspect:
+
+m10_2_evidence/m10_2_message_size.csv
+
+Verify all tested sizes:
+
+64B
+256B
+1KiB
+4KiB
+16KiB
+32KiB
+48KiB
+60KiB
+
+Verify 100 trials per size if the evidence contains them.
+
+60KiB successfully traversing the current 64KiB framed-packet constraint is valid.
+
+Do NOT claim that 60KiB is the absolute maximum application payload.
+
+Describe it as:
+
+"60KiB was the largest tested application payload and successfully traversed the current implementation."
+
+==================================================
+6. EXPERIMENT F — MESH FORWARDING
+==================================================
+
+Inspect the evidence and benchmark implementation.
+
+Classify exactly what M10.2 demonstrates.
+
+M10.2 can establish forwarding behavior through the Alice -> Bob -> Carol campaign.
+
+However, relay blindness must not be claimed as independently proven by the latency CSV.
+
+Use the already accepted M9.1 evidence for the security claim:
+
+- Bob relays APP_DATA metadata/ciphertext.
+- Bob does not possess the Alice-Carol endpoint session required for application decryption.
+- M9.1 used test-local observation only.
+- No production observer API was introduced.
+
+Clearly distinguish forwarding evidence from relay-blindness evidence.
+
+==================================================
+7. EXPERIMENT G — RESOURCE USAGE
+==================================================
+
+Inspect:
+
+m10_2_evidence/m10_2_resource_usage.txt
+
+The previous report's wording is insufficient.
+
+Extract actual measurements if present, including where available:
+
+- elapsed time
+- user CPU time
+- system CPU time
+- maximum RSS
+- other useful /usr/bin/time -v values
+
+Do NOT claim CPU utilization from runtime.MemStats.
+
+If CPU utilization cannot be meaningfully established from the available evidence, classify CPU utilization as:
+
+NOT MEASURED
+
+Memory/RSS may still be reported if actually measured.
+
+Do not invent values.
+
+The experiment must be classified PASS only if the evidence genuinely supports the stated resource metric. Otherwise use PARTIAL or NOT MEASURED.
+
+==================================================
+8. EXPERIMENT H — HANDSHAKE
+==================================================
+
+Inspect:
+
+m10_2_evidence/m10_2_handshake.csv
+tests/m10_benchmark_test.go
+
+The existing experiment performs 50 sequential full handshakes.
+
+That demonstrates:
+
+HANDSHAKE REPEATABILITY
+
+It does NOT by itself establish concurrent scaling.
+
+Therefore either:
+
+A) Rename/reframe the experiment as "Handshake Repeatability",
+
+OR
+
+B) Perform a genuine scaling experiment using increasing concurrency/parallel handshake load without modifying production behavior.
+
+Do not claim scaling merely from 50 sequential trials.
+
+The existing M9.2 pending-handshake bound remains authoritative:
+
+MaxPendingHandshakes = 10.
+
+==================================================
+9. EXPERIMENT I — CONCURRENCY
+==================================================
+
+Verify:
+
+go test -race -p 1 ./...
+
+Do not modify source merely for benchmark purposes.
+
+Report the actual result.
+
+==================================================
+10. RAW EVIDENCE PRESERVATION
+==================================================
+
+All evidence must remain inside:
+
+~/Documents/Noctis/CrytpProject/m10_2_evidence/
+
+Preserve per-trial raw data.
+
+Do not delete useful raw evidence.
+
+Do not replace raw evidence with fabricated summaries.
+
+If you regenerate an artifact, clearly indicate that it was regenerated.
+
+==================================================
+11. TEST/BUILD VERIFICATION
+==================================================
+
+Run and record:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+go build -tags gui -o meshchat-gui ./cmd/meshchat-gui
+
+If any command fails, report the exact failure.
+
+Do not conceal failures.
+
+==================================================
+12. GIT INTEGRITY
+==================================================
+
+Before and after the correction pass inspect:
+
+git status --short
+git diff --stat
+git diff -- tests/m10_benchmark_test.go
+
+Production modifications must remain zero.
+
+Allowed modifications:
+
+- tests/m10_benchmark_test.go
+- m10_2_evidence/*
+
+No other files.
+
+No commits.
+
+==================================================
+13. ENVIRONMENT CAPTURE
+==================================================
+
+Record:
+
+pwd
+git status --short
+git rev-parse --show-toplevel
+git rev-parse HEAD
+go version
+uname -a
+lscpu
+free -h
+
+Do not expose secrets or private keys.
+
+==================================================
+14. FINAL REPORT
+==================================================
+
+Update/create the M10.2 campaign report inside:
+
+m10_2_evidence/
+
+The corrected report must include:
+
+1. Environment
+2. Methodology
+3. Experiment A — Cryptography
+4. Experiment B — Direct Latency
+5. Experiment C — Multi-Hop Latency
+6. Experiment D — Application Delivery Throughput
+7. Experiment E — Message Size Scaling
+8. Experiment F — Mesh Forwarding
+9. Experiment G — Resource Usage
+10. Experiment H — Handshake Repeatability/Scaling
+11. Experiment I — Concurrency Validation
+12. Raw Evidence
+13. Reproducibility
+14. Limitations
+15. Test/Build Verification
+16. Git Integrity
+17. Corrected Results Summary
+18. Explicit unresolved/NOT MEASURED items
+
+Use these classifications honestly:
+
+PASS
+PARTIAL
+NOT MEASURED
+
+Do not force every experiment into PASS.
+
+Most importantly, distinguish:
+
+- observed implementation behavior
+- measured performance
+- previously established M9 security evidence
+- unsupported claims
+
+Do not use marketing/security exaggerations such as "military-grade", "unhackable", "anonymous", or "perfectly secure".
+
+==================================================
+15. FINAL RESPONSE
+==================================================
+
+Your final response to the Project Overseer must contain:
+
+A. Exact files inspected/created/modified
+B. Corrected experiment classifications
+C. Key quantitative results actually supported by raw evidence
+D. Any experiment that remains PARTIAL or NOT MEASURED
+E. Test/build results
+F. Git integrity result
+G. Confirmation that production source/protocol/security configuration was not modified
+H. Confirmation that Obsidian was not modified
+
+Do NOT claim M10.2 is closed.
+
+End your final response EXACTLY with:
+
+M10.2 correction pass complete; corrected evidence is ready for Project Overseer final audit.
+
+```
+
+
+
+```
+M10.3 — ACADEMIC REPORT + PRESENTATION MATERIAL
+PROJECT OVERSEER DIRECTIVE
+
+Project:
+Design and Implementation of an End-to-End Encrypted Messaging System over a Decentralized Mesh Network
+
+Project Director / Final Authority:
+Sanchay Jain
+
+Project Overseer / Security Architect / Technical Lead:
+Jarvis
+
+Implementation/Test Agent:
+Antigravity
+
+============================================================
+1. MILESTONE STATUS
+============================================================
+
+M0   Architecture               CLOSED
+M1   Skeleton                   CLOSED
+M2   Identity                   CLOSED
+M3   Session/Crypto             CLOSED
+M4   Secure Messaging           CLOSED
+M5   Direct Networking          CLOSED
+M6   Mesh Routing               CLOSED
+M7   Security Hardening         CLOSED
+M8   Observability/UI           CLOSED
+M9   Security Validation        CLOSED
+M10.1 Technical Documentation   CLOSED
+M10.2 Experimental Campaign     CLOSED
+
+NEXT:
+M10.3 Academic Report +
+      Presentation Material
+
+Do NOT reopen previous milestones unless a factual inconsistency is discovered.
+
+M10.3 is an academic documentation/communication milestone.
+
+============================================================
+2. HARD CONSTRAINTS
+============================================================
+
+Project directory MUST remain:
+
+~/Documents/Noctis/CrytpProject
+
+Do NOT:
+
+- rename the project
+- move the project
+- clone/copy/recreate the project
+- modify production source code
+- modify protocol schemas
+- modify cryptographic primitives/design
+- modify routing behavior
+- modify security controls
+- modify configuration
+- modify Docker architecture
+- modify the Obsidian vault
+
+Antigravity MUST NOT modify Obsidian documentation.
+
+No commits.
+
+No fabricated results.
+
+No invented benchmarks.
+
+No invented security properties.
+
+No claims such as:
+
+- military-grade
+- unhackable
+- anonymous
+- perfectly secure
+- guaranteed delivery
+- perfect forward secrecy
+- perfect anonymity
+- complete metadata protection
+
+Use only claims actually supported by the implementation and accepted milestone evidence.
+
+============================================================
+3. SOURCE OF TRUTH
+============================================================
+
+Build M10.3 from the already completed project evidence.
+
+Primary sources:
+
+M10.1 technical documentation
+M10.2 corrected experimental campaign
+M9 security-validation evidence
+M8 implementation/UI evidence
+M7 security-hardening evidence
+Frozen protocol specification
+Frozen cryptographic design
+Existing project README/documentation
+Existing test evidence
+
+Do NOT silently replace project-specific terminology with generic textbook terminology.
+
+Where a claim is not supported by project evidence, explicitly mark it as:
+
+"Not established by this project."
+
+============================================================
+4. FIRST TASK — RECONNAISSANCE
+============================================================
+
+Before creating the academic material, inspect the existing documentation and evidence.
+
+Identify:
+
+- existing M10.1 documents
+- M10.2 corrected report
+- M10.2 raw evidence
+- M9 final documentation
+- M9 security evidence
+- architecture documentation
+- protocol documentation
+- cryptographic documentation
+- testing documentation
+- GUI documentation
+- reproducibility documentation
+- README/project description
+- any existing report/thesis material
+- any existing presentation/PPT material
+
+Do NOT modify them during reconnaissance.
+
+Produce a short internal inventory before drafting.
+
+============================================================
+5. M10.3 ACADEMIC REPORT
+============================================================
+
+Create a submission-ready Markdown academic report inside:
+
+~/Documents/Noctis/CrytpProject/m10_3_evidence/
+
+Suggested filename:
+
+M10.3-Academic-Report.md
+
+The report must use an academic structure appropriate for a B.Tech CSE project.
+
+Required structure:
+
+1. Title Page Information
+2. Abstract
+3. Keywords
+4. Introduction
+5. Problem Statement
+6. Motivation
+7. Objectives
+8. Scope
+9. Threat Model
+10. System Requirements
+11. Related Concepts / Background
+12. System Architecture
+13. Network Architecture
+14. Cryptographic Architecture
+15. Protocol Design
+16. Mesh Routing and Forwarding
+17. Application and GUI Architecture
+18. Implementation
+19. Security Design
+20. Security Validation
+21. Experimental Methodology
+22. Experimental Results
+23. Results and Discussion
+24. Performance Analysis
+25. Security Analysis
+26. Limitations
+27. Future Work
+28. Conclusion
+29. Reproducibility
+30. References
+31. Appendix / Evidence Index
+
+Do not pad sections with generic material simply to make the report longer.
+
+============================================================
+6. ABSTRACT
+============================================================
+
+Write a concise academic abstract covering:
+
+- problem
+- proposed system
+- decentralized mesh networking
+- end-to-end encryption
+- cryptographic identity
+- authenticated session establishment
+- multi-hop forwarding
+- implementation
+- security validation
+- experimental evaluation
+- major measured findings
+- limitations
+
+Do not claim properties that are explicitly outside project scope.
+
+============================================================
+7. THREAT MODEL
+============================================================
+
+Use the accepted threat model.
+
+Discuss threats including:
+
+- traffic observation
+- ciphertext capture
+- message modification
+- replay
+- malformed packets
+- malicious/intermediate mesh nodes
+- impersonation
+- unauthorized message-content access
+- packet dropping
+- resource exhaustion / bounded-resource concerns
+
+Clearly separate:
+
+PROTECTED / MITIGATED
+
+from:
+
+NOT FULLY SOLVED / OUT OF SCOPE
+
+The report must explicitly preserve these non-goals:
+
+- perfect anonymity
+- global traffic-analysis resistance
+- complete metadata hiding
+- production-grade filesystem/security hardening
+- deniability
+- compromised endpoint protection
+- complete routing-attack resistance
+- guaranteed delivery
+- operational deployment readiness
+
+Do not turn mitigations into absolute guarantees.
+
+============================================================
+8. CRYPTOGRAPHIC DESIGN
+============================================================
+
+Document the frozen design exactly.
+
+Identity:
+Ed25519
+
+Key agreement:
+X25519
+
+AEAD:
+ChaCha20-Poly1305
+
+KDF:
+HKDF-SHA-256
+
+Password KDF where applicable:
+Argon2id
+
+Hashing:
+SHA-256 / SHA-3 where applicable
+
+Handshake transcript:
+
+DOMAIN = "MeshChat-Handshake-v1"
+PROTOCOL_VERSION = 0x01
+
+T_INIT =
+DOMAIN || u8(PROTOCOL_VERSION) ||
+ID_A || ID_B || E_A || ZERO32
+
+T_RESP =
+DOMAIN || u8(PROTOCOL_VERSION) ||
+ID_A || ID_B || E_A || E_B
+
+Alice signs T_INIT.
+Bob signs T_RESP.
+
+Session ID:
+SHA256(T_RESP)
+
+HKDF:
+
+salt = SHA256(T_RESP)
+
+K_A_to_B =
+HKDF-Expand(
+  PRK,
+  "MeshChat-v1|session|initiator->responder",
+  32
+)
+
+K_B_to_A =
+HKDF-Expand(
+  PRK,
+  "MeshChat-v1|session|responder->initiator",
+  32
+)
+
+Do not alter the protocol.
+
+For AEAD document:
+
+- ChaCha20-Poly1305
+- sequence-based nonce
+- AAD
+- direction marker
+- replay window
+- sequence exhaustion behavior
+- session rotation
+
+Explain TOFU accurately:
+
+TOFU protects against certain identity changes after initial trust, but first contact is not authenticated against an active MITM.
+
+Do not call TOFU equivalent to a PKI.
+
+============================================================
+9. PROTOCOL DOCUMENTATION
+============================================================
+
+Document the existing protobuf packet structure and semantic validation.
+
+Explain:
+
+- packet version
+- packet type
+- packet ID
+- TTL
+- source/destination
+- INIT
+- RESP
+- APP_DATA
+- session ID
+- sequence number
+- ciphertext
+
+Explicitly state that:
+
+Protobuf itself does not provide the project's semantic/security validation.
+
+Runtime validation enforces:
+
+- field sizes
+- packet version
+- packet type
+- oneof consistency
+- unknown-field policy
+- ciphertext limits
+- source identity constraints
+- session binding
+- framing limits
+
+TCP framing:
+
+4-byte length prefix
+
+Maximum frame:
+
+64 KiB
+
+============================================================
+10. MESH NETWORKING
+============================================================
+
+Explain:
+
+- managed flooding
+- bounded TTL
+- PacketID duplicate suppression
+- bounded seen-cache
+- forwarding queue limits
+- peer limits
+- pending-handshake limits
+- intermediate relay behavior
+
+IMPORTANT:
+
+Do NOT describe M6 as a DHT or route-selection algorithm.
+
+It is:
+
+BOUNDED MANAGED FLOODING
+
+Duplicate-cache identity:
+
+(source_node, packet_id)
+
+Do NOT call PacketID globally unique.
+
+Explain the crucial architectural property:
+
+The routing layer forwards opaque APP_DATA.
+
+The endpoint application/crypto layer performs decryption.
+
+Intermediate relays do not require the endpoint session keys.
+
+============================================================
+11. SECURITY VALIDATION
+============================================================
+
+Use the accepted M9.2 and M9.3 evidence.
+
+Include the security demonstrations:
+
+1. Wrong PeerID
+2. Ciphertext tampering
+3. AEAD replay
+4. Invalid signature
+5. Malformed packet
+6. TTL enforcement
+7. PacketID duplicate suppression
+8. Pending-handshake bound
+
+Also include the GUI validation evidence:
+
+- Alice identity
+- Bob identity
+- secure session
+- Alice → Bob
+- Bob → Alice
+- duplicate connection
+- wrong PeerID
+
+Do not fabricate screenshots.
+
+============================================================
+12. EXPERIMENTAL RESULTS
+============================================================
+
+Use ONLY the corrected M10.2 results.
+
+Clearly label these as:
+
+LOCAL LOOPBACK EXPERIMENTAL RESULTS
+
+Do not represent them as Internet/network deployment performance.
+
+Include:
+
+### Direct latency
+
+64B:
+Min 0.008 ms
+Mean 0.063 ms
+Median 0.049 ms
+P95 0.119 ms
+P99 0.438 ms
+Max 0.479 ms
+
+256B:
+Min 0.013 ms
+Mean 0.068 ms
+Median 0.066 ms
+P95 0.129 ms
+P99 0.268 ms
+Max 0.351 ms
+
+1KiB:
+Min 0.015 ms
+Mean 0.063 ms
+Median 0.052 ms
+P95 0.145 ms
+P99 0.220 ms
+Max 0.224 ms
+
+4KiB:
+Min 0.019 ms
+Mean 0.073 ms
+Median 0.069 ms
+P95 0.143 ms
+P99 0.222 ms
+Max 0.335 ms
+
+### Multi-hop latency
+
+64B:
+Mean 0.073 ms
+P99 0.223 ms
+
+256B:
+Mean 0.092 ms
+P99 0.286 ms
+
+1KiB:
+Mean 0.122 ms
+P99 0.408 ms
+
+4KiB:
+Mean 0.132 ms
+P99 0.382 ms
+
+Preserve the other statistics from the corrected M10.2 report if included.
+
+### Throughput
+
+5,000 messages
+1KiB each
+5,120,000 payload bytes
+0 loss
+0 duplicates
+2.696 seconds
+
+≈1,854 messages/sec
+≈1,899,109 bytes/sec
+≈1.81 MiB/sec
+
+Call this:
+
+APPLICATION DELIVERY THROUGHPUT
+
+### Message size
+
+64B through 60KiB tested.
+
+60KiB:
+100/100 successful.
+
+Do not claim 60KiB is the absolute maximum payload.
+
+### Cryptography
+
+X25519:
+~39.6 µs/op
+
+Ed25519 signing:
+~20.3 µs/op
+
+Ed25519 verification:
+~46.0 µs/op
+
+ChaCha20-Poly1305 encryption:
+~1.9 µs/op at 4KiB in the reported benchmark.
+
+AEAD decryption:
+NOT MEASURED.
+
+Do not include the discarded ~7 ns/op result.
+
+### Resource usage
+
+Maximum RSS:
+99,004 KB ≈ 96 MiB
+
+User CPU time:
+3.08 s
+
+System CPU time:
+1.03 s
+
+CPU utilization percentage:
+NOT MEASURED.
+
+### Handshake
+
+50 sequential full handshakes.
+
+Classify as:
+
+HANDSHAKE REPEATABILITY
+
+Concurrent handshake scaling:
+NOT MEASURED.
+
+M9.2 MaxPendingHandshakes:
+10.
+
+============================================================
+13. RESULTS AND DISCUSSION
+============================================================
+
+Discuss what the results actually demonstrate.
+
+Possible supported conclusions:
+
+- secure application messaging operates correctly on loopback
+- multi-hop forwarding introduces measurable additional latency in the tested topology
+- 1KiB local direct mean latency was 0.063 ms
+- 1KiB local multi-hop mean latency was 0.122 ms
+- 5,000/5,000 application messages were delivered in the throughput experiment
+- 60KiB application payloads successfully traversed the tested implementation
+- cryptographic operations are computationally measurable at microsecond scale
+- bounded resource and concurrency controls operate alongside the messaging stack
+
+Do not generalize local measurements to WAN/mobile/Internet conditions.
+
+============================================================
+14. LIMITATIONS
+============================================================
+
+Explicitly discuss:
+
+- loopback-only experimental environment
+- no realistic WAN latency
+- no packet-loss campaign
+- no adversarial DoS performance campaign
+- no global traffic-analysis resistance
+- no perfect anonymity
+- no full metadata hiding
+- no compromised-endpoint protection
+- no guaranteed delivery
+- no concurrent handshake scaling measurement
+- no AEAD decryption performance measurement
+- no CPU utilization percentage measurement
+- no operational deployment-readiness claim
+
+============================================================
+15. FUTURE WORK
+============================================================
+
+Only include future work consistent with the project's limitations.
+
+Potential categories:
+
+- WAN/network impairment testing
+- packet-loss and jitter experiments
+- larger mesh topologies
+- route optimization research
+- stronger routing-attack resistance
+- richer metadata protection
+- post-compromise security
+- more advanced identity infrastructure
+- persistent/offline messaging improvements
+- broader performance profiling
+- concurrent handshake scaling studies
+
+Clearly mark these as FUTURE WORK, not current capabilities.
+
+============================================================
+16. ARCHITECTURE DIAGRAMS
+============================================================
+
+Create Mermaid diagrams where useful.
+
+At minimum include:
+
+A. Overall architecture
+
+User/UI
+  ↓
+ApplicationService
+  ↓
+Session/Crypto
+  ↓
+Routing
+  ↓
+Transport
+  ↓
+Mesh Peers
+
+B. Three-node mesh:
+
+Alice → Bob → Carol
+
+Show:
+
+Alice application plaintext
+↓
+Alice endpoint encryption
+↓
+opaque APP_DATA
+↓
+Bob relay
+↓
+opaque APP_DATA
+↓
+Carol endpoint decryption
+↓
+Carol application plaintext
+
+Explicitly show that Bob is an intermediate relay.
+
+C. Handshake sequence:
+
+Alice
+Bob
+
+Identity → ephemeral key → signatures → transcript → session keys
+
+Do not expose private keys.
+
+============================================================
+17. REFERENCES
+============================================================
+
+Do not invent citations.
+
+Use references already present in the project's documentation where available.
+
+For cryptographic primitives/protocol standards, cite the actual standards/documentation already used by the project if present.
+
+If an external reference is missing, mark it for Project Overseer review rather than inventing bibliographic information.
+
+============================================================
+18. APPENDIX / EVIDENCE INDEX
+============================================================
+
+Create an evidence table mapping claims to project evidence.
+
+Example:
+
+Claim | Evidence | Milestone
+Secure session establishment | M3 evidence | M3
+Encrypted messaging | M4 evidence | M4
+Multi-hop forwarding | M6/M10.2 | M6/M10.2
+Relay blindness | M9.1 | M9.1
+Security attack demonstrations | M9.2 | M9.2
+GUI validation | M9.3 | M9.3
+Performance measurements | M10.2 | M10.2
+
+Do not invent evidence identifiers.
+
+============================================================
+19. PRESENTATION MATERIAL
+============================================================
+
+Create:
+
+~/Documents/Noctis/CrytpProject/m10_3_evidence/M10.3-Presentation-Outline.md
+
+Prepare a 12–15 slide academic presentation.
+
+Recommended structure:
+
+1. Title
+2. Problem Statement
+3. Motivation & Objectives
+4. Threat Model
+5. Proposed Architecture
+6. Decentralized Mesh Network
+7. Cryptographic Design
+8. Secure Session Establishment
+9. Protocol & Packet Flow
+10. Security Controls
+11. Security Validation / Attack Demonstrations
+12. Experimental Methodology
+13. Experimental Results
+14. Limitations & Future Work
+15. Conclusion
+
+For every slide provide:
+
+- slide title
+- concise bullet points
+- recommended diagram/screenshot
+- speaker notes
+- important numbers where applicable
+
+Do not overcrowd slides.
+
+============================================================
+20. VIVA MATERIAL
+============================================================
+
+Create:
+
+M10.3-Viva-QA.md
+
+Include approximately 25–35 likely viva questions with concise technically correct answers.
+
+Cover:
+
+- Why decentralized mesh?
+- Why E2EE?
+- Why Ed25519?
+- Why X25519?
+- Why ChaCha20-Poly1305?
+- Why HKDF?
+- What does TOFU protect against?
+- What does TOFU NOT protect against?
+- What is forward secrecy in this design?
+- What does the relay see?
+- Why can't Bob decrypt Alice-Carol traffic?
+- What is managed flooding?
+- Why TTL?
+- Why PacketID duplicate suppression?
+- Why is the cache key `(source_node, packet_id)`?
+- Why bounded queues?
+- Why 64KiB frame limit?
+- How is replay prevented?
+- What happens if ciphertext is modified?
+- What happens if a signature is invalid?
+- What are the system's non-goals?
+- Why aren't local latency results Internet performance?
+- Why is AEAD decryption performance NOT MEASURED?
+- Why isn't concurrent handshake scaling claimed?
+- What did M9 validate?
+- What did M10.2 validate?
+- What are the major limitations?
+- What would you improve next?
+
+Answers must match the actual implementation.
+
+============================================================
+21. CONSISTENCY AUDIT
+============================================================
+
+Before finishing, perform a terminology consistency check.
+
+Search the new M10.3 documents for potentially incorrect claims:
+
+- "globally unique PacketID"
+- "DHT"
+- "route selection"
+- "XChaCha20"
+- "perfect anonymity"
+- "military-grade"
+- "unhackable"
+- "anonymous"
+- "Bob decrypts relay traffic"
+- "Bob has Alice-Carol session"
+- "CPU utilization" where it is not measured
+- "AEAD decryption benchmark" referring to the discarded 7ns result
+- "concurrent handshake scaling" as an achieved result
+- "60KiB maximum payload"
+
+Correct any such claims in M10.3.
+
+============================================================
+22. OUTPUT REQUIREMENTS
+============================================================
+
+All new M10.3 artifacts must be placed under:
+
+~/Documents/Noctis/CrytpProject/m10_3_evidence/
+
+At minimum:
+
+M10.3-Academic-Report.md
+M10.3-Presentation-Outline.md
+M10.3-Viva-QA.md
+M10.3-Evidence-Index.md
+
+Do not modify Obsidian.
+
+Do not modify production code.
+
+Do not commit.
+
+============================================================
+23. FINAL VALIDATION
+============================================================
+
+After creating the documents:
+
+- verify files exist
+- verify Markdown structure
+- verify Mermaid blocks render syntactically
+- check internal relative links
+- search for forbidden/incorrect terminology
+- ensure no fabricated measurements
+- ensure all M10.2 limitations are preserved
+- ensure M9 security evidence is correctly distinguished from M10.2 performance evidence
+
+Do not rerun production tests unless required for documentation validation.
+
+============================================================
+24. FINAL RESPONSE
+============================================================
+
+Report:
+
+A. Files created
+B. Existing files consulted
+C. Sections completed
+D. Evidence sources used
+E. Any unresolved reference/documentation gaps
+F. Confirmation that production code was untouched
+G. Confirmation that Obsidian was untouched
+H. Confirmation that no commits were created
+
+Do NOT declare M10.3 closed.
+
+End EXACTLY with:
+
+M10.3 academic documentation draft complete; materials are ready for Project Overseer audit.
+
+```
+
+
+```
+PROJECT DIRECTOR / PROJECT OVERSEER FINAL VALIDATION ORDER
+
+Project:
+Design and Implementation of an End-to-End Encrypted Messaging System over a Decentralized Mesh Network
+
+Authoritative repository:
+~/Documents/Noctis/CrytpProject
+
+IMPORTANT ROLE RULES
+- Project Director = final authority.
+- Project Overseer = security architect / technical lead / final auditor.
+- You = implementation and test agent.
+- Do NOT modify the Obsidian documentation/vault.
+- Do NOT move, rename, clone, recreate, or copy the project.
+- Do NOT change source code, protocol definitions, cryptographic behavior, security controls, dependencies, or architecture unless a genuine defect is discovered that prevents an approved acceptance criterion from passing.
+- Do NOT make commits.
+- Do NOT "fix" tests merely to make them pass.
+- If a genuine defect is found, STOP and report it before changing production code.
+
+THIS IS A FINAL VALIDATION / RELEASE-CANDIDATE TEST.
+The purpose is to validate the existing implementation against the already-approved architecture and documented security claims.
+
+============================================================
+PHASE 0 — ENVIRONMENT AND REPOSITORY BASELINE
+============================================================
+
+Run from:
+
+~/Documents/Noctis/CrytpProject
+
+Capture:
+
+pwd
+git status --short
+git rev-parse --show-toplevel
+git rev-parse HEAD
+go version
+uname -a
+lscpu
+free -h
+
+Confirm that the repository is the expected existing project.
+
+Record whether there are pre-existing changes.
+
+Do not modify them.
+
+============================================================
+PHASE 1 — STATIC / BUILD VALIDATION
+============================================================
+
+Run:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+
+If the GUI build is available in the existing environment, also build:
+
+go build -tags gui ./cmd/meshchat-gui
+
+Do not change dependencies to make these commands pass.
+
+Record:
+- PASS/FAIL
+- exact command
+- important output
+- failure details if any
+
+============================================================
+PHASE 2 — CRYPTOGRAPHIC VALIDATION
+============================================================
+
+Validate the already-approved cryptographic design.
+
+Check tests for:
+
+1. Ed25519 identity generation
+2. Ed25519 signing
+3. Ed25519 verification
+4. X25519 ephemeral key generation
+5. X25519 shared-secret agreement
+6. transcript construction
+7. handshake signatures
+8. SHA-256 session ID
+9. HKDF-SHA-256 derivation
+10. directional session keys
+11. ChaCha20-Poly1305 encryption/decryption
+12. authentication failure on modified ciphertext
+13. replay protection
+14. sequence exhaustion behavior if covered by existing tests
+
+Use the frozen handshake definition:
+
+DOMAIN = "MeshChat-Handshake-v1"
+PROTOCOL_VERSION = 0x01
+
+T_INIT =
+DOMAIN || u8(PROTOCOL_VERSION) ||
+ID_A || ID_B || E_A || ZERO32
+
+T_RESP =
+DOMAIN || u8(PROTOCOL_VERSION) ||
+ID_A || ID_B || E_A || E_B
+
+Session ID:
+
+SHA256(T_RESP)
+
+HKDF:
+
+salt = SHA256(T_RESP)
+
+PRK = HKDF-Extract(
+    salt,
+    shared_secret
+)
+
+K_A_to_B =
+HKDF-Expand(
+    PRK,
+    "MeshChat-v1|session|initiator->responder",
+    32
+)
+
+K_B_to_A =
+HKDF-Expand(
+    PRK,
+    "MeshChat-v1|session|responder->initiator",
+    32
+)
+
+Verify the existing known-answer vectors where already implemented:
+
+Session ID:
+45422eb08ee361b5cbf1c81650f7d97c371f23a95698b89dc775349779a3d5ee
+
+PRK:
+6f14e26edb1b552f2ee4864e8f8d91354fdee2e7f3a610b620be0ac0fd4df79b
+
+K_A_to_B:
+750b44a95d57c29b536ca57990a2e2e19e5265bf64262e8aebd970785c76e6f1
+
+K_B_to_A:
+d016ddec6d26a85c38a3fdedb084d018ded4b75ad6d04b579035c75848e17e91
+
+Do not introduce new cryptographic APIs merely for this validation.
+
+============================================================
+PHASE 3 — PROTOCOL / FRAMING VALIDATION
+============================================================
+
+Validate the existing protocol implementation.
+
+Check:
+
+- protobuf encoding/decoding
+- unknown version rejection
+- unknown protobuf field rejection
+- invalid packet type rejection
+- oneof/type mismatch rejection
+- field-length validation
+- packet_id validation
+- source_node validation
+- destination_node validation
+- ephemeral key length validation
+- signature length validation
+- session ID validation
+- ciphertext validation
+- maximum frame size enforcement
+- 4-byte length-prefix handling
+- short reads
+- short writes
+
+The approved maximum frame is 64 KiB.
+
+Never allocate based on an untrusted length before enforcing the bound.
+
+Record malformed-packet tests explicitly.
+
+============================================================
+PHASE 4 — DIRECT TWO-NODE E2EE
+============================================================
+
+Start two actual nodes using the existing implementation.
+
+Validate:
+
+Alice → Bob
+
+and
+
+Bob → Alice
+
+Requirements:
+
+- identities authenticate correctly
+- secure session is established
+- application messages are delivered
+- messages are encrypted in transit
+- modified ciphertext is rejected
+- replayed ciphertext is rejected
+- wrong expected peer identity is rejected
+- duplicate peer connection behavior follows the existing smaller-identity-wins rule
+- no plaintext/session-key leakage is introduced
+
+If GUI execution is available, also perform the existing GUI workflow.
+
+Do not fabricate GUI evidence.
+
+If the environment cannot interact with the GUI, report GUI execution as NOT MEASURED rather than inventing success.
+
+============================================================
+PHASE 5 — THREE-NODE MESH
+============================================================
+
+Construct the approved security topology:
+
+Alice → Bob → Carol
+
+Bob is the relay.
+
+Validate:
+
+1. Alice establishes the endpoint session with Carol through Bob.
+2. Alice sends application data to Carol.
+3. Carol receives and decrypts the message.
+4. Bob forwards the packet.
+5. Bob does NOT receive Alice–Carol endpoint session keys.
+6. Bob's SessionManager does not contain the endpoint application session required to decrypt Alice→Carol traffic.
+7. Bob sees only routing metadata and ciphertext for the relayed APP_DATA packet.
+8. Bob cannot decrypt the Alice→Carol application payload.
+
+Use only test-local observation/instrumentation if necessary.
+
+Do NOT add a production observer API.
+
+Do NOT expose plaintext, private keys, or session keys through telemetry.
+
+Important wording:
+Do not claim that Bob is "mathematically incapable" of decryption.
+Demonstrate the implementation-level property:
+Bob does not possess the endpoint session state/keys required to decrypt Alice→Carol application data.
+
+============================================================
+PHASE 6 — ROUTING VALIDATION
+============================================================
+
+Validate the approved bounded managed-flooding design.
+
+Test:
+
+- TTL handling
+- destination-local delivery
+- forwarding with TTL decrement
+- TTL expiration/drop
+- maximum accepted TTL = 32
+- default initial TTL = 16
+- PacketID duplicate suppression
+- bounded seen-cache
+- queue bounds
+- peer limits
+- pending-handshake limits
+
+Duplicate suppression MUST use:
+
+(source_node, packet_id)
+
+Do NOT describe PacketID as globally unique.
+
+PacketID is generated using cryptographic randomness.
+
+Validate the current cache bounds:
+
+- seen-cache approximately 10,000 entries / 2 minutes
+- forwarding queue approximately 1000 packets or 2 MiB
+- active peers maximum 50
+- pending handshakes maximum 10
+
+============================================================
+PHASE 7 — SECURITY ATTACK REGRESSION
+============================================================
+
+Re-run the previously approved security scenarios:
+
+1. Wrong PeerID
+2. Ciphertext tampering
+3. AEAD replay
+4. Invalid signature
+5. Malformed packet
+6. TTL enforcement
+7. PacketID duplicate suppression
+8. Pending-handshake resource bound
+
+For every scenario record:
+
+TEST NAME
+SETUP
+EXPECTED RESULT
+OBSERVED RESULT
+PASS/FAIL
+
+Do not silently skip a scenario.
+
+If an environment limitation prevents execution, mark:
+
+NOT MEASURED
+
+rather than PASS.
+
+============================================================
+PHASE 8 — RESOURCE / DoS CONTROLS
+============================================================
+
+Validate the existing bounds without changing production constants.
+
+Specifically:
+
+- maximum pending handshakes = 10
+- handshake timeout = 5 seconds
+- maximum active peers = 50
+- maximum frame = 64 KiB
+- bounded forwarding queue
+- bounded duplicate cache
+- malformed input handling
+- no obvious panic path from untrusted network input
+
+For pending handshakes, use the production value of 10.
+
+If performing the concurrent test, attempt more than 10 incomplete connections and verify that simultaneously admitted pending handshakes do not exceed the production bound.
+
+============================================================
+PHASE 9 — CONCURRENCY / RACE VALIDATION
+============================================================
+
+Run the existing race suite:
+
+go test -race -p 1 ./...
+
+Pay particular attention to:
+
+- PeerManager
+- session state
+- send/receive sequence state
+- replay state
+- router/cache
+- shutdown
+- connection lifecycle
+- GUI state if covered
+
+Do not suppress race detector failures.
+
+============================================================
+PHASE 10 — PERFORMANCE REGRESSION CHECK
+============================================================
+
+Do NOT invent new performance claims.
+
+The approved M10.2 measurements already exist.
+
+If the existing M10.2 evidence is available locally, verify that it is still present and internally consistent.
+
+Previously recorded measurements include:
+
+X25519:
+~39.6 µs/op
+
+Ed25519 signing:
+~20.3 µs/op
+
+Ed25519 verification:
+~46.0 µs/op
+
+ChaCha20-Poly1305 encryption:
+~1.9 µs/op at 4 KiB
+
+Direct latency:
+1 KiB mean ~0.063 ms
+1 KiB P99 ~0.220 ms
+
+4 KiB mean ~0.073 ms
+4 KiB P99 ~0.222 ms
+
+Multi-hop:
+1 KiB mean ~0.122 ms
+1 KiB P99 ~0.408 ms
+
+4 KiB mean ~0.132 ms
+4 KiB P99 ~0.382 ms
+
+Throughput:
+5000 attempted
+5000 delivered
+0 loss
+0 duplicates
+2.696 s
+~1854 messages/s
+~1.81 MiB/s
+
+Largest tested payload:
+60 KiB
+100/100 successful
+
+Resource observation:
+max RSS ~96 MiB
+
+Previously NOT MEASURED:
+- AEAD decryption isolated benchmark
+- CPU utilization percentage
+- concurrent handshake scaling
+- WAN performance
+
+Do not upgrade NOT MEASURED results into PASS.
+
+============================================================
+PHASE 11 — GUI REGRESSION
+============================================================
+
+If a desktop GUI environment is available:
+
+Run the existing Fyne GUI.
+
+Validate:
+
+1. Alice identity displayed
+2. Bob identity displayed
+3. Add Peer
+4. Secure session establishment
+5. Alice → Bob message
+6. Bob → Alice message
+7. duplicate Add Peer
+8. conversation preservation
+9. wrong PeerID rejection
+
+Use the actual application.
+
+Do not fabricate screenshots.
+
+If GUI cannot be executed in this environment, explicitly report:
+
+GUI EXECUTION = NOT MEASURED
+
+The previous manual GUI evidence remains historical evidence and must not be falsely represented as a fresh test.
+
+============================================================
+PHASE 12 — FINAL SECURITY CLAIM AUDIT
+============================================================
+
+Inspect the implementation and current repository documentation for any accidental claims of:
+
+- anonymity
+- perfect anonymity
+- metadata hiding
+- unhackability
+- military-grade security
+- guaranteed delivery
+- perfect forward secrecy without assumptions
+- post-compromise security
+- global traffic-analysis resistance
+- complete Sybil resistance
+- complete DoS resistance
+- routing optimality
+- global PacketID uniqueness
+
+These are NOT approved claims.
+
+If such claims exist in generated reports, report them.
+
+Do not modify Obsidian.
+
+============================================================
+PHASE 13 — EVIDENCE COLLECTION
+============================================================
+
+Create/update ONLY a final evidence directory inside:
+
+~/Documents/Noctis/CrytpProject/m10_final_validation/
+
+Do not modify source code.
+
+Collect:
+
+- environment.txt
+- build-test-results.txt
+- crypto-results.txt
+- protocol-results.txt
+- direct-messaging-results.txt
+- multihop-results.txt
+- routing-results.txt
+- security-results.txt
+- resource-results.txt
+- gui-results.txt
+- final-summary.md
+
+Preserve raw command output where practical.
+
+Do not overwrite previous M9/M10.2 evidence.
+
+Do not fabricate screenshots.
+
+============================================================
+PHASE 14 — FINAL REPORT
+============================================================
+
+Produce:
+
+~/Documents/Noctis/CrytpProject/m10_final_validation/FINAL-SYSTEM-VALIDATION-REPORT.md
+
+Use this classification:
+
+PASS
+PARTIAL
+FAIL
+NOT MEASURED
+
+The report MUST clearly separate:
+
+A. Tests actually executed during this final validation
+B. Previously accepted M9 evidence
+C. Previously accepted M10.2 experimental evidence
+D. Tests that could not be executed
+E. Any discovered defect
+F. Final recommendation
+
+Do not merge historical evidence with fresh execution results.
+
+============================================================
+STOP CONDITIONS
+============================================================
+
+STOP immediately and report if:
+
+- cryptographic behavior differs from the approved protocol
+- relay can decrypt endpoint application data
+- authentication can be bypassed
+- replay protection fails
+- ciphertext tampering succeeds
+- malformed network input causes an uncontrolled panic
+- frame-size limits can be bypassed
+- pending-handshake limit is ineffective
+- race detector finds a new race
+- a regression breaks an already-approved milestone
+
+Do NOT patch the problem silently.
+
+If a genuine defect is found, report:
+
+DEFECT
+SEVERITY
+AFFECTED COMPONENT
+REPRODUCTION
+EXPECTED
+OBSERVED
+SECURITY IMPACT
+RECOMMENDED REMEDIATION
+
+Then wait for Project Overseer authorization before modifying anything.
+
+============================================================
+FINAL ACCEPTANCE CRITERIA
+============================================================
+
+The system can be recommended for final freeze only if:
+
+- build passes
+- vet passes
+- tests pass
+- race tests pass
+- cryptographic tests pass
+- direct E2EE passes
+- three-node Alice→Bob→Carol passes
+- relay blindness passes
+- replay/tampering/signature tests pass
+- malformed packet tests pass
+- TTL and duplicate suppression pass
+- resource limits pass
+- no new security regression is discovered
+- GUI is either freshly validated or clearly marked NOT MEASURED
+- evidence is preserved
+- no unsupported security claims are introduced
+
+Do NOT call the project "production-ready."
+Do NOT call it "unhackable."
+Do NOT claim capabilities that were not tested.
+
+At the end, provide:
+
+1. Executive result
+2. Complete test matrix
+3. Failures/partial results
+4. Evidence paths
+5. Repository state
+6. Any discrepancies
+7. Final freeze recommendation
+
+The final report MUST end exactly with:
+
+M10 final system validation complete; results are ready for Project Overseer audit.
+
+```
+
+
+
+```
+Verify ~/Documents/Noctis/CrytpProject/m10_final_validation/
+Verify every claimed evidence artifact exists.
+Print filenames, sizes, and SHA-256 hashes.
+Verify git status has no production-source modifications.
+Do not modify source code.
+Do not modify Obsidian.
+Do not rerun the whole test suite.
+Do not create or alter evidence.
+Report only the evidence inventory and repository state.
+```
+

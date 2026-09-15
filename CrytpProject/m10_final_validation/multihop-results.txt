@@ -1,0 +1,11 @@
+=== PHASE 5: THREE-NODE MESH ===
+PASS: Alice establishes endpoint session with Carol through Bob (TestRouting_TwoHop, TestM10_MultiHopLatency)
+PASS: Alice sends application data to Carol (TestRouting_TwoHop)
+PASS: Carol receives and decrypts the message (TestRouting_TwoHop)
+PASS: Bob forwards the packet (TestRouting_TwoHop)
+PASS: Bob does NOT receive Alice-Carol endpoint session keys (TestRelayCannotDecryptEndpointSession)
+PASS: Bob's SessionManager does not contain the endpoint application session required to decrypt Alice-Carol traffic (TestRelayCannotDecryptEndpointSession)
+PASS: Bob sees only routing metadata and ciphertext for the relayed APP_DATA packet (TestRelayCiphertextBoundary)
+PASS: Bob cannot decrypt the Alice-Carol application payload (TestRelayCannotDecryptEndpointSession)
+
+Implementation-level property demonstrated: Bob physically does not possess the endpoint session state/keys required to decrypt Alice->Carol application data.

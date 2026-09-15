@@ -28,4 +28,4 @@ Possible future work includes route discovery and route selection, stronger cong
 
 ## M8 Follow-on Work
 
-Potential follow-on work includes a clean-environment GUI runtime demonstration, stronger GUI-level automated testing, persistent encrypted message storage if later authorized, richer peer discovery, concrete bounded telemetry exporters, and the reproducible demonstration environment planned for M9. These are not part of the approved M8 implementation.
+Potential follow-on work includes clean-environment deployment reproduction, stronger GUI-level automated testing, persistent encrypted message storage if later authorized, richer peer discovery, concrete bounded telemetry exporters, and stronger routing/metadata protections. These remain future work and are not represented as implemented.

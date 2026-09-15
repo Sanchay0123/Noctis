@@ -5,7 +5,8 @@
 > M2–M7 provide implementation and security evidence for identity, authenticated
 > session/message protection, direct networking and bounded multi-hop routing.
 > M8 provides application-boundary and functional GUI integration evidence.
-> Final demonstration and deployment results remain pending M9.
+> M9 provides relay-blind E2EE, adversarial security-demonstration and live GUI evidence.
+> Clean-environment deployment reproduction remains incomplete.
 
 ## Functional results
 
@@ -25,8 +26,8 @@
   Integrity              Tampering               Verified   M4 tamper evidence
   Replay resistance      Replay injection        Verified*  M3 session evidence
   Authentication         Invalid identity       Verified   M3/M4 evidence
-  MITM resistance        Key substitution    TBD          TBD
-  Routing containment    TTL/loop             TBD          TBD
+  MITM resistance        Key substitution    TBD          M3/M9 authentication evidence; full active-MITM evaluation not performed
+  Routing containment    TTL/loop             Verified     M6/M9 TTL, PacketID and relay evidence
 
 ## Performance results
 
@@ -120,3 +121,40 @@ M8 is therefore a verified application-integration milestone with explicit envir
 - [[07-testing/10-M8.1-Acceptance-Evidence]]
 - [[07-testing/11-M8.2-Acceptance-Evidence]]
 - [[07-testing/12-M8.3-Acceptance-Evidence]]
+
+
+## M9 Results
+
+M9 adds final demonstration evidence for the implemented security boundaries.
+M9.1 demonstrates Alice → Bob → Carol end-to-end encrypted messaging across a
+relay while Bob observes routing metadata and ciphertext rather than the endpoint
+plaintext. M9.2 passes eight adversarial demonstrations covering identity
+mismatch, ciphertext tampering, replay, signature failure, malformed packets,
+TTL, PacketID duplicate suppression and the production pending-handshake bound.
+M9.3 records successful manual desktop verification of the two-node GUI workflow
+in both messaging directions, including secure-session establishment, duplicate
+connection behavior and wrong-PeerID behavior.
+
+M9 does not constitute clean-environment deployment reproduction; Docker
+regression remains unverified because of external proxy/DNS restrictions.
+
+## M9 Reference
+
+- [[00-governance/07-Architecture-Review-M9]]
+- [[07-testing/19-M9-Evidence-Manifest]]
+- [[07-testing/20-M9-Final-Report]]
+
+
+## M10 Technical Documentation Baseline
+
+M10.1 establishes a synchronized technical description of the implemented
+system. It consolidates the component boundaries, cryptographic construction,
+wire format, mesh forwarding model, application/GUI boundary, and
+reproducibility constraints without introducing new implementation claims.
+
+Reference: [[10-technical-documentation/08-M10.1-Technical-Documentation-Map]]
+
+
+## Implemented Results Source
+
+Use [[10-technical-documentation/11-Experimental-Methodology-and-Results]] and [[10-technical-documentation/12-Security-Evidence-Matrix]] as the evidence-grounded results sources. Do not add numerical performance results without a controlled measurement campaign.
