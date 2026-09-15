@@ -1,510 +1,226 @@
-# E2EE Mesh Chat
+# E2EE Mesh Chat --- Documentation Hub
 
-### End-to-End Encrypted Messaging over a Decentralized Mesh Network
+> **Status:** Final engineering validation PASS; documentation frozen\
+> **Project type:** Academic cybersecurity and networking prototype
 
-> **Status:** 🟢 Final Engineering Validation — PASS  
-> **Project State:** Documentation Frozen  
-> **Project Type:** Academic Cybersecurity & Networking Prototype
-
-E2EE Mesh Chat is a secure messaging system designed to provide **end-to-end encrypted communication over a decentralized, multi-hop mesh network**.
-
-The project combines applied cryptography, computer networking, distributed systems, peer-to-peer communication, secure software engineering, and security testing into a single experimentally validated system.
-
-The complete engineering and academic documentation is maintained as an **Obsidian knowledge base** inside this repository.
-
----
-
-## 🔐 Core Security Model
-
-The system is designed around the principle:
-
-> **Security > Correctness > Simplicity > Performance > Features**
-
-Endpoint application data remains encrypted throughout the mesh.
-
-Intermediate relay nodes can participate in routing and forwarding but **cannot decrypt endpoint application messages**.
-
-The system uses:
-
-|Security Component|Technology|
-|---|---|
-|Node Identity|Ed25519|
-|Key Agreement|X25519|
-|Key Derivation|HKDF-SHA-256|
-|Message Encryption|ChaCha20-Poly1305|
-|Replay Protection|Sequence / replay controls|
-|Transport|Bounded TCP|
-|Routing|Authenticated multi-peer mesh|
-|Forwarding|Bounded multi-hop forwarding|
-|Application Boundary|ApplicationService|
-|Observability|Out-of-band telemetry|
-
----
-
-## 🏗️ System Architecture
-
-```mermaid
-flowchart TB
-    A[User / GUI] --> B[ApplicationService]
-
-    B --> C[Session Management]
-    B --> D[Message Processing]
-
-    C --> E[Ed25519 Identity]
-    C --> F[X25519 Key Agreement]
-    C --> G[HKDF-SHA-256]
-
-    D --> H[ChaCha20-Poly1305]
-
-    H --> I[Mesh Networking]
-
-    I --> J[Peer Discovery]
-    I --> K[Routing]
-    I --> L[Forwarding]
-    I --> M[TTL / Loop Prevention]
-
-    M --> N[Relay Node]
-    N --> O[Relay Node]
-    O --> P[Destination Node]
-
-    P --> Q[Authenticated Session]
-    Q --> R[Decryption]
-    R --> S[Destination Application]
 
-    I -.-> T[Observability]
-    T -.-> U[Security Telemetry]
-```
+## GitHub / Obsidian compatibility
 
-### Security Boundary
+This repository is maintained as an Obsidian vault but is also readable directly on GitHub.
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                         ENDPOINT A                            │
-│                                                              │
-│  Application                                                 │
-│       │                                                      │
-│       ▼                                                      │
-│  ApplicationService                                          │
-│       │                                                      │
-│       ▼                                                      │
-│  Session / Cryptography                                      │
-│       │                                                      │
-│       ▼                                                      │
-│  Encrypted Application Data                                  │
-└──────────────────────────┬───────────────────────────────────┘
-                           │
-                           │ Ciphertext
-                           ▼
-                 ┌───────────────────┐
-                 │    Relay Node     │
-                 │                   │
-                 │ Routing           │
-                 │ Forwarding        │
-                 │ TTL / Bounds      │
-                 └─────────┬─────────┘
-                           │
-                           │ Ciphertext
-                           ▼
-                 ┌───────────────────┐
-                 │    Relay Node     │
-                 └─────────┬─────────┘
-                           │
-                           │ Ciphertext
-                           ▼
-┌──────────────────────────┴───────────────────────────────────┐
-│                         ENDPOINT B                            │
-│                                                              │
-│  Receive → Authenticate → Decrypt → Application              │
-└──────────────────────────────────────────────────────────────┘
-```
+- Internal Obsidian ```[[wikilinks]]``` have been converted to standard relative Markdown links for GitHub.
+- Inline Mermaid diagrams are kept as `mermaid` code blocks so GitHub can render them.
+- The standalone M9 topology source (`.mmd`) is preserved, with a GitHub-renderable [`M9 Topology`](07-testing/14-M9-Topology.md) page added alongside it.
+- The `.obsidian` configuration is retained for vault behavior, while machine/session-specific workspace state is ignored.
+- No external image attachments were found in the vault, so there are no missing image assets to migrate.
 
-**Important:** relay infrastructure is not trusted with endpoint plaintext.
+### Suggested entry points
 
----
+If you are reading this repository without Obsidian, start with this README and then follow the linked architecture, security, protocol, cryptography, testing, and academic documentation sections below.
 
-# 📚 Documentation
+## Purpose
 
-The complete documentation lives under:
+This vault documents the design of an **End-to-End Encrypted Messaging
+System over a Decentralized Mesh Network**.
 
-**`Noctis Documentation (Obsidian)/e2ee-mesh-chat/`**
+The project combines:
 
-### Start Here
+-   cybersecurity
+-   applied cryptography
+-   computer networking
+-   distributed systems
+-   peer-to-peer communication
+-   secure software engineering
 
-- Project Overview
-    
-- Requirements
-    
-- Threat Model
-    
-- System Architecture
-    
-- Architecture Decisions
-    
-- Protocol Overview
-    
-- Cryptographic Architecture
-    
-- Mesh Architecture
-    
-- Testing Strategy
-    
-- Milestones
-    
+The documentation is deliberately separated into small, linked Markdown
+notes so it can be used directly in **Obsidian**.
 
----
-
-## 🧭 Documentation Map
-
-### 00 — Governance
-
-Project decisions, architecture reviews, project state, validation gates, and documentation governance.
-
-Browse Governance Documentation
-
-### 01 — Project
-
-Project scope, requirements, objectives, assumptions, and constraints.
-
-Browse Project Documentation
-
-### 02 — Architecture
-
-System architecture, component architecture, data flow, trust boundaries, deployment architecture, and architecture decisions.
-
-Browse Architecture Documentation
-
-### 03 — Security
-
-Threat model, security goals, attack surface, security controls, limitations, and security review checklists.
-
-Browse Security Documentation
-
-### 04 — Protocol
-
-Protocol overview, node identity, session establishment, message format, mesh packet format, replay protection, state machines, and error handling.
-
-Browse Protocol Documentation
-
-### 05 — Cryptography
-
-Cryptographic architecture, identity and signatures, key agreement, key derivation, AEAD, nonce management, key lifecycle, and cryptographic failure modes.
-
-Browse Cryptography Documentation
-
-### 06 — Networking
-
-Mesh architecture, peer discovery, routing, forwarding, TTL controls, connection management, handshake correlation, and resource bounds.
-
-Browse Networking Documentation
-
-### 07 — Testing & Evidence
-
-Testing strategy, cryptographic tests, protocol tests, network tests, security demonstrations, acceptance evidence, attack evidence, topology, logs, and final validation reports.
-
-Browse Testing Documentation
-
-### 08 — Implementation
-
-Milestones, task templates, code review standards, development workflow, and Definition of Done.
-
-Browse Implementation Documentation
-
-### 09 — Academic
-
-Abstract, problem statement, objectives, methodology, security analysis, results, limitations, future work, and viva preparation.
-
-Browse Academic Documentation
-
-### 10 — Technical Documentation
-
-Final technical documentation, experimental methodology, security analysis, documentation audits, and evidence matrices.
-
-Browse Technical Documentation
-
-### 📑 Final Academic Package
-
-- Academic Report
-    
-- Presentation Outline
-    
-- Viva Q&A
-    
-- Evidence Index
-    
-
----
-
-# 🛡️ Security Architecture
-
-The system establishes authenticated sessions using:
-
-```text
-Ed25519 Identity
-       │
-       ▼
-Authenticated X25519 Key Agreement
-       │
-       ▼
-Transcript-Bound HKDF-SHA-256
-       │
-       ▼
-Session Encryption Keys
-       │
-       ▼
-ChaCha20-Poly1305
-       │
-       ▼
-Encrypted Application Messages
-```
-
-This provides separation between:
-
-- long-term node identity
-    
-- ephemeral/session key agreement
-    
-- derived session keys
-    
-- application message encryption
-    
-- mesh routing metadata
-    
-
-The mesh therefore transports encrypted application traffic without requiring relay nodes to possess endpoint decryption keys.
-
----
-
-# 🌐 Mesh Networking
-
-The networking layer supports:
-
-- authenticated peers
-    
-- peer discovery
-    
-- multi-peer communication
-    
-- bounded routing
-    
-- multi-hop forwarding
-    
-- TTL-based loop prevention
-    
-- connection management
-    
-- resource bounds
-    
-- authenticated network handshakes
-    
-
-The architecture is designed so that routing infrastructure handles **where encrypted data should go**, rather than **what the encrypted data means**.
-
----
-
-# 🧪 Validation
-
-The project progressed through **M0–M10.3** engineering and documentation milestones.
-
-### Final status
-
-|Area|Status|
-|---|---|
-|Core Architecture|🟢 Verified|
-|Node Identity|🟢 Verified|
-|Session Establishment|🟢 Verified|
-|Key Derivation|🟢 Verified|
-|Application Encryption|🟢 Verified|
-|Replay Protection|🟢 Verified|
-|TCP Transport|🟢 Verified|
-|Multi-Peer Networking|🟢 Verified|
-|Multi-Hop Forwarding|🟢 Verified|
-|Security Hardening|🟢 Verified|
-|ApplicationService Boundary|🟢 Verified|
-|GUI Integration|🟢 Accepted|
-|M8.3 Integration|🟢 Passed|
-|M9 Validation|🟢 Approved|
-|M10 Documentation|🟢 Complete|
-|Academic Deliverables|🟢 Complete|
-|Final System Validation|🟢 PASS|
-
-### Validation notes
-
-Final validation passed for the executable checks available in the validation environment.
-
-The previously accepted M8/M9 manual GUI evidence remains part of the evidence baseline.
-
-Docker regression testing remains **unverified** where external dependency resolution was blocked by proxy/DNS restrictions.
-
-Final GUI re-execution in a headless environment is explicitly **NOT MEASURED**.
-
-These limitations are documented rather than silently treated as successful tests.
-
----
-
-# 🔍 Evidence-Driven Engineering
-
-A central principle of this project is:
-
-> **An implementation claim is not considered verified without supporting evidence.**
-
-The documentation therefore distinguishes between:
-
-- **Proposed**
-    
-- **Accepted**
-    
-- **Implemented**
-    
-- **Verified**
-    
-- **Approved**
-    
-- **Rejected**
-    
-- **Deferred**
-    
-
-This distinction prevents architectural proposals from being incorrectly represented as implemented functionality.
-
----
-
-# 📊 Project Development
-
-```text
-M0
-│
-├── Requirements & Scope
-│
-M1–M4
-│
-├── Architecture
-├── Cryptography
-├── Protocol
-└── Networking
-│
-M5–M7
-│
-├── Security Hardening
-├── Mesh Validation
-└── Acceptance Evidence
-│
-M8
-│
-├── ApplicationService
-├── GUI Integration
-└── End-to-End Application Testing
-│
-M9
-│
-├── Final Environment
-├── Multi-Hop Validation
-├── Attack Evidence
-└── Final Engineering Review
-│
-M10
-│
-├── Technical Documentation
-├── Experimental Evaluation
-├── Security Analysis
-└── Academic Deliverables
-│
-▼
-FINAL VALIDATION — PASS
-```
-
----
-
-# 📂 Repository Structure
-
-```text
-.
-├── README.md
-│
-└── Noctis Documentation (Obsidian)/
-    └── e2ee-mesh-chat/
-        ├── 00-governance/
-        ├── 01-project/
-        ├── 02-architecture/
-        ├── 03-security/
-        ├── 04-protocol/
-        ├── 05-cryptography/
-        ├── 06-networking/
-        ├── 07-testing/
-        ├── 08-implementation/
-        ├── 09-academics/
-        ├── 10-technical-documentation/
-        └── Summarized Presentable Structured Reports/
-```
-
-The `e2ee-mesh-chat` directory is maintained as an **Obsidian vault**, while this root README provides a GitHub-friendly entry point for readers who do not use Obsidian.
-
----
-
-# 🎓 Academic Context
-
-This project demonstrates the practical integration of:
-
-- Applied Cryptography
-    
-- Network Security
-    
-- End-to-End Encryption
-    
-- Peer-to-Peer Networking
-    
-- Mesh Networking
-    
-- Distributed Systems
-    
-- Secure Protocol Design
-    
-- Threat Modeling
-    
-- Security Testing
-    
-- Software Architecture
-    
-- Experimental Validation
-    
-
-It is intended to serve both as an engineering artifact and as an academic research/project submission.
-
----
-
-# ⚠️ Scope & Limitations
-
-This is an **academic cybersecurity and networking prototype**, not a production-ready secure messenger.
-
-The documentation explicitly records known limitations, assumptions, environmental constraints, and unmeasured validation areas.
-
-The system should therefore not be interpreted as independently audited or production-certified cryptographic software.
-
----
-
-# 📖 Documentation-First Design
-
-The project documentation is intentionally maintained as a structured Obsidian knowledge base rather than a single monolithic document.
-
-This allows architecture, security, protocol, cryptography, networking, testing, implementation, and academic material to remain independently navigable while preserving cross-references between them.
-
-For the complete engineering record, start with the:
-
-**Obsidian Vault Documentation**
-
----
-
-# 👤 Project
-
-**E2EE Mesh Chat**
-
-End-to-End Encrypted Messaging over a Decentralized Mesh Network
-
-**Documentation:** Obsidian  
-**Validation:** M0–M10.3  
-**Final Status:** 🟢 PASS
-
----
-
-> **Security claims are backed by implementation evidence and testing wherever measurable.**
-> 
-> **Documentation frozen after final technical and academic validation.**
+## Security priority
+
+> **Security \> Correctness \> Simplicity \> Performance \> Features**
+
+No component is considered secure merely because an implementation agent
+reports that it is complete. Security claims require implementation
+evidence and tests.
+
+## Start here
+
+-   [01-Project-Overview](01-project/01-Project-Overview.md)
+-   [02-Requirements](01-project/02-Requirements.md)
+-   [01-Threat-Model](03-security/01-Threat-Model.md)
+-   [01-System-Architecture](02-architecture/01-System-Architecture.md)
+-   [02-Architecture-Decisions](02-architecture/02-Architecture-Decisions.md)
+-   [01-Protocol-Overview](04-protocol/01-Protocol-Overview.md)
+-   [01-Cryptographic-Architecture](05-cryptography/01-Cryptographic-Architecture.md)
+-   [01-Testing-Strategy](07-testing/01-Testing-Strategy.md)
+-   [01-Milestones](08-implementation/01-Milestones.md)
+
+## Documentation map
+
+### Governance
+
+-   [00-Project-State](00-governance/00-Project-State.md)
+-   [01-Vault-Index](00-governance/01-Vault-Index.md)
+-   [03-Architecture-Review-M5](00-governance/03-Architecture-Review-M5.md)
+-   [07-Architecture-Review-M9](00-governance/07-Architecture-Review-M9.md)
+-   [06-Architecture-Review-M8](00-governance/06-Architecture-Review-M8.md)
+-   [05-Architecture-Review-M7](00-governance/05-Architecture-Review-M7.md)
+-   [04-Architecture-Review-M6](00-governance/04-Architecture-Review-M6.md)
+
+### Project
+
+-   [01-Project-Overview](01-project/01-Project-Overview.md)
+-   [02-Requirements](01-project/02-Requirements.md)
+-   [03-Goals-and-Non-Goals](01-project/03-Goals-and-Non-Goals.md)
+-   [04-Assumptions-and-Constraints](01-project/04-Assumptions-and-Constraints.md)
+
+### Architecture
+
+-   [01-System-Architecture](02-architecture/01-System-Architecture.md)
+-   [02-Architecture-Decisions](02-architecture/02-Architecture-Decisions.md)
+-   [03-Component-Architecture](02-architecture/03-Component-Architecture.md)
+-   [04-Data-Flow](02-architecture/04-Data-Flow.md)
+-   [05-Trust-Boundaries](02-architecture/05-Trust-Boundaries.md)
+-   [06-Deployment-Architecture](02-architecture/06-Deployment-Architecture.md)
+
+### Security
+
+-   [01-Threat-Model](03-security/01-Threat-Model.md)
+-   [02-Security-Goals](03-security/02-Security-Goals.md)
+-   [03-Attack-Surface](03-security/03-Attack-Surface.md)
+-   [04-Security-Controls](03-security/04-Security-Controls.md)
+-   [05-Security-Limitations](03-security/05-Security-Limitations.md)
+-   [06-Security-Review-Checklist](03-security/06-Security-Review-Checklist.md)
+
+### Protocol
+
+-   [01-Protocol-Overview](04-protocol/01-Protocol-Overview.md)
+-   [02-Node-Identity](04-protocol/02-Node-Identity.md)
+-   [03-Session-Establishment](04-protocol/03-Session-Establishment.md)
+-   [04-Message-Format](04-protocol/04-Message-Format.md)
+-   [05-Mesh-Packet-Format](04-protocol/05-Mesh-Packet-Format.md)
+-   [06-Replay-Protection](04-protocol/06-Replay-Protection.md)
+-   [07-Protocol-State-Machines](04-protocol/07-Protocol-State-Machines.md)
+-   [08-Error-Handling](04-protocol/08-Error-Handling.md)
+
+### Cryptography
+
+-   [01-Cryptographic-Architecture](05-cryptography/01-Cryptographic-Architecture.md)
+-   [02-Identity-and-Signatures](05-cryptography/02-Identity-and-Signatures.md)
+-   [03-Key-Agreement](05-cryptography/03-Key-Agreement.md)
+-   [04-Key-Derivation](05-cryptography/04-Key-Derivation.md)
+-   [05-AEAD-and-Nonce-Management](05-cryptography/05-AEAD-and-Nonce-Management.md)
+-   [06-Key-Lifecycle](05-cryptography/06-Key-Lifecycle.md)
+-   [07-Cryptographic-Failure-Modes](05-cryptography/07-Cryptographic-Failure-Modes.md)
+
+### Networking
+
+-   [01-Mesh-Architecture](06-networking/01-Mesh-Architecture.md)
+-   [02-Peer-Discovery](06-networking/02-Peer-Discovery.md)
+-   [03-Routing](06-networking/03-Routing.md)
+-   [04-Forwarding](06-networking/04-Forwarding.md)
+-   [05-TTL-and-Loop-Prevention](06-networking/05-TTL-and-Loop-Prevention.md)
+-   [06-Connection-Management](06-networking/06-Connection-Management.md)
+-   [07-M6-Handshake-Correlation](06-networking/07-M6-Handshake-Correlation.md)
+-   [08-M6-Resource-Bounds](06-networking/08-M6-Resource-Bounds.md)
+
+### Testing
+
+-   [01-Testing-Strategy](07-testing/01-Testing-Strategy.md)
+-   [02-Cryptographic-Test-Matrix](07-testing/02-Cryptographic-Test-Matrix.md)
+-   [03-Protocol-Test-Matrix](07-testing/03-Protocol-Test-Matrix.md)
+-   [04-Network-Test-Matrix](07-testing/04-Network-Test-Matrix.md)
+-   [05-Security-Demonstrations](07-testing/05-Security-Demonstrations.md)
+-   [06-Test-Evidence-Standard](07-testing/06-Test-Evidence-Standard.md)
+-   [08-M6-Acceptance-Evidence](07-testing/08-M6-Acceptance-Evidence.md)
+-   [09-M7-Acceptance-Evidence](07-testing/09-M7-Acceptance-Evidence.md)
+-   [10-M8.1-Acceptance-Evidence](07-testing/10-M8.1-Acceptance-Evidence.md)
+-   [11-M8.2-Acceptance-Evidence](07-testing/11-M8.2-Acceptance-Evidence.md)
+-   [12-M8.3-Acceptance-Evidence](07-testing/12-M8.3-Acceptance-Evidence.md)
+-   [13-M9-Environment](07-testing/13-M9-Environment.txt)
+-   [14-M9-Topology](07-testing/14-M9-Topology.md)
+-   [15-M9-Test-Suite](07-testing/15-M9-Test-Suite.log)
+-   [16-M9-Attack-Evidence](07-testing/16-M9-Attack-Evidence.md)
+-   [17-M9-Relay-Blindness](07-testing/17-M9-Relay-Blindness.log)
+-   [18-M9-GUI-Evidence](07-testing/18-M9-GUI-Evidence.md)
+-   [19-M9-Evidence-Manifest](07-testing/19-M9-Evidence-Manifest.md)
+-   [20-M9-Final-Report](07-testing/20-M9-Final-Report.md)
+
+### Implementation
+
+-   [01-Milestones](08-implementation/01-Milestones.md)
+-   [02-Task-Template](08-implementation/02-Task-Template.md)
+-   [03-Code-Review-Checklist](08-implementation/03-Code-Review-Checklist.md)
+-   [04-Antigravity-Workflow](08-implementation/04-Antigravity-Workflow.md)
+-   [05-Definition-of-Done](08-implementation/05-Definition-of-Done.md)
+
+### Technical Documentation (M10)
+
+- [08-M10.1-Technical-Documentation-Map](10-technical-documentation/08-M10.1-Technical-Documentation-Map.md)
+- [09-M10.1-Documentation-Audit](10-technical-documentation/09-M10.1-Documentation-Audit.md)
+- [11-Experimental-Methodology-and-Results](10-technical-documentation/11-Experimental-Methodology-and-Results.md)
+- [13-M10.2-Security-Analysis-Audit](10-technical-documentation/13-M10.2-Security-Analysis-Audit.md)
+
+### Academic
+
+-   [01-Abstract-Draft](09-academics/01-Abstract-Draft.md)
+-   [02-Problem-Statement](09-academics/02-Problem-Statement.md)
+-   [03-Objectives](09-academics/03-Objectives.md)
+-   [04-Methodology](09-academics/04-Methodology.md)
+-   [05-Security-Analysis-Structure](09-academics/05-Security-Analysis-Structure.md)
+-   [06-Results-Structure](09-academics/06-Results-Structure.md)
+-   [07-Limitations](09-academics/07-Limitations.md)
+-   [08-Future-Work](09-academics/08-Future-Work.md)
+-   [09-Viva-Question-Bank](09-academics/09-Viva-Question-Bank.md)
+
+### Final Academic Package
+
+- [M10.3-Academic-Report](Summarized%20Presentable%20Structured%20Reports/M10.3-Academic-Report.md)
+- [M10.3-Presentation-Outline](Summarized%20Presentable%20Structured%20Reports/M10.3-Presentation-Outline.md)
+- [M10.3-Viva-QA](Summarized%20Presentable%20Structured%20Reports/M10.3-Viva-QA.md)
+- [M10.3-Evidence-Index](Summarized%20Presentable%20Structured%20Reports/M10.3-Evidence-Index.md)
+
+## Decision status legend
+
+-   **Proposed** --- reasonable design candidate; not approved.
+-   **Accepted** --- selected for implementation.
+-   **Implemented** --- code exists.
+-   **Verified** --- tests/evidence support the claim.
+-   **Approved** --- technical lead has reviewed implementation and
+    evidence.
+-   **Rejected** --- explicitly not permitted.
+-   **Deferred** --- intentionally postponed.
+
+## Important rule
+
+If a document contains an unresolved design decision, it must say so.
+Never silently convert a proposal into an implementation requirement.
+
+## Supporting subsystem
+
+- [07-Observability-and-Security-Telemetry](02-architecture/07-Observability-and-Security-Telemetry.md) —
+  Observability, security telemetry, Prometheus/Grafana/Loki boundary
+  and telemetry security policy.
+
+Observability is deliberately out-of-band. The mesh must continue to
+operate if monitoring is unavailable.
+
+## Current Implementation Status
+
+**M0–M9 — 🟢 Complete / Closed**
+
+**M10.0–M10.3 — 🟢 Complete / Closed**
+
+**Final System Validation — 🟢 PASS**
+
+The repository has completed the approved Ed25519 identity, X25519 authenticated session establishment, transcript-bound HKDF-SHA-256 key derivation, ChaCha20-Poly1305 application protection, replay control, bounded TCP transport, authenticated multi-peer networking, bounded multi-hop forwarding, security hardening, the ApplicationService boundary and functional Fyne GUI integration.
+
+M8 preserves endpoint E2EE: relays can route ciphertext but cannot decrypt endpoint application data. The GUI is isolated behind ApplicationService and does not directly access crypto, session, mesh or routing internals.
+
+M8.3 application integration passed repository tests, race validation, vetting and build validation. Final live two-node GUI acceptance passed in both first-initiator directions, including secure-session establishment, bidirectional encrypted messaging and idempotent duplicate Add Peer behavior. Docker regression remains unverified because external dependency resolution is blocked by proxy/DNS restrictions.
+
+**M9.1, M9.2 and M9.3 are complete and approved. M9.4 documentation/evidence assembly and final technical audit are complete; M9 is formally closed. M10.0 reconnaissance, M10.1 technical documentation, M10.2 security analysis/experimental evaluation, and M10.3 academic deliverables are complete. Final system validation passed for all executable checks in the available environment. GUI final re-execution remains explicitly NOT MEASURED in the headless validation environment; previously accepted M8/M9 manual GUI evidence remains part of the evidence baseline.**
+
+The implementation is now in documentation freeze. No further feature development is authorized unless a final submission review identifies a genuine defect or factual inconsistency.
+
+See [00-Project-State](00-governance/00-Project-State.md), [01-Milestones](08-implementation/01-Milestones.md), [11-Experimental-Methodology-and-Results](10-technical-documentation/11-Experimental-Methodology-and-Results.md), and [13-M10.2-Security-Analysis-Audit](10-technical-documentation/13-M10.2-Security-Analysis-Audit.md) for the final gate.
