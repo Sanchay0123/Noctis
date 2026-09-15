@@ -74,28 +74,11 @@ The relay trust boundary is intentionally weak: a relay is trusted to forward pa
 
 The relay may observe routing metadata, packet type, PacketID, TTL and ciphertext. It must not obtain endpoint session keys or plaintext. A malicious relay can drop, delay, reorder, duplicate or selectively forward packets; M6 does not claim to prevent those availability attacks.
 
-## M8 application/UI trust boundary
 
-The UI is an unprivileged presentation client of `internal/app`.
+## M8 GUI Boundary
 
-```mermaid
-flowchart LR
-    UI[GUI] -->|display-safe API + app events| APP[Application Service]
-    APP -->|session lookup / plaintext only at endpoint| S[Session Manager]
-    APP -->|opaque routed APP_DATA| R[Routing]
-    R -->|ciphertext only| M[Mesh / Relays]
-```
+The GUI is untrusted with respect to cryptographic implementation details and is therefore restricted to the ApplicationService boundary. It may receive authenticated public identities, sanitized status/security events and endpoint plaintext for presentation.
 
-The boundary forbids GUI access to:
+It must not receive or manipulate private keys, session keys, ephemeral private keys, AEAD nonces, sequence state, raw protobuf packets or socket objects.
 
-- Ed25519 private keys
-- X25519 ephemeral private keys
-- session keys
-- AEAD nonces/replay internals
-- raw sockets
-- raw protobuf packets
-- routing internals
-
-Routing likewise has no application-plaintext decryption path. Only the
-endpoint application/session boundary may convert authenticated ciphertext
-into plaintext.
+The routing layer remains a separate trust boundary: relay nodes can see routing metadata and ciphertext but do not receive endpoint session keys or application plaintext.

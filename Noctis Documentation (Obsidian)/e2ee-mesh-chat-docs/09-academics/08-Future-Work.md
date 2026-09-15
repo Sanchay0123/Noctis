@@ -24,3 +24,8 @@ Possible future work includes route discovery and route selection, stronger cong
 ## M6 Reference
 
 - [[00-governance/04-Architecture-Review-M6]] — authoritative M6 architecture and acceptance record
+
+
+## M8 Follow-on Work
+
+Potential follow-on work includes a clean-environment GUI runtime demonstration, stronger GUI-level automated testing, persistent encrypted message storage if later authorized, richer peer discovery, concrete bounded telemetry exporters, and the reproducible demonstration environment planned for M9. These are not part of the approved M8 implementation.

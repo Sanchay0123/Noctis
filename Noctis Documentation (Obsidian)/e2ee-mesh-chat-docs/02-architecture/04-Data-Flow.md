@@ -98,34 +98,39 @@ C authenticates/decrypts with the A-C E2EE session
 
 For handshake traffic, INIT and RESP are similarly forwarded through relays, while the endpoint transcript and X25519-derived session remain between the actual initiator and responder.
 
-## M8 Application delivery flow
 
-```mermaid
-flowchart LR
-    UI[UI] --> APP[Application Service]
-    APP --> S[Endpoint Session Manager]
-    S --> E[AEAD Decrypt]
-    E --> EVT[Application Event]
-    EVT --> UI
+## M8 Message Flow
+
+### Outbound
+
+```text
+Fyne GUI
+  ↓ SendMessage(peerID, plaintext)
+ApplicationService
+  ↓ session lookup
+Session / AEAD
+  ↓ ciphertext
+Mesh routing
+  ↓
+Relay peers
+  ↓
+Destination session
 ```
 
-For received routed APP_DATA, the routing layer passes only opaque
-`session_id`, `sequence_num` and `ciphertext` across the application boundary.
-The application service performs session lookup and decryption. This keeps
-relay routing blind to plaintext while allowing the local endpoint to deliver
-authenticated plaintext to the UI.
+### Inbound
 
-## M8 outbound application flow
-
-```mermaid
-flowchart LR
-    UI[UI] --> APP[Application Service]
-    APP --> S[Session Manager]
-    S --> E[AEAD Encrypt]
-    E --> R[RouteAppData]
-    R --> F[Forwarding]
-    F --> T[Transport]
+```text
+Relay / transport
+  ↓ opaque APP_DATA
+Routing
+  ↓ session_id + sequence + ciphertext
+ApplicationService
+  ↓ Lookup(session_id)
+Session.DecryptMessage()
+  ↓ plaintext
+SubscribeEvents()
+  ↓
+Fyne GUI
 ```
 
-The GUI supplies a PeerID and plaintext to the application service. It does
-not construct protocol packets or invoke cryptographic primitives directly.
+Routing does not decrypt application payloads.

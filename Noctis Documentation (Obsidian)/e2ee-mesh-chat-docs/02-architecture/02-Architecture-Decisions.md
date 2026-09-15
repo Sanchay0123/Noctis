@@ -302,53 +302,45 @@ The project obtains a demonstrable direct encrypted messaging path while
 preserving separation between transport, protocol and cryptographic/session
 responsibilities. Session multiplexing and mesh forwarding remain future work.
 
-## ADR-014 --- Application-service boundary
 
-**Status:** Implemented / verified / approved in M8.1
+------------------------------------------------------------------------
 
-### Decision
+## ADR-010 --- Authenticated-on-connect transport admission
 
-Expose secure messaging to presentation/UI code through a narrow application
-service rather than allowing the UI to call crypto, session, mesh or routing
-internals.
+**Status:** Accepted
 
-### Security consequence
+### Context
 
-The UI cannot directly access private keys, session keys, raw packets or
-transport internals. Endpoint decryption occurs behind the application
-boundary.
-
-### Routing consequence
-
-The router delivers opaque APP_DATA metadata/ciphertext upward and remains
-blind to plaintext.
-
-## ADR-015 --- Fyne GUI isolated by build tag
-
-**Status:** Implemented / verified / approved in M8.2
+The M8 GUI manual dialing workflow exposed a mismatch with the earlier M5
+`ExpectInbound` pre-authorization mechanism. The first initiator could not
+establish a connection because the remote listener required prior local
+authorization of the initiator.
 
 ### Decision
 
-Use Fyne as the primary GUI framework and isolate the GUI under the `gui`
-build tag so the headless backend remains independent of GUI/CGO dependencies.
+Normal inbound transport admission does not require out-of-band pre-authorization.
+Unknown peers may enter the bounded authenticated handshake. A peer becomes
+established only after successful cryptographic authentication and the existing
+duplicate-arbitration rules.
 
-### Consequence
+### Security consequences
 
-The backend retains a clean containerized/headless build path, while GUI
-builds require the native graphical dependencies appropriate to the target
-environment.
+Pre-authorization transport isolation is removed, increasing exposure to
+unauthenticated handshake attempts. The exposure is bounded by the existing
+pending-handshake limit, handshake timeout, pre-allocation frame-size checks
+and active-peer limits. This decision does not claim complete DoS resistance.
 
-## ADR-016 --- Manual peer dialing for initial UI discovery
+Expected-PeerID verification remains enforced for manual GUI dialing, so
+transport admission does not imply trust or acceptance of an unexpected
+identity.
 
-**Status:** Accepted / implemented in M8
+### Protocol consequences
 
-### Decision
+No Protobuf schema, M3 handshake transcript, cryptographic primitive, AEAD
+construction, replay mechanism or M6 routing semantics are changed.
 
-The initial UI uses explicit manual peer address entry. PeerID is treated as
-an authenticated identity and network address as a transport locator; neither
-is used as a substitute for the other.
+### Operational consequences
 
-### Scope
+The GUI can establish the first connection in either direction without
+requiring reciprocal user action.
 
-No DHT, automatic decentralized discovery or blockchain mechanism is added by
-M8.1/M8.2.

@@ -1,6 +1,6 @@
 # E2EE Mesh Chat --- Documentation Hub
 
-> **Status:** M8.2 complete / verified / approved\
+> **Status:** M8.3 complete / verified / approved\
 > **Project type:** Academic cybersecurity and networking prototype
 
 ## Purpose
@@ -47,9 +47,9 @@ evidence and tests.
 -   [[00-governance/00-Project-State]]
 -   [[00-governance/01-Vault-Index]]
 -   [[00-governance/03-Architecture-Review-M5]]
--   [[00-governance/04-Architecture-Review-M6]]
--   [[00-governance/05-Architecture-Review-M7]]
 -   [[00-governance/06-Architecture-Review-M8]]
+-   [[00-governance/05-Architecture-Review-M7]]
+-   [[00-governance/04-Architecture-Review-M6]]
 
 ### Project
 
@@ -120,6 +120,7 @@ evidence and tests.
 -   [[07-testing/09-M7-Acceptance-Evidence]]
 -   [[07-testing/10-M8.1-Acceptance-Evidence]]
 -   [[07-testing/11-M8.2-Acceptance-Evidence]]
+-   [[07-testing/12-M8.3-Acceptance-Evidence]]
 
 ### Implementation
 
@@ -168,21 +169,14 @@ operate if monitoring is unavailable.
 
 ## Current Implementation Status
 
-**M8.2 — Fyne GUI Foundation: 🟢 Complete / Verified / Approved**
+**M8.3 — Functional GUI Integration: 🟢 Complete / Verified / Approved**
 
-The repository has completed and verified the long-term Ed25519 identity,
-fresh X25519 session establishment, transcript-bound HKDF-SHA-256 key
-derivation, ChaCha20-Poly1305 application message protection, sequence-based
-replay control, and direct TCP secure messaging integration.
+The repository has completed the approved Ed25519 identity, X25519 authenticated session establishment, transcript-bound HKDF-SHA-256 key derivation, ChaCha20-Poly1305 application protection, replay control, bounded TCP transport, authenticated multi-peer networking, bounded multi-hop forwarding, security hardening, the ApplicationService boundary and functional Fyne GUI integration.
 
-M4 provides the bounded direct secure channel, M5 provides authenticated multi-peer runtime networking, and M6 provides bounded multi-hop forwarding while preserving endpoint E2EE. Relays can route ciphertext but cannot decrypt endpoint application data.
+M8 preserves endpoint E2EE: relays can route ciphertext but cannot decrypt endpoint application data. The GUI is isolated behind ApplicationService and does not directly access crypto, session, mesh or routing internals.
 
-**M8.2 is complete and approved within its reviewed scope.**
+M8.3 application integration passed repository tests, race validation, vetting and build validation. Final live two-node GUI acceptance passed in both first-initiator directions, including secure-session establishment, bidirectional encrypted messaging and idempotent duplicate Add Peer behavior. Docker regression remains unverified because external dependency resolution is blocked by proxy/DNS restrictions.
 
-M8.1 established the application-service boundary while preserving relay-blind
-routing. M8.2 added the Fyne GUI foundation behind a GUI build tag with
-synchronized UI state and lifecycle handling. Concrete Prometheus/Grafana
-implementation remains future M8 work. M8.3 has not been authorized.
+**M8.3 is complete, live accepted and approved. M9 requires separate authorization.**
 
-See [[00-governance/00-Project-State]] and
-[[08-implementation/01-Milestones]] for the current gate.
+See [[00-governance/00-Project-State]], [[00-governance/06-Architecture-Review-M8]] and [[08-implementation/01-Milestones]] for the current gate.

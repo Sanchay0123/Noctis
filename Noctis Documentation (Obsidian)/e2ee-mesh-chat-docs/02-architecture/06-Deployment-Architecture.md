@@ -104,3 +104,10 @@ nodes report one active peer.
 
 This topology is a runtime hardening demonstration, not evidence of M6 multi-hop
 routing. No relay forwarding is claimed by M5.
+
+
+## M8 GUI Deployment
+
+The GUI is isolated from the headless backend container requirements. Fyne requires native graphical/CGO dependencies on the host/runtime environment; these are not added to the backend Dockerfile.
+
+The M8.3 GUI was built with native dependencies and passed live two-node runtime acceptance. Docker regression remains unverified because dependency resolution in the constrained environment was blocked by external DNS/proxy restrictions.

@@ -115,20 +115,9 @@ connection arbitration, lifecycle race safety, telemetry isolation and a
 containerized multi-node runtime. It does not establish multi-hop routing or
 network-wide forwarding behavior.
 
-## Phase 8A --- Application service and UI integration
 
-After mesh security hardening, introduce a narrow application-service boundary
-that exposes authenticated messaging to presentation code without exposing
-cryptographic/session/routing internals. Verify that routing remains blind to
-plaintext and that endpoint decryption occurs only at the application/session
-boundary.
+## Phase 9 --- Application and GUI integration
 
-## Phase 8B --- GUI integration
+After the mesh/security backend was stabilized, introduce a narrow application boundary and a presentation client. Validate that endpoint decryption remains outside routing, then test peer connection, conversation handling, message exchange and lifecycle behavior through the ApplicationService.
 
-Add the primary Fyne GUI behind an isolated GUI build tag. Validate application
-service behavior, synchronized GUI state, event delivery and shutdown/lifecycle
-handling. Separate GUI build/runtime environment evidence from headless backend
-validation.
-
-M8.2 does not by itself constitute complete observability implementation or
-final demonstration evidence.
+M8.3 uses an Alice→Bob→Carol application-layer integration test over real local TCP and the approved mesh stack. GUI visual runtime is treated as an environment-dependent smoke test rather than inferred from compilation.

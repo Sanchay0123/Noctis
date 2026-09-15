@@ -184,21 +184,15 @@ The following hardening controls were implemented and verified:
 M7 does not add anonymity, metadata hiding or global network-wide DoS
 protection.
 
-## M8 Application/UI Controls
 
-1. The UI accesses secure messaging only through `internal/app`.
-2. PeerID is an authenticated identity identifier and is distinct from a
-   network address.
-3. The router does not decrypt APP_DATA; endpoint decryption occurs at the
-   application/session boundary.
-4. GUI-visible events exclude private keys, ephemeral private keys, session
-   keys, AEAD nonces and raw protocol/network internals.
-5. GUI mutable state is synchronized to prevent concurrent event/render state
-   races.
-6. GUI shutdown coordinates event-consumer termination with application
-   service shutdown.
-7. GUI is isolated behind a `gui` build tag, preserving the headless backend
-   dependency boundary.
+## M8.3 inbound admission control
 
-M8.1/M8.2 approval does not establish GUI runtime smoke-test evidence in the
-review environment or concrete Prometheus/Grafana implementation.
+Transport admission no longer requires out-of-band pre-authorization. Unknown
+inbound peers may consume a bounded pending-handshake slot, subject to the
+existing handshake timeout, frame-size validation and connection/peer limits.
+Successful peer registration still requires cryptographic authentication.
+
+The change increases exposure to unauthenticated handshake attempts compared
+with the former whitelist model. It is not a claim of complete DoS prevention;
+the documented controls bound concurrent pending work and incomplete connection
+lifetime.

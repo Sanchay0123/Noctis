@@ -90,11 +90,3 @@ relays. No anonymity or complete metadata hiding is claimed.
 
 Global Sybil attacks, large-scale flood traffic, malicious packet dropping and
 endpoint compromise remain outside the guarantees of the prototype.
-
-## M8 Limitations
-
-The GUI is a presentation layer and does not reduce the prototype's existing
-metadata, malicious-relay, endpoint-compromise or availability limitations.
-The current M8.2 acceptance evidence did not include interactive GUI runtime
-smoke testing in the review environment. Concrete Prometheus/Grafana metrics
-and dashboards remain future M8 work.

@@ -98,13 +98,3 @@ The default initial TTL is 16 and the maximum accepted TTL is 32. TTL 0 is dropp
 Forwarding is to eligible active peers except the incoming peer. The router performs no network I/O directly and uses bounded per-peer queues. See [[06-networking/07-M6-Handshake-Correlation]] and [[06-networking/08-M6-Resource-Bounds]].
 
 **Status: 🟢 COMPLETE / VERIFIED / APPROVED**
-
-## M8 application boundary
-
-M8.1 preserves the routing security boundary: APP_DATA handling at the router
-never decrypts application ciphertext. The router validates/routs opaque
-session metadata and ciphertext and passes that opaque payload to the local
-application boundary when the destination is local.
-
-Endpoint session lookup and `DecryptMessage` occur in `internal/app`, not
-`internal/routing`.

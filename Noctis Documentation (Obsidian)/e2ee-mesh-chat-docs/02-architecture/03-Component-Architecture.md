@@ -89,7 +89,7 @@ transport implementation provides bounded TCP framing and synchronized writes.
 Binds one direct TCP `Connection` to one M3 `crypto.Session` for the M4 scope.
 It orchestrates INIT/RESP handshake exchange, validates endpoint identity
 bindings, constructs APP_DATA packets, and exposes authenticated plaintext to
-the application only after successful decryption.
+the application only after successful decryption..
 
 ### Local State
 
@@ -181,33 +181,27 @@ Provides non-blocking bounded buffering between the router and M5 peer writer. B
 
 The router can process routing metadata but cannot decrypt APP_DATA. A relay is therefore a forwarding participant, not an E2EE endpoint.
 
-## M8 Application and UI Components
 
-### Application Service
+## M8 Application Layer
 
-`internal/app` is the application-facing boundary between UI concerns and the
-secure backend. It owns application operations such as local identity display,
-explicit dialing, conversation lifecycle, message sending and application
-events. It is responsible for endpoint decryption after routing has delivered
-opaque APP_DATA to the local application boundary.
+`internal/app` is the presentation-facing boundary for identity display, peer dialing, conversation creation, message sending, service lifecycle and application events.
 
-### Application Event Boundary
+The Fyne GUI consumes this boundary and maintains only presentation/application state. It does not construct protocol packets, manipulate AEAD sequence numbers/nonces, perform cryptographic operations or access raw sockets.
 
-Events exposed to the UI contain display-safe application information such as
-PeerID, connection state, security-safe status and authenticated plaintext
-messages. Secret cryptographic material and raw protocol/network internals
-must not cross this boundary.
+### GUI state
 
-### Fyne UI
+The GUI maintains synchronized in-memory conversation state containing sender, plaintext and timestamp information. No persistent plaintext message store was introduced in M8.
 
-The M8.2 GUI is isolated behind a `gui` build tag. It renders conversations,
-message history/input, identity/status information and manual peer-dialing
-controls through the application service. `UIState` synchronizes mutable GUI
-state shared by event processing and rendering.
+See [[02-architecture/08-Application-Service-Boundary]] for the detailed GUI/application trust and lifecycle boundary.
 
-### M8 Routing Boundary Correction
 
-The router remains a relay-blind component. It validates and routes opaque
-APP_DATA and passes session ID, sequence number and ciphertext upward; it does
-not invoke decryption. Endpoint decryption occurs in the application service
-using the endpoint session manager.
+## M8.3 transport admission
+
+The Peer/Connection subsystem no longer depends on an `ExpectInbound`
+pre-authorization map for normal inbound connections. Admission is bounded by
+pending-handshake and connection resource controls; authenticated identity is
+established by the M3 handshake before peer registration and duplicate
+arbitration.
+
+The ApplicationService retains expected-PeerID verification for manual GUI
+dialing.

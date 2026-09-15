@@ -133,3 +133,8 @@ resistance, endpoint compromise resistance or guaranteed delivery.
 
 See [[00-governance/05-Architecture-Review-M7]] and
 [[07-testing/09-M7-Acceptance-Evidence]].
+
+
+## M8 Definition-of-Done Notes
+
+For M8, completion required an application-layer GUI boundary, functional peer/conversation/message workflows, preserved routing plaintext blindness, synchronized UI state and explicit shutdown lifecycle. Environment-dependent GUI visual runtime and Docker regression are recorded separately as unverified when native dependencies or external network access are unavailable.

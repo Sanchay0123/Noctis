@@ -25213,6 +25213,4087 @@ The Project Overseer will make the final milestone decision.
 ```
 
 
+
+```
+We discovered an M8.3 runtime-verification limitation on the real Ubuntu host.
+
+Do NOT implement anything yet. Do NOT start M9.
+
+Inspect the current M8.3 GUI startup path and report only.
+
+Project:
+~/Documents/Noctis/CrytpProject
+
+Known findings:
+- internal/app/service.go NewNode() hard-codes mgr.Listen("0.0.0.0:8000") when role != "standalone".
+- cmd/meshchat/main.go also hard-codes mgr.Listen("0.0.0.0:8000").
+- No os.Args/flag/config listener-port mechanism was found.
+- The GUI Add Peer dialog accepts a remote address, but its PeerID field is displayed as optional while the current code rejects an empty PeerID.
+
+Tasks:
+
+1. Inspect the complete cmd/meshchat-gui/main.go startup path.
+2. Identify exactly which role is passed to NewNode(), if any.
+3. Identify exactly where ApplicationService.Start()/NewNode() is invoked.
+4. Confirm whether the GUI currently has any mechanism at all for selecting its local listening address/port.
+5. Identify whether making the local listener configurable can be done without modifying the protocol, crypto, routing architecture, or GUI/application boundary.
+6. Recommend the MINIMAL M8.3 remediation that would allow two GUI instances on one Ubuntu machine to use different local ports, e.g. 8000 and 8001.
+7. Preserve the existing default 0.0.0.0:8000 so existing Docker/integration behavior is unchanged.
+8. Also report the minimal change needed to reconcile the Add Peer UI text "Optional expected PeerID" with actual behavior. Do not implement this yet; just identify whether the correct behavior should be:
+   A. make PeerID genuinely optional, or
+   B. change the UI wording to indicate it is required.
+   Base the recommendation on the current ApplicationService/DialNode security model.
+9. Do not edit files.
+10. Do not begin M9.
+
+Return:
+- current startup flow
+- confirmed blockers
+- minimal remediation design
+- security impact
+- exact files that would need modification
+- whether you recommend doing this as M8.3 remediation
+
+```
+
+
+
+```
+M8.3 REMEDIATION AUTHORIZATION — IMPLEMENT ONLY THIS SCOPE
+
+The M8.3 Runtime Limitation Report has been reviewed and the following remediation is AUTHORIZED.
+
+Do NOT begin M9.
+Do NOT add any other features.
+Do NOT modify the protocol or cryptographic design.
+
+Project:
+~/Documents/Noctis/CrytpProject
+
+==================================================
+REMEDIATION 1 — CONFIGURABLE LOCAL LISTEN ADDRESS
+==================================================
+
+Modify the ApplicationService/NewNode startup path so the local mesh listener can be configured through:
+
+MESH_LISTEN_ADDR
+
+Behavior:
+
+1. If MESH_LISTEN_ADDR is set and non-empty:
+   use that exact address when calling mgr.Listen(...).
+
+2. If MESH_LISTEN_ADDR is unset or empty:
+   preserve the current default exactly:
+   0.0.0.0:8000
+
+3. Do not change the NewNode function signature unless absolutely required.
+4. Do not modify mesh protocol behavior.
+5. Do not modify PeerManager semantics.
+6. Do not modify routing.
+7. Do not modify crypto/session behavior.
+8. Do not introduce automatic port discovery.
+9. Do not introduce a config file.
+10. Do not change existing Docker/integration defaults.
+11. Do not log private keys, session keys, plaintext, or other secret material.
+
+Important security wording:
+This does not change the cryptographic security boundary, but the chosen bind address can change network exposure. Preserve 0.0.0.0:8000 as the default.
+
+==================================================
+REMEDIATION 2 — FIX MISLEADING PEER ID UI
+==================================================
+
+The Add Peer dialog currently displays:
+
+"Optional expected PeerID (hex)"
+
+but DialNode() rejects an empty PeerID.
+
+Change the UI wording to make the requirement explicit, e.g.:
+
+"Required PeerID (hex)"
+
+Do NOT weaken DialNode() to permit an empty PeerID.
+
+The expected PeerID must remain required because the current authenticated connection model relies on the caller specifying the expected remote Ed25519 identity.
+
+Also improve the Add Peer validation minimally:
+
+- trim address and PeerID
+- if address is empty, do not attempt connection
+- if PeerID is empty, do not attempt connection
+- provide an appropriate user-visible validation/status response rather than silently returning
+
+Do not change the underlying security validation in DialNode().
+
+==================================================
+TEST REQUIREMENTS
+==================================================
+
+Add/update tests for:
+
+1. Default listener address behavior:
+   unset MESH_LISTEN_ADDR -> 0.0.0.0:8000
+
+2. Configured listener:
+   MESH_LISTEN_ADDR=127.0.0.1:8001 -> listener uses 127.0.0.1:8001
+
+3. Existing behavior remains unchanged when environment variable is absent.
+
+4. GUI Add Peer validation rejects empty address.
+
+5. GUI Add Peer validation rejects empty PeerID.
+
+6. Existing invalid PeerID validation remains enforced.
+
+7. Do not introduce races.
+
+==================================================
+VERIFICATION
+==================================================
+
+Run:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+go build -tags gui ./cmd/meshchat-gui
+
+Also perform a source-level security audit confirming:
+
+- no routing DecryptMessage calls
+- no GUI direct imports/access to internal/crypto
+- no GUI direct imports/access to internal/session
+- no GUI direct imports/access to internal/mesh
+- no GUI direct imports/access to internal/routing
+- no AES-GCM terminology
+- no plaintext logging
+- no protocol/schema changes
+
+==================================================
+RUNTIME VERIFICATION PREPARATION
+==================================================
+
+After implementation, report the exact commands for launching two GUI instances on this same Ubuntu host using:
+
+GUI A:
+MESH_LISTEN_ADDR=127.0.0.1:8000
+
+GUI B:
+MESH_LISTEN_ADDR=127.0.0.1:8001
+
+Do not launch them yourself unless the environment explicitly permits it.
+
+Do not make any changes outside this exact remediation scope.
+
+Return a complete implementation report including:
+- files changed
+- exact behavior
+- tests added/changed
+- all verification results
+- security audit results
+- any remaining limitations
+- exact two-GUI runtime test procedure
+
+M8.3 remains the active milestone. M9 is NOT authorized.
+
+```
+
+
+
+```
+M8.3 RUNTIME FAILURE — INVESTIGATION ONLY
+
+We performed the real two-GUI test on Ubuntu.
+
+Runtime configuration:
+
+Alice:
+MESH_ROLE="node1"
+MESH_LISTEN_ADDR="127.0.0.1:8000"
+
+Bob:
+MESH_ROLE="node2"
+MESH_LISTEN_ADDR="127.0.0.1:8001"
+
+Both listeners are confirmed:
+127.0.0.1:8000 LISTEN
+127.0.0.1:8001 LISTEN
+
+Both TCP ports accept connections with nc.
+
+Observed behavior:
+- Bob attempting to add Alice failed.
+- Alice adding Bob at 127.0.0.1:8001 succeeded.
+- After the successful connection/session path, the GUI has no conversation in the Conversations pane.
+- The message area says "Select a conversation to start chatting."
+- Therefore Send cannot be used.
+
+DO NOT IMPLEMENT ANYTHING YET.
+DO NOT START M9.
+DO NOT CHANGE PROTOCOL/CRYPTO/ROUTING.
+
+Investigate the current source and determine exactly why a successfully connected/secure-session peer does not appear as a selectable conversation.
+
+Inspect at minimum:
+
+1. internal/app/events.go
+2. internal/app/service.go
+3. cmd/meshchat-gui/main.go
+4. the M8.3 integration tests
+5. UIState.AddMessage()
+6. EventTypeSessionEstablished handling
+7. EventTypeMessageReceived handling
+8. StartConversation()
+9. SendMessage()
+
+Trace the exact runtime path:
+
+TCP connection
+→ authenticated session
+→ AppEvent
+→ GUI event consumer
+→ UIState
+→ conversationList
+
+Determine whether EventTypeSessionEstablished creates a conversation or whether conversations are only created after EventTypeMessageReceived / outgoing SendMessage.
+
+Also determine whether SendMessage itself creates a conversation when the session exists.
+
+Report:
+
+- exact root cause
+- exact source locations/functions
+- whether this is an M8.3 defect
+- minimal remediation needed
+- security impact
+- whether the remediation changes any approved architecture/security boundary
+- exact tests that should be added
+
+Do NOT edit files.
+Do NOT propose unrelated improvements.
+
+```
+
+
+```
+M8.3 REMEDIATION #2 AUTHORIZATION — CONVERSATION INITIALIZATION
+
+The M8.3 runtime investigation has been reviewed and the root cause is confirmed.
+
+IMPLEMENT ONLY THIS FIX.
+DO NOT START M9.
+DO NOT MODIFY PROTOCOL, CRYPTOGRAPHY, SESSION ESTABLISHMENT, MESH ROUTING, OR TRANSPORT.
+
+Project:
+~/Documents/Noctis/CrytpProject
+
+ROOT CAUSE:
+A newly established secure session does not initialize GUI conversation state.
+
+UIState.peerList is populated only through AddMessage(), while SendMessage requires an already-selected conversation. Therefore two connected GUI peers cannot initiate the first message.
+
+AUTHORIZED FIX:
+
+1. Add:
+
+func (s *UIState) EnsureConversation(peerID string) bool
+
+Requirements:
+- acquire s.mu.Lock()
+- if peerID does not exist:
+    - create conversations[peerID] as an empty []Message
+    - append peerID to peerList
+    - return true
+- if it already exists:
+    - make no duplicate entry
+    - return false
+- release lock before returning
+
+2. In the EventTypeSessionEstablished event handling:
+- call EnsureConversation(e.PeerID)
+- if it returns true, refresh the conversation list
+- preserve the existing secure-session status update
+
+3. Do not decrypt anything in the GUI event consumer.
+4. Do not move any cryptographic/session/routing functionality into the GUI.
+5. Do not alter ApplicationService semantics.
+6. Do not alter PeerManager behavior.
+7. Do not alter protocol schemas or wire format.
+8. Do not create conversations merely because a TCP connection exists.
+   Conversation initialization must remain associated with the authenticated
+   EventTypeSessionEstablished event.
+9. Do not create duplicate conversations.
+10. Preserve UIState mutex protection.
+
+TESTS REQUIRED:
+
+1. TestUIState_EnsureConversation
+   - new PeerID creates exactly one conversation
+   - peer appears in peerList
+   - conversation starts with zero messages
+   - second EnsureConversation for same PeerID returns false
+   - peerList contains no duplicate
+
+2. Verify EventTypeSessionEstablished causes the conversation to become selectable.
+
+3. Verify an outbound message can now be initiated immediately after secure
+   session establishment without requiring a prior inbound message.
+
+4. Verify EventTypeMessageReceived still works and does not create duplicate
+   conversation entries when the conversation already exists.
+
+5. Run the full verification suite:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+go build -tags gui ./cmd/meshchat-gui
+
+6. Perform source-level security checks:
+- no DecryptMessage in internal/routing
+- no GUI direct access/import of internal/crypto
+- no GUI direct access/import of internal/session
+- no GUI direct access/import of internal/mesh
+- no GUI direct access/import of internal/routing
+- no AES-GCM terminology
+- no plaintext logging
+
+SECURITY STATEMENT:
+Do not describe the security impact as literally "zero".
+Report it as:
+"No change to cryptographic or network security properties; the remediation
+only initializes local GUI presentation state after an authenticated session
+event."
+
+REPORT:
+Return:
+- files changed
+- exact implementation
+- tests added/updated
+- all verification results
+- security audit results
+- remaining limitations
+
+Do not make any other improvements.
+Do not begin M9.
+
+```
+
+
+```
+M8.3 LIVE RUNTIME FAILURE — INVESTIGATION ONLY
+
+We have now reproduced an asymmetric GUI connection failure.
+
+Environment:
+Ubuntu 24.04 x86_64
+Go 1.21.13
+
+GUI A:
+MESH_ROLE="node1"
+MESH_LISTEN_ADDR="127.0.0.1:8000"
+
+GUI B:
+MESH_ROLE="node2"
+MESH_LISTEN_ADDR="127.0.0.1:8001"
+
+Confirmed:
+- 127.0.0.1:8000 is listening
+- 127.0.0.1:8001 is listening
+- nc can connect to both ports
+- GUI A can successfully connect to GUI B
+- Once the session is established, bilateral message transfer works
+- Conversation initialization now works
+
+New reproducible failure:
+- GUI B attempting to connect to GUI A fails repeatedly.
+- It failed on first, second, and third attempts.
+- GUI displays "Connection failed" / "Connection closed".
+- No useful diagnostic output appears in either GUI terminal.
+
+DO NOT IMPLEMENT ANYTHING.
+DO NOT START M9.
+DO NOT CHANGE PROTOCOL/CRYPTO/ROUTING.
+
+Investigate the exact cause.
+
+Trace the code path for:
+
+GUI B
+→ ApplicationService.DialNode()
+→ ExpectInbound()
+→ PeerManager.Connect()
+→ outbound TCP connection
+→ identity/handshake
+→ session establishment
+→ duplicate connection arbitration
+→ connection close
+
+Compare this with the successful reverse direction:
+
+GUI A
+→ DialNode(127.0.0.1:8001, BobPeerID)
+→ successful session
+→ bilateral messaging
+
+Specifically inspect:
+1. PeerManager duplicate-connection arbitration.
+2. Lexicographic identity ordering.
+3. Which side is expected to win when both peers can initiate.
+4. Whether ExpectInbound() is incorrectly affecting an outbound connection.
+5. Whether a connection is being closed because the same peer is considered already connected.
+6. Whether failed duplicate arbitration is reported to ApplicationService as "connection closed".
+7. Whether a successful session from the reverse direction causes later outbound attempts from the other side to be rejected.
+8. Whether the GUI's first failed attempt leaves stale peer/session state.
+9. Whether the failure occurs before or after TCP accept.
+10. Whether the failure occurs before or after authenticated identity verification.
+
+Do not infer from tests alone. Inspect the actual implementation.
+
+Also inspect the existing M5/M6 duplicate-connection tests and explain whether they cover this exact GUI scenario.
+
+Return:
+- exact root cause
+- exact source locations/functions
+- exact state transition causing the close
+- why reverse direction succeeds
+- whether this is a real M8.3 defect or expected duplicate-connection behavior
+- minimal remediation if a defect exists
+- security implications
+- tests that should be added
+
+Do not edit files.
+
+
+```
+
+
+
+```
+M8.3 REMEDIATION #3 — FURTHER INVESTIGATION ONLY
+
+The root-cause report is accepted:
+the repeated GUI connection failure is caused by the interaction between
+ApplicationService.DialNode() and the existing M5/M6 duplicate-connection
+arbitration.
+
+However, the proposed fix:
+
+    if _, err := s.meshManager.GetPeer(peerPubKey); err == nil {
+        return nil
+    }
+
+is NOT authorized yet.
+
+The concern is that existence of a PeerManager entry may not mean that the
+peer has a usable ESTABLISHED authenticated connection. Returning nil for a
+CONNECTING, HANDSHAKING, CLOSING, FAILED, or stale entry could cause the GUI
+to falsely report success.
+
+DO NOT MODIFY FILES.
+DO NOT START M9.
+
+Investigate:
+
+1. Locate and inspect PeerManager.GetPeer().
+2. Determine exactly what it returns and whether it exposes connection state.
+3. Inspect the PeerManager state machine and identify all peer states:
+   CONNECTING
+   HANDSHAKING
+   ESTABLISHED
+   CLOSING
+   FAILED
+   or any others actually present.
+4. Determine whether GetPeer() can return a peer that is not currently
+   ESTABLISHED.
+5. Determine how an established authenticated peer/session is represented.
+6. Determine whether ApplicationService already has a reliable way to ask:
+      "Is this PeerID currently associated with an authenticated usable
+       session?"
+7. Inspect internal/session/manager.go and the existing LookupByPeer /
+   PeerID/session mapping.
+8. Determine whether DialNode should:
+   A. return success only if an authenticated ESTABLISHED session already
+      exists,
+   B. return a specific "already connected" error,
+   C. attempt a dial only when no usable session exists,
+   D. or use another minimal behavior.
+
+9. Consider the case:
+   - Peer exists but is CONNECTING/HANDSHAKING.
+   - Peer exists but is CLOSING.
+   - Peer entry is stale.
+   - Peer has an ESTABLISHED authenticated session.
+   - No peer exists.
+
+10. The behavior must preserve M5/M6 duplicate arbitration. Do not modify
+    PeerManager arbitration.
+
+11. Determine the exact minimal application-layer change that makes repeated
+    Add Peer on an already-established peer idempotent WITHOUT falsely
+    reporting success for a non-established peer.
+
+12. Determine how the GUI status should behave for:
+    - already securely connected
+    - currently connecting/handshaking
+    - connection failed
+
+13. Propose tests covering all relevant states.
+
+SECURITY:
+Do not describe the impact as "zero".
+State precisely whether the proposed behavior changes any cryptographic,
+authentication, or network security property.
+
+Return:
+- GetPeer implementation/state semantics
+- session-manager semantics
+- exact recommended behavior
+- exact files/functions requiring modification
+- tests required
+- why the behavior is safe
+
+Do not implement anything.
+
+```
+
+
+```
+M8.3 REMEDIATION #3 — IMPLEMENTATION AUTHORIZED
+
+The investigation has been reviewed and the proposed application-layer
+idempotency fix is AUTHORIZED.
+
+Implement ONLY this remediation.
+Do NOT start M9.
+Do NOT modify protocol, cryptography, session derivation, routing, transport
+framing, or M5/M6 duplicate arbitration.
+
+Project:
+~/Documents/Noctis/CrytpProject
+
+==================================================
+OBJECTIVE
+==================================================
+
+Prevent the GUI from repeatedly dialing a peer when an authenticated usable
+connection/session already exists.
+
+The existing M5/M6 duplicate-connection arbitration remains authoritative.
+This remediation is only an ApplicationService optimization and correct
+GUI status handling.
+
+==================================================
+DIALNODE BEHAVIOR
+==================================================
+
+In internal/app/service.go:
+
+Add an exported error:
+
+var ErrAlreadyConnected = errors.New("already connected")
+
+Update DialNode() as follows:
+
+1. Decode and validate expectedPeerID exactly as currently done.
+2. Look up the peer through PeerManager.GetPeer().
+3. If GetPeer succeeds AND the peer state is
+   mesh.PeerStateEstablished:
+
+   a. Check SessionManager.LookupByPeer(expectedPeerID).
+
+   b. If an authenticated E2E session exists:
+      return ErrAlreadyConnected
+
+   c. If the transport is established but no E2E session exists:
+      return nil
+
+      This is intentional because the existing GUI flow subsequently calls
+      StartConversation(expectedPeerID).
+
+4. If no peer exists, or the existing peer is CLOSING/FAILED/stale:
+   proceed through the existing:
+      ExpectInbound(peerPubKey)
+      Connect(ctx, address, peerPubKey)
+
+5. Do NOT alter PeerManager duplicate arbitration.
+6. Do NOT introduce new locking around this check.
+7. Do NOT assume the check eliminates all races. M5/M6 arbitration remains
+   the final authority if concurrent state changes occur.
+
+IMPORTANT:
+Do not return success merely because any peer-map entry exists.
+Only the ESTABLISHED + authenticated-session case returns
+ErrAlreadyConnected.
+
+==================================================
+GUI BEHAVIOR
+==================================================
+
+In cmd/meshchat-gui/main.go:
+
+Handle ErrAlreadyConnected explicitly.
+
+For ErrAlreadyConnected:
+    display:
+    "Status: Already securely connected to [PeerID]"
+
+Do NOT call StartConversation again in this case.
+
+For DialNode() returning nil:
+    preserve the existing behavior:
+    call StartConversation(expectedPeerID).
+
+This means:
+
+    no existing usable connection
+        → DialNode()
+        → nil
+        → StartConversation()
+
+    established transport but no session
+        → DialNode()
+        → nil
+        → StartConversation()
+
+    established transport + existing E2E session
+        → DialNode()
+        → ErrAlreadyConnected
+        → do NOT StartConversation()
+
+Other DialNode errors:
+    preserve normal failure handling.
+
+==================================================
+TESTS
+==================================================
+
+Add tests for all relevant states:
+
+1. TestDialNode_AlreadyConnected
+   - ESTABLISHED peer
+   - authenticated E2E session exists
+   - DialNode returns ErrAlreadyConnected
+   - Connect is NOT invoked
+
+2. TestDialNode_TransportButNoSession
+   - ESTABLISHED peer
+   - no E2E session
+   - DialNode returns nil
+   - Connect is NOT invoked
+   - caller can subsequently StartConversation
+
+3. TestDialNode_StalePeer
+   - CLOSING or FAILED peer
+   - DialNode attempts normal Connect path
+
+4. TestDialNode_NoPeer
+   - normal Connect path occurs
+
+5. TestValidateAndDialPeer_AlreadyConnected
+   - GUI handles ErrAlreadyConnected
+   - status indicates securely connected
+   - StartConversation is NOT called
+
+6. TestValidateAndDialPeer_NewConnection
+   - DialNode returns nil
+   - StartConversation is called
+
+7. Verify repeated Add Peer after a successfully established session does
+   not create another session or break the existing connection.
+
+8. If practical, test the race/TOCTOU case where the peer state changes
+   between lookup and connection attempt. The expected result is that
+   PeerManager's existing duplicate arbitration still determines the final
+   outcome.
+
+==================================================
+SECURITY REQUIREMENTS
+==================================================
+
+Do not weaken identity validation.
+
+Do not bypass:
+- Ed25519 identity verification
+- X25519 handshake
+- transcript signatures
+- session establishment
+- ChaCha20-Poly1305
+- replay protection
+
+Do not modify:
+- packet schema
+- routing behavior
+- PeerManager duplicate arbitration
+
+The change must remain architecturally inside ApplicationService/GUI.
+
+Security wording in the final report must be:
+
+"No change to cryptographic, authentication, or protocol security properties.
+The change only avoids redundant dialing when an already authenticated
+transport and E2E session are known to exist. Existing M5/M6 duplicate
+arbitration remains authoritative for concurrent connection races."
+
+==================================================
+VERIFICATION
+==================================================
+
+Run:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+go build -tags gui ./cmd/meshchat-gui
+
+Also repeat source-level checks:
+
+grep -R "DecryptMessage" internal/routing
+
+grep checks confirming GUI has no direct imports/access to:
+internal/crypto
+internal/session
+internal/mesh
+internal/routing
+
+grep for AES-GCM/AES GCM/AESGCM terminology.
+
+==================================================
+REPORT
+==================================================
+
+Return:
+- files changed
+- exact behavior
+- tests added/updated
+- verification results
+- security audit
+- any remaining limitations
+
+Do NOT make unrelated improvements.
+Do NOT begin M9.
+
+```
+
+
+
+```
+M8.3 LIVE ACCEPTANCE FAILURE — DIAGNOSE ONLY, DO NOT MODIFY CODE YET
+
+We have a deterministic live GUI failure:
+
+Two instances are launched cleanly:
+
+Alice:
+  MESH_ROLE=node1
+  MESH_LISTEN_ADDR=127.0.0.1:8000
+
+Bob:
+  MESH_ROLE=node2
+  MESH_LISTEN_ADDR=127.0.0.1:8001
+
+Observed behavior:
+
+1. Alice → Bob as the FIRST connection attempt:
+   Result: Alice GUI reports "connection closed".
+   Retrying Alice → Bob repeatedly continues to fail with "connection closed".
+
+2. Bob → Alice afterward:
+   Result: succeeds.
+   Secure session establishes and messaging works.
+
+3. After Bob → Alice succeeds:
+   - messaging works bidirectionally
+   - the remaining M8.3 live tests work
+   - duplicate Add Peer behavior works as expected.
+
+4. If the roles are conceptually reversed, the instance that performs the FIRST outbound connection is the one that fails; the other instance can subsequently initiate successfully.
+
+This is therefore NOT the previously identified redundant/duplicate Add Peer problem. It is a deterministic directional connection/handshake failure.
+
+PROJECT DIRECTORY:
+~/Documents/Noctis/CrytpProject
+
+IMPORTANT:
+Do NOT change code.
+Do NOT apply a speculative fix.
+Do NOT modify protocol/schema/crypto.
+Do NOT modify duplicate-connection arbitration.
+Do NOT start M9 work.
+
+Perform a source-level diagnostic of the exact first outbound connection lifecycle.
+
+Trace the complete path:
+
+GUI Add Peer
+→ ApplicationService.DialNode()
+→ PeerManager/Dialer
+→ TCP connection establishment
+→ inbound listener acceptance
+→ Peer state creation
+→ identity exchange
+→ handshake INIT/RESP
+→ authenticated identity assignment
+→ duplicate arbitration
+→ session establishment
+→ routing/session registration
+→ ApplicationService events
+→ GUI status update.
+
+Specifically investigate why the FIRST connection from the initiating side is closed.
+
+Compare the behavior of:
+
+A) Alice dialing Bob
+B) Bob dialing Alice
+
+Determine whether the difference is caused by:
+
+- inbound/outbound identity semantics
+- duplicate arbitration being triggered incorrectly on the first connection
+- initiator/responder role assignment
+- handshake INIT/RESP processing
+- pending-handshake registration
+- expectedPeerID handling
+- peer identity becoming known too late
+- PeerManager state transition
+- connection ownership/replacement
+- session establishment callback
+- connection cleanup/defer behavior
+- stale peer/session state
+- a race between inbound and outbound registration
+- GUI/ApplicationService incorrectly interpreting a legitimate event as failure
+- listener/dialer asymmetry
+- anything else in the actual source.
+
+IMPORTANT M5 invariant:
+Duplicate arbitration is intentionally identity-based:
+the connection initiated by the lexicographically smaller authenticated identity wins when duplicate connections exist.
+
+But verify whether that arbitration is accidentally being applied to what should be a SINGLE first connection.
+
+Also inspect the exact condition that causes the literal GUI error:
+"connection closed"
+
+Find where that error/status originates and trace backwards to the underlying error.
+
+For the failing direction, determine:
+- which side closes the TCP connection
+- which side enters FAILED/CLOSING
+- what error caused it
+- whether the peer identity was known at that point
+- whether a session existed
+- whether duplicate arbitration was invoked
+- whether the connection was closed intentionally or because of an error/defer path.
+
+For the successful reverse direction, trace the corresponding path and compare it line-by-line conceptually.
+
+Use the existing tests and source. Do not assume the previous reports are correct.
+
+Run targeted tests if useful, but do not modify files.
+
+At the end, report:
+
+1. ROOT CAUSE — one precise explanation.
+2. FAILURE TRACE — exact sequence of events for failing direction.
+3. SUCCESS TRACE — exact sequence for working direction.
+4. RELEVANT FILES/functions/conditions.
+5. WHY THE DIRECTION MATTERS.
+6. MINIMAL SAFE FIX — describe only; DO NOT implement.
+7. REGRESSION TEST — describe the test that should prove the fix.
+8. Whether this is a protocol/security issue or an application/transport lifecycle issue.
+
+Do not claim the issue is fixed.
+Do not change any source files.
+
+```
+
+
+```
+M8.3 FOLLOW-UP — ROOT CAUSE ACCEPTED, FIX DESIGN REQUIRES SECURITY REVIEW
+
+Your diagnostic correctly identifies the deterministic failure:
+
+The first GUI initiator calls local ExpectInbound(peer), then attempts an outbound connection. The remote listener rejects the inbound INIT because the remote side has not yet authorized the initiator. The failed attempt leaves local authorization state behind, allowing the reverse direction to succeed.
+
+I agree this explains the observed live behavior.
+
+However, DO NOT implement the proposed "catch EOF / Pending Authorization" fix yet.
+
+That approach would make a user-facing Connect action intentionally fail while presenting the failure as a pending state, which is not the intended M8.3 Add Peer semantics.
+
+We need to determine the correct architecture first.
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+Perform a focused source audit of the purpose and security contract of:
+
+- internal/mesh/listener.go
+- internal/mesh/manager.go
+- internal/mesh/dialer.go
+- internal/app/service.go
+- relevant M5/M6 tests involving ExpectInbound/isExpectedInbound
+- relevant M5/M6 acceptance evidence/documentation if available in the repository or project docs
+
+Answer these questions WITHOUT modifying code:
+
+1. Why was ExpectInbound() introduced?
+2. Is it intended to be:
+   A. production security authorization for every inbound connection,
+   B. a headless/test harness authorization mechanism,
+   C. both,
+   D. something else?
+
+3. What security threat does isExpectedInbound() specifically mitigate?
+4. Is an authenticated Ed25519 INIT identity already sufficient to safely allow the inbound connection to proceed to the existing handshake/duplicate-arbitration machinery?
+5. If the whitelist is removed/bypassed for M8 GUI connections, what exact M5 security properties are lost, if any?
+6. Could an arbitrary TCP scanner then cause expensive cryptographic work/resource exhaustion?
+7. What existing rate/resource limits protect against that?
+   Inspect:
+   - MaxPendingHandshakes
+   - handshake timeout
+   - frame size limit
+   - malformed packet validation
+   - connection limits
+   - duplicate arbitration
+   - any other relevant controls.
+
+8. Could we safely change the listener from:
+      reject unauthorised identity
+   to:
+      accept TCP + validate INIT + authenticate identity + enforce resource limits + proceed through normal handshake
+   without weakening the project's stated threat model?
+
+9. Alternatively, if the whitelist MUST remain, what is the intended user-facing M8 workflow for mutual authorization?
+   Would Add Peer need to create a persistent/pending pairing state rather than pretending DialNode is sufficient?
+
+10. Distinguish clearly between:
+   - transport admission control
+   - cryptographic peer authentication
+   - authorization/trust
+   - GUI peer discovery/manual dialing.
+
+11. Recommend ONE architecture for M8.3 that:
+   - makes first Add Peer connection work in either direction,
+   - preserves E2EE,
+   - preserves authenticated peer identity,
+   - preserves resource/DoS protections,
+   - does not introduce automatic trust of an arbitrary identity,
+   - does not require both GUIs to click Connect in a particular order.
+
+DO NOT MODIFY ANY FILES.
+
+At the end provide:
+
+A. Root architectural issue
+B. Security impact of changing the listener admission rule
+C. Recommended minimal fix
+D. Exact regression tests required
+E. Whether the fix belongs in mesh, application service, or GUI
+F. Whether protocol/schema changes are required
+
+This is a design/security audit only.
+
+```
+
+
+
+```
+M8.3 SECURITY GATE — AUDIT PERMISSIONLESS INBOUND HANDSHAKE BEFORE IMPLEMENTATION
+
+Your previous audit correctly identified the ExpectInbound chicken-and-egg failure.
+
+I agree that the GUI should be able to establish a first connection in either direction without requiring the remote GUI to have clicked Connect first.
+
+However, I DO NOT approve deleting ExpectInbound yet.
+
+Your previous statement that removing the whitelist has "no negative security impact" is too strong. Removing pre-admission authorization necessarily changes the inbound attack surface.
+
+Do NOT modify any files.
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+Perform a focused resource-exhaustion/security audit of the proposed architecture:
+
+TCP inbound
+→ frame length validation
+→ protobuf validation
+→ INIT validation
+→ pending handshake admission
+→ cryptographic handshake
+→ authenticated peer registration
+→ duplicate arbitration.
+
+Inspect the ACTUAL source and tests.
+
+Answer precisely:
+
+1. What work is performed BEFORE MaxPendingHandshakes is acquired?
+
+2. What work is performed AFTER MaxPendingHandshakes is acquired?
+
+3. Is the semaphore acquired before:
+   - expensive Ed25519 verification?
+   - X25519 computation?
+   - peer/session allocation?
+   - goroutine creation?
+   - any potentially attacker-amplified operation?
+
+4. Is the semaphore released on EVERY path?
+   Include:
+   - malformed packet
+   - invalid identity
+   - invalid signature
+   - timeout
+   - connection close
+   - panic/error paths if applicable.
+
+5. What is the exact maximum number of simultaneous pending cryptographic handshakes?
+
+6. Can an attacker repeatedly reconnect and consume the same 10 slots indefinitely?
+   If yes, what rate limiting/backoff/cooldown exists?
+
+7. What prevents an attacker from opening thousands of TCP sockets before the handshake semaphore is reached?
+
+8. What limits:
+   - accepted TCP connections
+   - goroutines
+   - per-IP resources
+   - pending connections
+   - handshake duration
+   - memory allocation
+   - CPU work
+   - established peers?
+
+9. Verify the 64 KiB frame limit occurs BEFORE allocation based on attacker-controlled length.
+
+10. Verify the handshake timeout actually bounds resource lifetime.
+
+11. Inspect whether unauthenticated inbound connections can trigger telemetry/log/event amplification.
+
+12. Inspect whether duplicate arbitration occurs only AFTER authenticated identity is established.
+
+13. Determine whether removing ExpectInbound introduces any new security vulnerability beyond increased exposure to unauthenticated handshake attempts.
+
+14. Distinguish:
+   - "security property lost"
+   - "attack surface increased"
+   - "attack still bounded"
+   - "attack completely prevented"
+
+15. Give a quantitative worst-case resource model where possible:
+   - max concurrent handshake operations
+   - max handshake lifetime
+   - max frame size
+   - max active peers
+   - relevant queue sizes
+   - any other relevant limits.
+
+16. Based ONLY on the actual implementation, decide whether this is acceptable for the project's existing threat model.
+
+Then recommend ONE of:
+
+A. SAFE TO REMOVE EXPECTED-INBOUND WHITELIST
+B. KEEP WHITELIST AND REDESIGN GUI PAIRING
+C. REMOVE WHITELIST BUT ADD SPECIFIC ADDITIONAL RESOURCE/RATE LIMIT BEFORE DOING SO
+
+If choosing A or C, explicitly state why the existing controls are sufficient or what exact control is missing.
+
+IMPORTANT:
+Do not modify code.
+Do not change protocol/schema.
+Do not implement the fix.
+Do not claim M8.3 fixed.
+
+This is the final security gate before authorization of the remediation.
+
+```
+
+
+
+```
+M8.3 REMEDIATION AUTHORIZED — REMOVE EXPECTED-INBOUND WHITELIST
+
+SECURITY GATE RESULT: APPROVED
+
+The security audit establishes that the ExpectInbound/isExpectedInbound whitelist is incorrectly coupling M5 transport admission with M8 GUI dialing.
+
+The first-initiator live failure is confirmed to be caused by:
+
+Dialer:
+  ExpectInbound(remote)
+  → Connect(remote)
+
+Remote listener:
+  receives authenticated INIT
+  → isExpectedInbound(initiator) == false
+  → closes connection
+
+The failed first dial leaves local authorization state behind, allowing the reverse direction to succeed.
+
+This is the deterministic M8.3 failure.
+
+The approved architecture is:
+
+TCP accept
+→ bounded pending-handshake admission
+→ frame validation
+→ handshake authentication
+→ authenticated identity
+→ duplicate arbitration
+→ established peer/session
+
+Do NOT require pre-authorization before the authenticated handshake.
+
+PROJECT DIRECTORY:
+~/Documents/Noctis/CrytpProject
+
+IMPLEMENT ONLY THIS REMEDIATION.
+
+## Required changes
+
+1. Remove the expected-inbound authorization mechanism from production mesh admission:
+
+   internal/mesh/manager.go
+
+   Remove:
+   - expectedInbound state
+   - ExpectInbound()
+   - isExpectedInbound()
+
+   Only remove code that exists specifically for this mechanism.
+
+2. Update:
+
+   internal/mesh/listener.go
+
+   Remove the isExpectedInbound() admission check.
+
+   The listener must continue to:
+   - enforce pending-handshake admission
+   - enforce handshake timeout
+   - enforce maximum frame size BEFORE allocation
+   - validate protobuf structure
+   - reject malformed/invalid protocol messages
+   - perform the normal authenticated M3 handshake
+   - register only successfully authenticated peers
+   - preserve existing duplicate arbitration.
+
+3. Update:
+
+   internal/app/service.go
+
+   Remove the ExpectInbound() call from DialNode().
+
+   DialNode(address, expectedPeerID) must continue to:
+   - validate the supplied expected PeerID
+   - establish the outbound TCP connection
+   - perform the normal authenticated handshake
+   - verify the authenticated remote identity against expectedPeerID
+   - surface failure if the authenticated identity does not match.
+
+   IMPORTANT:
+   Do NOT weaken expectedPeerID verification.
+
+4. Update existing tests and test harnesses that explicitly call ExpectInbound().
+
+   Replace only the obsolete authorization setup.
+
+   Do not weaken assertions merely to make tests pass.
+
+5. Preserve all M5/M6 security/resource controls:
+   - MaxPendingHandshakes = 10
+   - 5-second handshake timeout
+   - 64 KiB maximum frame
+   - maximum active peers
+   - duplicate connection arbitration
+   - malformed packet rejection
+   - authenticated identity requirement
+   - bounded telemetry
+   - routing validation
+   - all existing crypto/session protections.
+
+6. DO NOT modify:
+   - protobuf schema
+   - handshake transcript
+   - Ed25519
+   - X25519
+   - HKDF
+   - ChaCha20-Poly1305
+   - AEAD nonce construction
+   - replay window
+   - routing semantics
+   - TTL
+   - PacketID replay suppression
+   - session rotation
+   - GUI architecture
+   - ApplicationService interface except removing obsolete ExpectInbound usage.
+
+## Required new regression tests
+
+Add a focused test proving the actual bug is gone:
+
+### TestListener_AcceptsUnknownPeer
+
+Node A and Node B:
+
+1. Neither node pre-authorizes the other.
+2. A initiates connection to B.
+3. Connection succeeds.
+4. B authenticates A.
+5. A authenticates B.
+6. Peer/session establishment succeeds.
+7. Both sides can exchange an encrypted application message.
+
+Then repeat with B initiating A.
+
+Both directions MUST succeed.
+
+### TestExpectedPeerIDStillEnforced
+
+1. A dials B.
+2. A supplies an incorrect expected PeerID.
+3. The TCP connection may be established and the remote identity may be authenticated.
+4. ApplicationService MUST reject the connection/session because the authenticated identity does not equal expectedPeerID.
+5. Do not silently accept an unexpected authenticated identity.
+
+This test is critical because removing transport pre-authorization must NOT remove application-level identity verification.
+
+### Preserve existing tests
+
+Run all existing:
+- duplicate arbitration tests
+- pending handshake exhaustion tests
+- handshake timeout tests
+- malformed packet tests
+- invalid identity/signature tests
+- direct messaging tests
+- routing tests
+- replay tests
+- race tests.
+
+## Verification
+
+Run:
+
+go test ./...
+
+go test -race -p 1 ./...
+
+go vet ./...
+
+go build ./...
+
+If GUI dependencies are available:
+
+go build -tags gui ./cmd/meshchat-gui
+
+Do NOT claim Docker verification if proxy/DNS prevents it.
+
+## Live acceptance preparation
+
+After implementation, provide exact commands for a clean two-GUI test:
+
+Alice:
+MESH_ROLE=node1 MESH_LISTEN_ADDR=127.0.0.1:8000 ./meshchat-gui
+
+Bob:
+MESH_ROLE=node2 MESH_LISTEN_ADDR=127.0.0.1:8001 ./meshchat-gui
+
+The expected result is:
+
+A → B first connection: SUCCESS
+B → A first connection: SUCCESS
+
+Do NOT require reciprocal clicking.
+
+Then verify:
+- secure session established
+- conversation appears
+- Alice → Bob message
+- Bob → Alice message
+- repeated Add Peer on established connection reports the existing/idempotent state
+- messages remain intact.
+
+## Security wording
+
+Do NOT describe removal of ExpectInbound as:
+- eliminating DoS
+- mathematically proving DoS resistance
+- making the node immune to flooding
+- providing unlimited inbound access.
+
+Use:
+"Transport admission is no longer dependent on out-of-band pre-authorization. Inbound resource exposure remains bounded by the existing pending-handshake limit, timeout, frame-size validation, and peer limits. Cryptographic authentication and expected PeerID verification remain enforced."
+
+## Scope
+
+This is ONLY the M8.3 remediation.
+
+Do NOT start M9.
+Do NOT modify protocol/schema.
+Do NOT add features.
+Do NOT add persistence.
+Do NOT add group chat.
+Do NOT add file transfer.
+Do NOT add DHT/discovery.
+
+After implementation, report:
+1. exact files changed
+2. exact obsolete APIs removed
+3. tests added/updated
+4. complete verification results
+5. security-boundary verification
+6. GUI build result
+7. Docker result, explicitly qualified if unavailable
+8. whether the code is ready for final M8.3 live acceptance.
+
+Do not claim final M8.3 acceptance yet.
+```
+
+
+```
+M9 ARCHITECTURE & DEMONSTRATION REVIEW — DESIGN ONLY
+
+M8 IS NOW COMPLETE AND LIVE-ACCEPTED.
+
+M8.3 final live acceptance passed:
+- Alice-first connection: PASS
+- Bob-first connection: PASS
+- secure session establishment: PASS
+- bidirectional encrypted messaging: PASS
+- duplicate Add Peer behavior: PASS
+- existing in-memory conversation state preserved: PASS
+
+M8 is CLOSED.
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+We are now beginning M9.
+
+IMPORTANT:
+This is an M9 ARCHITECTURE/DESIGN REVIEW ONLY.
+
+DO NOT MODIFY CODE.
+DO NOT IMPLEMENT ANYTHING.
+DO NOT START M10.
+DO NOT CHANGE THE PROTOCOL OR PROTOBUF SCHEMA.
+DO NOT CHANGE CRYPTOGRAPHIC CONSTRUCTIONS.
+DO NOT add speculative features.
+
+First inspect the ACTUAL current repository and establish the current implementation state.
+
+M9 should turn the completed system into a reproducible, technically rigorous demonstration of the project's security and networking properties.
+
+Produce a concrete M9 proposal covering:
+
+1. M9 OBJECTIVE
+
+Define precisely what M9 must demonstrate.
+
+2. DEMONSTRATION TOPOLOGY
+
+Design a reproducible topology such as:
+
+Alice
+  |
+  v
+Relay / Bob / intermediate node
+  |
+  v
+Bob
+
+and, where useful, a 3-hop topology:
+
+Alice → Relay-1 → Relay-2 → Bob
+
+Explain which topology is required and why.
+
+3. END-TO-END MESSAGE DEMONSTRATION
+
+Show the complete lifecycle:
+
+GUI/application
+→ session
+→ encryption
+→ packet creation
+→ mesh forwarding
+→ destination
+→ authentication/decryption
+→ plaintext delivery.
+
+Clearly identify which components see plaintext and which do not.
+
+4. E2EE RELAY-BLINDNESS DEMONSTRATION
+
+Design a reproducible demonstration proving that an intermediate relay can forward the application packet but does not possess the endpoint session state or plaintext.
+
+Do NOT weaken the actual security boundary merely to make the demo easier.
+
+Use existing source/test instrumentation where appropriate.
+
+5. SECURITY DEMONSTRATIONS
+
+Identify reproducible M9 demonstrations for:
+
+- identity authentication
+- wrong PeerID rejection
+- packet tampering
+- ciphertext modification
+- replay rejection
+- malformed packet rejection
+- TTL enforcement
+- duplicate PacketID suppression
+- invalid signature rejection
+- session establishment failure
+- connection failure
+- bounded resource behavior.
+
+For each demonstration specify:
+- setup
+- action
+- expected result
+- evidence to capture
+- relevant existing test, if any.
+
+6. GUI DEMONSTRATION
+
+Define the exact user-facing demonstration sequence.
+
+Include:
+- displaying identity
+- adding peer
+- establishing secure session
+- conversation creation
+- sending message
+- receiving message
+- duplicate Add Peer behavior
+- status distinction between transport connection and secure session.
+
+7. OBSERVABILITY DEMONSTRATION
+
+Inspect the CURRENT implementation.
+
+Do not assume Prometheus/Grafana exists merely because it was architecturally planned.
+
+Determine exactly what telemetry currently exists and what can legitimately be demonstrated.
+
+Never expose:
+- plaintext
+- private keys
+- session keys
+- passwords
+- AEAD nonces
+- secret crypto material.
+
+If a planned telemetry component is not implemented, explicitly mark it as NOT IMPLEMENTED rather than proposing fake evidence.
+
+8. CONTAINERIZED DEMONSTRATION
+
+Determine what can actually be demonstrated reproducibly with Docker/Compose using the current repository.
+
+Account for the known environment limitation where Docker dependency downloads have historically been blocked by proxy/DNS.
+
+Separate:
+- verified Docker capabilities
+- previously verified Docker evidence
+- currently unverified Docker behavior.
+
+Do not claim Docker execution unless actually verified.
+
+9. LIVE GUI DEMONSTRATION
+
+Define exact commands for running multiple GUI instances locally.
+
+Use the existing:
+MESH_ROLE
+MESH_LISTEN_ADDR
+
+Do not introduce unnecessary infrastructure.
+
+10. FAILURE/ATTACK DEMONSTRATIONS
+
+Select the highest-value demonstrations for an academic cybersecurity project.
+
+Prioritize demonstrations that visibly prove security properties rather than merely showing that the application works.
+
+11. REPRODUCIBILITY
+
+Define:
+- prerequisites
+- build commands
+- test commands
+- environment variables
+- topology setup
+- execution order
+- cleanup
+- expected outputs
+- evidence collection.
+
+12. EVIDENCE PACKAGE
+
+Specify exactly what M9 should produce for the final project/report:
+
+- screenshots
+- terminal captures
+- test output
+- topology diagram
+- packet/ciphertext evidence
+- security-event evidence
+- GUI evidence
+- Docker evidence where available
+- failure/attack evidence.
+
+13. ACADEMIC VALUE
+
+Map each demonstration to:
+- confidentiality
+- integrity
+- authentication
+- replay resistance
+- routing behavior
+- E2EE relay blindness
+- availability/resource controls
+- secure software architecture.
+
+Do not overclaim any property.
+
+14. M9 NON-GOALS
+
+Explicitly exclude:
+- new cryptographic protocol
+- new wire schema
+- persistent chat history
+- file transfer
+- group chat
+- DHT
+- anonymity system
+- perfect metadata protection
+- deniability
+- production-grade deployment
+- arbitrary routing security claims beyond the implemented model.
+
+15. M9 RISKS/GAPS
+
+Identify anything in the current implementation that would prevent a rigorous M9 demonstration.
+
+Do not fix it yet.
+
+16. M9 DEFINITION OF DONE
+
+Create a precise checklist where every item can be objectively marked:
+PASS / FAIL / NOT APPLICABLE / NOT VERIFIED.
+
+17. RECOMMENDED M9 PHASES
+
+Break M9 into the smallest sensible implementation phases.
+
+Prefer:
+M9.1
+M9.2
+M9.3
+etc.
+
+Each phase must have:
+- scope
+- deliverables
+- tests
+- acceptance criteria
+- security review requirements.
+
+18. FINAL RECOMMENDATION
+
+Conclude whether the proposed M9 plan is ready for authorization.
+
+IMPORTANT GOVERNANCE RULES:
+
+M8 is complete.
+
+M9 is NOT YET AUTHORIZED FOR IMPLEMENTATION.
+
+This response must be a design proposal only.
+
+Do not modify files.
+Do not create documentation.
+Do not alter source code.
+
+Report based on the ACTUAL repository, not assumptions from previous reports.
+
+```
+
+
+```
+M9.1 IMPLEMENTATION AUTHORIZATION — E2EE & RELAY-BLINDNESS EVIDENCE
+
+GOVERNANCE DECISION:
+
+M9 ARCHITECTURE/DESIGN REVIEW = APPROVED.
+
+M9.1 IS NOW AUTHORIZED FOR IMPLEMENTATION.
+
+M9.2, M9.3, AND M9.4 ARE NOT YET AUTHORIZED.
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+==================================================
+M9.1 OBJECTIVE
+==================================================
+
+Implement ONLY the evidence/instrumentation required to produce a rigorous,
+reproducible demonstration of:
+
+Alice
+  |
+  v
+Relay/Bob
+  |
+  v
+Carol
+
+The demonstration must prove:
+
+1. Alice and Carol possess the authenticated endpoint application session.
+2. Alice encrypts application plaintext using the EXISTING ChaCha20-Poly1305 implementation.
+3. The resulting APP_DATA packet can traverse the mesh through Bob.
+4. Bob forwards the packet without decrypting the application payload.
+5. Bob does not possess the Alice–Carol endpoint application session.
+6. Carol receives and successfully decrypts the original plaintext.
+7. The routing layer remains cryptographically blind to application plaintext.
+
+==================================================
+STRICT SECURITY / GOVERNANCE CONSTRAINTS
+==================================================
+
+DO NOT:
+
+- modify the cryptographic protocol
+- modify Ed25519 authentication
+- modify X25519 key agreement
+- modify HKDF
+- modify ChaCha20-Poly1305
+- modify the AEAD nonce construction
+- modify replay protection
+- modify protobuf schema
+- add protobuf fields
+- modify packet wire format
+- modify routing semantics
+- replace managed flooding with route selection
+- introduce DHT
+- introduce new routing algorithms
+- introduce persistent storage
+- introduce group chat
+- introduce file transfer
+- implement Prometheus/Grafana
+- modify Docker configuration merely for M9
+- revive or repair the obsolete cmd/meshchat simulator
+- expose private keys
+- expose ephemeral private keys
+- expose session keys
+- expose secret crypto material
+- add production plaintext logging to relay code.
+
+The project uses:
+
+ChaCha20-Poly1305
+
+NOT XChaCha20-Poly1305.
+NOT AES-GCM.
+
+The existing nonce construction is:
+
+[4 zero bytes][8-byte big-endian sequence number]
+
+DO NOT change it.
+
+==================================================
+FIRST: INSPECT ACTUAL CURRENT REPOSITORY
+==================================================
+
+Before modifying anything:
+
+cd ~/Documents/Noctis/CrytpProject
+
+Inspect:
+
+- internal/mesh/integration_test.go
+- internal/routing/
+- internal/session/
+- internal/crypto/
+- internal/app/
+- existing M6/M7/M8 integration/security tests.
+
+Identify the exact existing test:
+
+TestRelayCannotDecryptEndpointSession
+
+and determine whether it already provides the required 3-node path.
+
+Do not assume the previous reports are still accurate if the source differs.
+
+==================================================
+M9.1 IMPLEMENTATION SCOPE
+==================================================
+
+Only implement what is necessary to create rigorous evidence.
+
+Permitted changes:
+
+1. Test-only instrumentation.
+2. Additional tests specifically required to demonstrate relay blindness.
+3. Test logging using t.Logf or equivalent test-only mechanisms.
+4. Minimal test helpers required to observe the existing forwarding path.
+5. Documentation/comments directly necessary to explain the test evidence.
+
+Avoid production-code modifications unless absolutely necessary to expose an already-existing architectural boundary.
+
+If production code must be changed, STOP and report exactly why before proceeding.
+
+Do not make speculative changes.
+
+==================================================
+RELAY-BLINDNESS EVIDENCE
+==================================================
+
+The evidence must contain FOUR categories.
+
+--------------------------------------------------
+A. SESSION OWNERSHIP
+--------------------------------------------------
+
+Demonstrate:
+
+Alice:
+- possesses Alice–Carol endpoint application session.
+
+Carol:
+- possesses Alice–Carol endpoint application session.
+
+Bob:
+- does NOT possess Alice–Carol endpoint application session.
+
+Do not say:
+
+"Bob's SessionManager does not trigger."
+
+Bob may have legitimate sessions with neighboring peers.
+
+Use precise terminology:
+
+"Bob does not possess the Alice–Carol endpoint application session."
+
+--------------------------------------------------
+B. RELAY PACKET OBSERVATION
+--------------------------------------------------
+
+Capture minimal test-only evidence that Bob forwards the APP_DATA packet.
+
+Permitted observed information may include:
+
+- source_node
+- dest_node
+- packet_id
+- TTL
+- packet type
+- session_id
+- sequence number
+- ciphertext
+
+DO NOT log:
+
+- private keys
+- ephemeral private keys
+- session keys
+- plaintext at the relay
+- secret crypto material.
+
+Do not claim that ciphertext is "indistinguishable from random noise."
+
+The claim is only:
+
+"The relay observes permitted routing metadata and ciphertext but does not possess the endpoint session required to decrypt the application ciphertext."
+
+Prefer test-only t.Logf instrumentation.
+
+Do not permanently add verbose production logging.
+
+--------------------------------------------------
+C. ROUTING CODE BOUNDARY
+--------------------------------------------------
+
+Verify that:
+
+internal/routing
+
+does NOT decrypt application data.
+
+Specifically verify that no production routing path calls:
+
+DecryptMessage(...)
+
+If source inspection is included in the test/evidence process, make it a verification artifact rather than changing routing behavior.
+
+--------------------------------------------------
+D. DESTINATION DECRYPTION
+--------------------------------------------------
+
+Demonstrate:
+
+Alice plaintext
+→ endpoint encryption
+→ ciphertext
+→ Bob forwarding
+→ Carol reception
+→ endpoint decryption
+→ original plaintext.
+
+Carol must actually receive the original message.
+
+==================================================
+IMPORTANT ROUTING TERMINOLOGY
+==================================================
+
+M6 implements bounded managed flooding.
+
+Do NOT describe Bob as being selected by a sophisticated route-selection algorithm.
+
+Use terminology consistent with the implementation:
+
+"Alice originates the packet. The mesh forwarding mechanism propagates it through eligible peers. Bob receives and forwards the packet, and Carol accepts it as the destination."
+
+==================================================
+TEST REQUIREMENTS
+==================================================
+
+Create or enhance the M9.1 evidence test so that it demonstrates:
+
+1. Three nodes are established:
+   Alice
+   Bob / relay
+   Carol
+
+2. Alice and Carol establish the required endpoint session.
+
+3. Bob does not have the Alice–Carol endpoint session.
+
+4. Alice sends a known test plaintext to Carol.
+
+5. The application data is encrypted using the existing session implementation.
+
+6. Bob forwards the APP_DATA packet.
+
+7. The forwarded packet can be observed in test-only instrumentation.
+
+8. Bob's observation does not include plaintext.
+
+9. Carol receives the packet.
+
+10. Carol successfully decrypts the packet.
+
+11. Carol receives exactly the expected plaintext.
+
+12. The same application packet is not incorrectly decrypted at Bob.
+
+13. No routing-layer decryption path is introduced.
+
+==================================================
+EVIDENCE QUALITY
+==================================================
+
+The test output should make the evidence understandable to an external reviewer.
+
+Use concise t.Logf statements such as:
+
+- topology established
+- Alice–Carol endpoint session established
+- relay session ownership check
+- APP_DATA packet observed at relay
+- relay source/destination/session metadata
+- ciphertext length
+- relay endpoint-session lookup result
+- packet forwarded
+- Carol decryption successful
+- plaintext delivery successful
+
+Do NOT print sensitive cryptographic secrets.
+
+If printing packet identifiers or public identities is necessary, ensure they are not private/secret values.
+
+Do not dump entire private structures.
+
+==================================================
+TEST ISOLATION
+==================================================
+
+Do not make the test dependent on:
+
+- external network
+- Internet
+- Docker
+- Prometheus
+- Grafana
+- GUI
+- external services.
+
+Use loopback/local test infrastructure.
+
+==================================================
+VERIFICATION
+==================================================
+
+After implementation run:
+
+go fmt ./...
+
+go vet ./...
+
+go test ./...
+
+go test -race -p 1 ./...
+
+go build ./...
+
+Do NOT claim Docker verification.
+
+Do NOT claim GUI runtime verification in M9.1.
+
+The race command should use:
+
+go test -race -p 1 ./...
+
+because the environment previously experienced VM CPU starvation.
+
+==================================================
+REGRESSION CHECKS
+==================================================
+
+Confirm existing security boundaries remain intact.
+
+Specifically verify:
+
+- internal/routing contains no DecryptMessage production path.
+- no plaintext is logged by relay production code.
+- no private/session keys are logged.
+- no crypto construction changed.
+- no protobuf schema changed.
+- no routing semantics changed.
+
+Run appropriate grep/source inspections and report the results.
+
+==================================================
+GIT / CHANGE SCOPE
+==================================================
+
+Before changes record:
+
+git status --short
+
+After changes record:
+
+git status --short
+git diff --stat
+git diff
+
+Ensure modifications are limited to M9.1 evidence/test scope.
+
+If unrelated modifications are discovered, DO NOT overwrite or revert them blindly.
+Report them separately.
+
+==================================================
+M9.1 ACCEPTANCE GATE
+==================================================
+
+M9.1 PASS requires ALL of the following:
+
+[ ] Three-node Alice → Bob → Carol demonstration succeeds.
+
+[ ] Alice and Carol establish the authenticated endpoint session.
+
+[ ] Alice sends application plaintext.
+
+[ ] Existing ChaCha20-Poly1305 implementation encrypts the application data.
+
+[ ] Bob forwards the resulting application packet.
+
+[ ] Bob does not possess the Alice–Carol endpoint application session.
+
+[ ] Relay observation contains only permitted routing metadata and ciphertext.
+
+[ ] Relay does not receive plaintext through the routing layer.
+
+[ ] Carol receives and successfully decrypts the original plaintext.
+
+[ ] No routing-layer decryption path exists.
+
+[ ] No crypto/protocol/schema/routing semantics changed.
+
+[ ] No sensitive secret material is exposed by test instrumentation.
+
+[ ] go vet ./... passes.
+
+[ ] go test ./... passes.
+
+[ ] go test -race -p 1 ./... passes.
+
+[ ] go build ./... passes.
+
+[ ] Changes are limited to M9.1 scope.
+
+==================================================
+IMPORTANT GOVERNANCE RULE
+==================================================
+
+M9.1 completion does NOT authorize M9.2.
+
+After M9.1 implementation and verification:
+
+STOP.
+
+Do not begin M9.2.
+
+Return a detailed M9.1 implementation report containing:
+
+1. Files changed.
+2. Exact implementation changes.
+3. Test/instrumentation design.
+4. Relay-blindness evidence.
+5. Session ownership evidence.
+6. Packet observation evidence.
+7. Destination decryption evidence.
+8. Security-boundary inspection results.
+9. Commands executed.
+10. Exact test/build results.
+11. Git diff/stat summary.
+12. Any limitations.
+13. Any unresolved findings.
+14. M9.1 PASS/FAIL recommendation.
+
+Do not modify the documentation vault.
+
+Do not update M9 documentation yet.
+
+M9.1 must receive an independent security review before M9.2 is authorized.
+
+```
+
+
+```
+M9.1 SECURITY REVIEW REMEDIATION — TEST OBSERVER BOUNDARY
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+GOVERNANCE:
+
+M9 architecture = APPROVED.
+M9.1 = CONDITIONALLY PASSED.
+M9.1 is NOT YET CLOSED.
+M9.2 is NOT AUTHORIZED.
+
+The independent security review found one issue:
+
+The M9.1 report describes TestObserver as "strictly test-only", but
+internal/routing/router.go was modified to add:
+
+TestObserver func(pkt *protocol.MeshPacket)
+
+to the production Router structure.
+
+This creates a production test-oriented observation capability and
+unnecessarily expands the routing component's API/security boundary.
+
+==================================================
+OBJECTIVE
+==================================================
+
+Remove the production TestObserver API while preserving the same M9.1
+relay-blindness evidence.
+
+The final production routing architecture must not expose a generic
+test packet-observer callback merely for M9 evidence.
+
+==================================================
+STRICT CONSTRAINTS
+==================================================
+
+DO NOT:
+
+- change protobuf schema
+- change packet format
+- change ChaCha20-Poly1305
+- change nonce construction
+- change Ed25519
+- change X25519
+- change HKDF
+- change replay protection
+- change TTL semantics
+- change PacketID cache semantics
+- change managed flooding behavior
+- change transport behavior
+- change session semantics
+- add telemetry
+- add Prometheus/Grafana
+- modify Docker
+- fix the obsolete CLI simulator
+- perform broad routing refactoring.
+
+This is a narrow test-boundary remediation.
+
+==================================================
+REQUIRED CHANGE
+==================================================
+
+Remove:
+
+TestObserver func(pkt *protocol.MeshPacket)
+
+from the production Router API.
+
+Do NOT simply rename it to another production callback.
+
+Do NOT replace it with:
+
+Observer
+PacketHook
+DebugCallback
+OnForward
+OnPacket
+or equivalent production extension points.
+
+Find the narrowest existing test-controlled observation point that can
+capture the already-existing forwarded packet.
+
+Prefer a test-local observation mechanism at an existing forwarding or
+transport boundary.
+
+If a test-only build mechanism is genuinely necessary, keep the
+production build free of the test observer.
+
+==================================================
+PRESERVE M9.1 EVIDENCE
+==================================================
+
+The relay-blindness test must still demonstrate:
+
+1. Alice possesses Alice–Carol endpoint application session.
+2. Carol possesses Alice–Carol endpoint application session.
+3. Bob does not possess Alice–Carol endpoint application session.
+4. Alice sends "Hello Carol".
+5. Existing ChaCha20-Poly1305 encrypts the application payload.
+6. Bob forwards the APP_DATA packet.
+7. Test evidence captures permitted packet metadata/ciphertext.
+8. Bob does not decrypt the application payload.
+9. Carol receives and successfully decrypts "Hello Carol".
+
+Permitted observed fields:
+
+- packet type
+- source_node
+- dest_node
+- packet_id
+- TTL
+- session_id
+- sequence number
+- ciphertext length/content where required for evidence.
+
+Never log:
+
+- private keys
+- ephemeral private keys
+- session keys
+- secret crypto material.
+
+Do not claim ciphertext is "indistinguishable from random noise."
+
+==================================================
+SESSION OWNERSHIP LANGUAGE
+==================================================
+
+Use precise wording:
+
+"Bob's implemented session manager does not contain the Alice–Carol
+endpoint application session required to decrypt the packet."
+
+Do NOT claim:
+
+"Bob cannot possibly possess the keys."
+
+==================================================
+REPRODUCIBILITY LANGUAGE
+==================================================
+
+Do not claim:
+
+"perfectly reproducible."
+
+Use technically defensible wording such as:
+
+"The test avoids the previously observed port-collision condition and
+uses race-safe observation counting."
+
+==================================================
+VERIFICATION
+==================================================
+
+Run:
+
+go fmt ./...
+go vet ./...
+go test ./...
+go test -race -p 1 ./...
+go build ./...
+
+Also verify:
+
+1. No TestObserver field remains in production Router.
+2. No equivalent generic packet-observation callback was introduced.
+3. internal/routing contains no DecryptMessage production path.
+4. No crypto construction changed.
+5. No protobuf schema changed.
+6. No routing semantics changed.
+7. No secret material is logged.
+
+Run appropriate source/grep inspections.
+
+==================================================
+GIT SCOPE
+==================================================
+
+Before changes:
+
+git status --short
+
+After changes:
+
+git status --short
+git diff --stat
+git diff
+
+Only M9.1 test/evidence-boundary files may change.
+
+Do not overwrite unrelated work.
+
+==================================================
+STOP CONDITION
+==================================================
+
+After completing this remediation:
+
+STOP.
+
+Do NOT begin M9.2.
+
+Do NOT modify the documentation vault.
+
+Return an updated M9.1 remediation report containing:
+
+1. Root cause of the TestObserver issue.
+2. Exact files changed.
+3. Exact mechanism used instead.
+4. Confirmation that production Router no longer exposes TestObserver
+   or an equivalent generic observation API.
+5. Relay-blindness evidence.
+6. Session ownership evidence.
+7. Destination decryption evidence.
+8. Security-boundary inspection.
+9. Exact commands/results.
+10. Git diff/stat.
+11. Any limitations.
+12. Final M9.1 PASS/FAIL recommendation.
+
+M9.1 remains awaiting independent security review after remediation.
+
+```
+
+
+```
+
+M9.2 IMPLEMENTATION AUTHORIZATION — SECURITY ATTACK EVIDENCE
+
+GOVERNANCE DECISION:
+
+M9 ARCHITECTURE = APPROVED.
+M9.1 = PASS / CLOSED.
+M9.2 = NOW AUTHORIZED.
+
+M9.3 and M9.4 remain NOT AUTHORIZED.
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+==================================================
+OBJECTIVE
+==================================================
+
+M9.2 must produce reproducible academic evidence for the security
+controls already implemented in the system.
+
+This is an EVIDENCE / TEST phase.
+
+Do not redesign the security architecture.
+
+Do not modify the cryptographic protocol.
+
+Do not modify the protobuf schema.
+
+Do not modify routing semantics.
+
+Do not begin M9.3.
+
+Do not begin M9.4.
+
+==================================================
+MANDATORY SECURITY DEMONSTRATIONS
+==================================================
+
+Implement or enhance tests ONLY where necessary to produce clear,
+reproducible evidence for:
+
+1. Cryptographic authentication
+2. Wrong PeerID rejection
+3. Ciphertext tampering rejection
+4. Replay rejection
+5. Invalid signature rejection
+6. Malformed packet rejection
+7. TTL enforcement
+8. Duplicate PacketID suppression
+9. Pending-handshake resource bounding
+
+Use existing tests whenever possible.
+
+Before adding any new test, inspect the existing test suite and identify
+whether the required behavior is already covered.
+
+==================================================
+IMPORTANT DISTINCTIONS
+==================================================
+
+Do not conflate these mechanisms:
+
+A. AEAD replay protection
+
+Uses the existing:
+- sequence numbers
+- replay window
+- ChaCha20-Poly1305 authentication
+- session/direction context.
+
+B. Mesh duplicate PacketID suppression
+
+Uses the existing:
+- source_node
+- packet_id
+- bounded duplicate/seen cache.
+
+M9.2 must demonstrate that these are separate mechanisms.
+
+==================================================
+1. AUTHENTICATION / WRONG PEERID
+==================================================
+
+Demonstrate:
+
+- legitimate peer identity succeeds.
+- forged/mismatched expected PeerID fails.
+- connection/session is not established with the wrong identity.
+
+Use the actual existing expected-PeerID behavior.
+
+Do not weaken or bypass authentication for the test.
+
+==================================================
+2. CIPHERTEXT TAMPERING
+==================================================
+
+Demonstrate:
+
+1. Create a valid encrypted application message.
+2. Modify ciphertext in transit/test fixture.
+3. Submit modified ciphertext.
+4. Existing ChaCha20-Poly1305 authentication rejects it.
+5. Message is not delivered as valid plaintext.
+
+Do not change the AEAD implementation.
+
+Do not log keys.
+
+Do not log private material.
+
+==================================================
+3. REPLAY
+==================================================
+
+Demonstrate:
+
+1. Deliver a valid encrypted APP_DATA packet.
+2. Replay the exact packet.
+3. Existing session replay protection rejects the replay.
+4. No duplicate plaintext delivery occurs.
+
+Clearly document that this is endpoint/session-level replay protection.
+
+Do not claim this is the same as PacketID suppression.
+
+==================================================
+4. INVALID SIGNATURE
+==================================================
+
+Demonstrate an authenticated-handshake signature failure.
+
+Expected:
+
+- signature verification fails.
+- session is not established.
+- failure is observable in test evidence.
+
+Do not modify the signature verification implementation.
+
+==================================================
+5. MALFORMED PACKET
+==================================================
+
+Demonstrate malformed transport/protobuf input.
+
+Include existing validation boundaries where already covered:
+
+- invalid framing
+- malformed protobuf
+- invalid packet structure
+- invalid field lengths where applicable.
+
+Expected:
+
+- malformed input is rejected.
+- no panic.
+- no invalid packet reaches normal processing.
+
+Do not claim protection beyond the behavior actually tested.
+
+==================================================
+6. TTL
+==================================================
+
+Demonstrate the existing M6 semantics.
+
+At minimum:
+
+TTL = 0
+→ dropped.
+
+Also, if existing tests support it, demonstrate:
+
+TTL = 1
+→ local destination may process it
+→ non-local packet is not forwarded.
+
+TTL > 1
+→ non-local packet can be forwarded with decremented TTL.
+
+Do not modify TTL behavior.
+
+==================================================
+7. PACKETID DUPLICATE SUPPRESSION
+==================================================
+
+This demonstration is REQUIRED.
+
+Use the actual implemented duplicate cache.
+
+Demonstrate:
+
+1. Construct a valid packet.
+2. Deliver it.
+3. Deliver the exact same packet again using the same:
+   source_node + packet_id.
+4. Show that the duplicate is suppressed.
+5. Show that it is not delivered/forwarded a second time.
+
+Also demonstrate, where practical, that changing packet_id results in a
+distinct packet rather than incorrectly treating it as the same packet.
+
+Do not conflate this with AEAD replay protection.
+
+==================================================
+8. PENDING-HANDSHAKE RESOURCE BOUND
+==================================================
+
+Demonstrate the existing:
+
+MaxPendingHandshakes = 10
+
+behavior.
+
+The evidence should establish:
+
+- TCP connections can arrive.
+- pending-handshake admission is bounded.
+- no more than the configured pending-handshake limit is admitted.
+- expensive handshake processing occurs only for admitted pending
+  handshakes.
+- handshake timeout remains enforced.
+- frame-size limits remain enforced.
+
+Do NOT claim:
+
+- DoS immunity
+- unlimited attack resistance
+- "exactly 10 threads"
+- that excess connections necessarily block or timeout unless the actual
+  test proves that exact behavior.
+
+Use:
+
+"The number of simultaneously admitted pending handshakes is bounded
+by MaxPendingHandshakes=10."
+
+==================================================
+TEST INSTRUMENTATION RULES
+==================================================
+
+Use minimal test-only evidence instrumentation.
+
+Prefer:
+
+t.Logf(...)
+
+or existing test helpers.
+
+Do NOT add generic packet observers/callbacks to production Router APIs.
+
+Do NOT introduce:
+
+TestObserver
+Observer
+PacketHook
+DebugCallback
+OnForward
+or equivalent generic production observation APIs.
+
+M9.1 established this architectural rule.
+
+Do not log:
+
+- private keys
+- ephemeral private keys
+- session keys
+- passwords
+- secret crypto material.
+
+Do not add production plaintext logging.
+
+==================================================
+SECURITY LANGUAGE
+==================================================
+
+Use precise terminology.
+
+Project AEAD:
+
+ChaCha20-Poly1305
+
+Never call it:
+
+XChaCha20-Poly1305
+AES-GCM.
+
+Do not claim:
+
+- mathematically unbreakable
+- impossible to attack
+- DoS immunity
+- anonymous
+- perfect metadata protection
+- perfect forward secrecy unless qualified by the actual design
+- protection against compromised endpoints.
+
+==================================================
+VERIFICATION
+==================================================
+
+Run:
+
+go fmt ./...
+
+go vet ./...
+
+go test ./...
+
+go test -race -p 1 ./...
+
+go build ./...
+
+Do not claim Docker verification.
+
+Do not begin GUI work.
+
+==================================================
+REGRESSION SECURITY CHECKS
+==================================================
+
+Verify that:
+
+- internal/routing contains no production DecryptMessage path.
+- no production test-observer API exists.
+- ChaCha20-Poly1305 construction is unchanged.
+- AEAD nonce construction is unchanged.
+- replay-window behavior is unchanged.
+- PacketID cache semantics are unchanged.
+- TTL semantics are unchanged.
+- MaxPendingHandshakes remains bounded.
+- protobuf schema is unchanged.
+- no private/secret crypto material is logged.
+
+==================================================
+EVIDENCE CAPTURE
+==================================================
+
+Produce clear test output for each attack.
+
+Prefer evidence formatted like:
+
+M9.2 EVIDENCE - CIPHERTEXT TAMPERING
+  Original packet accepted: YES
+  Ciphertext modified: YES
+  AEAD authentication: FAILED
+  Plaintext delivered: NO
+
+M9.2 EVIDENCE - REPLAY
+  Original packet accepted: YES
+  Same packet replayed: YES
+  Replay rejected: YES
+  Duplicate plaintext delivery: NO
+
+M9.2 EVIDENCE - PACKETID DUPLICATE
+  Original packet delivered: YES
+  Same source_node + packet_id replayed: YES
+  Duplicate suppressed: YES
+  Second forwarding/delivery: NO
+
+M9.2 EVIDENCE - TTL
+  TTL: 0
+  Destination local: NO
+  Forwarded: NO
+  Result: DROPPED
+
+M9.2 EVIDENCE - HANDSHAKE RESOURCE BOUND
+  Configured maximum: 10
+  Attempted incomplete handshakes: 15
+  Maximum simultaneously admitted: <= 10
+  Result: BOUNDED
+
+```
+
+
+
+```
+M9.2 SECURITY REVIEW REMEDIATION — PENDING HANDSHAKE BOUND EVIDENCE
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+GOVERNANCE:
+
+M9 Architecture = APPROVED.
+M9.1 = PASS / CLOSED.
+M9.2 = CONDITIONALLY PASSED.
+M9.2 is NOT YET CLOSED.
+M9.3 is NOT AUTHORIZED.
+
+==================================================
+FINDING
+==================================================
+
+The current M9.2 resource-bound evidence reports:
+
+Configured maximum: 1
+Attempted incomplete handshakes: 2
+Maximum simultaneously admitted: <= 1
+
+This proves that the semaphore can enforce a test-configured bound of 1,
+but it does NOT demonstrate the project's actual configured:
+
+MaxPendingHandshakes = 10
+
+M9.2 was explicitly authorized to demonstrate the actual production
+pending-handshake resource boundary.
+
+==================================================
+OBJECTIVE
+==================================================
+
+Correct ONLY the M9.2 evidence test so that it demonstrates the actual
+production pending-handshake bound.
+
+Do NOT redesign the handshake mechanism.
+
+Do NOT change the production security architecture.
+
+Do NOT change protocol/crypto/schema/routing semantics.
+
+==================================================
+REQUIRED EVIDENCE
+==================================================
+
+The final test must establish the actual configured value used by the
+production PeerManager/listener.
+
+Expected architectural value:
+
+MaxPendingHandshakes = 10
+
+The test should attempt more incomplete concurrent handshakes than the
+configured limit.
+
+For example, 15 attempts may be appropriate, but DO NOT fabricate or
+assume observed values.
+
+The evidence should establish:
+
+Configured maximum: 10
+Attempted incomplete handshakes: >10
+Maximum simultaneously admitted: <=10
+Result: BOUNDED
+
+If the actual implementation exposes the configuration differently,
+inspect the source and use the authoritative production value.
+
+==================================================
+CRITICAL REQUIREMENT
+==================================================
+
+Do NOT simply construct a test PeerManager with:
+
+MaxPendingHandshakes = 1
+
+and call that sufficient.
+
+The test must exercise or explicitly verify the actual production
+configuration of 10.
+
+If the existing test architecture requires a test-specific constructor,
+ensure the test still uses the same production constant/default rather
+than silently replacing it with 1.
+
+==================================================
+SECURITY PROPERTY
+==================================================
+
+The evidence must demonstrate:
+
+- incoming TCP connections can arrive;
+- pending-handshake admission is bounded;
+- no more than MaxPendingHandshakes are simultaneously admitted;
+- incomplete handshakes cannot consume unlimited pending-handshake
+  resources;
+- existing handshake timeout remains intact;
+- expensive cryptographic processing remains within the bounded
+  admission path.
+
+Do NOT claim:
+
+- DoS immunity;
+- complete availability protection;
+- unlimited attack resistance;
+- exactly 10 threads;
+- that excess connections necessarily block or timeout unless the test
+  actually demonstrates that behavior.
+
+Use precise language:
+
+"The number of simultaneously admitted pending handshakes is bounded
+by MaxPendingHandshakes=10."
+
+==================================================
+SCOPE
+==================================================
+
+Only modify M9.2 test/evidence code.
+
+Do NOT modify:
+
+- internal/crypto production code
+- internal/mesh production code
+- internal/routing production code
+- protobuf schema
+- crypto construction
+- handshake semantics
+- routing semantics
+- Docker
+- GUI
+- documentation vault.
+
+Do not add production instrumentation.
+
+==================================================
+VERIFICATION
+==================================================
+
+Run:
+
+go fmt ./...
+
+go vet ./...
+
+go test ./...
+
+go test -race -p 1 ./...
+
+go build ./...
+
+Also verify the production configuration is still:
+
+MaxPendingHandshakes = 10
+
+and report where that authoritative value comes from.
+
+==================================================
+GIT CHECK
+==================================================
+
+Before changes:
+
+git status --short
+
+After changes:
+
+git status --short
+git diff --stat
+git diff
+
+Only M9.2 test/evidence files should change.
+
+Do not revert unrelated work.
+
+==================================================
+STOP
+==================================================
+
+After remediation:
+
+STOP.
+
+Do NOT begin M9.3.
+
+Do NOT modify the documentation vault.
+
+Return a concise remediation report containing:
+
+1. Root cause.
+2. Exact test change.
+3. Authoritative production MaxPendingHandshakes value.
+4. Number of attempted incomplete handshakes.
+5. Maximum simultaneously admitted observed.
+6. Exact evidence output.
+7. Full verification results.
+8. Git diff/stat.
+9. Confirmation no production security behavior changed.
+10. Final M9.2 PASS/FAIL recommendation.
+
+M9.2 remains awaiting independent security review.
+
+```
+
+
+```
+M9.3 IMPLEMENTATION AUTHORIZATION — GUI LIVE DEMONSTRATION
+
+GOVERNANCE:
+
+M8 = COMPLETE / LIVE ACCEPTED.
+M9 ARCHITECTURE = APPROVED.
+M9.1 = PASS / CLOSED.
+M9.2 = PASS / CLOSED.
+
+M9.3 = NOW AUTHORIZED.
+
+M9.4 = NOT AUTHORIZED.
+
+PROJECT:
+
+~/Documents/Noctis/CrytpProject
+
+==================================================
+OBJECTIVE
+==================================================
+
+M9.3 is an EVIDENCE-CAPTURE phase.
+
+The GUI was already implemented and live-accepted during M8.3.
+
+DO NOT treat M9.3 as a GUI development milestone.
+
+The objective is to perform and document a reproducible two-node live GUI
+demonstration proving the user-facing behavior of the already implemented
+system.
+
+==================================================
+TOPOLOGY
+==================================================
+
+Use exactly two independent GUI nodes:
+
+Alice
+  ↕
+Bob
+
+This demonstration is separate from the M9.1 three-node relay-blindness
+proof.
+
+Do NOT claim that the two-node GUI demonstration proves relay blindness.
+
+M9.1 already provides the three-node relay-blindness evidence.
+
+==================================================
+MANDATORY GUI DEMONSTRATION
+==================================================
+
+Demonstrate the following sequence:
+
+1. Launch Alice GUI.
+2. Launch Bob GUI.
+3. Verify each displays its local public identity.
+4. Alice manually enters Bob's:
+   - IP/address
+   - TCP port
+   - expected PeerID.
+5. Alice connects to Bob.
+6. Demonstrate the distinction between:
+   - TCP connection established
+   - secure session established.
+7. Conversation with Bob becomes available.
+8. Alice sends a message to Bob.
+9. Bob receives and displays the message.
+10. Bob sends a message to Alice.
+11. Alice receives and displays the message.
+12. Attempt duplicate Add Peer / Connect against already-established Bob.
+13. Verify existing conversation/session state is not destroyed or duplicated.
+14. Attempt connection using a valid address but incorrect/forged PeerID.
+15. Verify connection/session establishment fails.
+
+==================================================
+SECURITY / PRIVACY CONSTRAINTS
+==================================================
+
+DO NOT:
+
+- modify cryptographic constructions
+- modify session protocol
+- modify protobuf
+- modify routing
+- add GUI crypto logic
+- expose private keys
+- expose session keys
+- expose ephemeral private keys
+- expose nonces/secrets
+- add plaintext logging to relay/routing code
+- add telemetry
+- modify Docker
+- fix obsolete cmd/meshchat
+- add persistent chat history
+- add new networking features.
+
+The GUI must continue using ApplicationService APIs.
+
+The GUI must NOT directly access:
+
+- internal/crypto
+- internal/session
+- internal/mesh
+- internal/routing
+
+==================================================
+LIVE BUILD
+==================================================
+
+First inspect the actual current repository.
+
+Build using the existing GUI build command:
+
+go build -tags gui -o meshchat-gui ./cmd/meshchat-gui
+
+If native GUI dependencies are missing, report the exact failure.
+
+Do not modify the system merely to conceal dependency problems.
+
+==================================================
+LIVE EXECUTION
+==================================================
+
+Use the existing commands:
+
+Terminal 1:
+
+MESH_ROLE=node1 MESH_LISTEN_ADDR=127.0.0.1:8000 ./meshchat-gui
+
+Terminal 2:
+
+MESH_ROLE=node2 MESH_LISTEN_ADDR=127.0.0.1:8001 ./meshchat-gui
+
+Use the actual GUI controls already implemented.
+
+Do not introduce new environment variables unless the existing code
+requires them.
+
+==================================================
+IDENTITY EVIDENCE
+==================================================
+
+Capture evidence that each GUI displays its local public identity.
+
+Do NOT capture or expose private key material.
+
+Public identity is acceptable.
+
+==================================================
+CONNECTION EVIDENCE
+==================================================
+
+Capture evidence for:
+
+TCP Connected
+
+followed by:
+
+Secure Session Established
+
+The evidence must preserve the distinction already implemented in M8.3.
+
+Do not collapse these into one generic "connected" state.
+
+==================================================
+MESSAGING EVIDENCE
+==================================================
+
+Capture:
+
+Alice → Bob
+
+and:
+
+Bob → Alice
+
+Use simple known messages, for example:
+
+Alice:
+"Hello Bob"
+
+Bob:
+"Hello Alice"
+
+Only use messages that are actually transmitted and displayed.
+
+Do not fabricate evidence.
+
+==================================================
+DUPLICATE CONNECTION EVIDENCE
+==================================================
+
+Attempt a duplicate connection to the already-connected peer.
+
+Demonstrate:
+
+- existing conversation remains intact;
+- existing session is not broken;
+- no unintended duplicate conversation is created;
+- system handles the duplicate attempt correctly.
+
+Use the actual behavior observed.
+
+Do not claim a specific UI string such as "Already connected" unless that
+is exactly what the current GUI displays.
+
+==================================================
+WRONG PEERID EVIDENCE
+==================================================
+
+Use a valid reachable address but an intentionally incorrect PeerID.
+
+Demonstrate:
+
+- connection/authentication failure;
+- secure session is not established;
+- existing valid session/conversation is not falsely authenticated.
+
+Do not modify authentication behavior to make this demonstration easier.
+
+==================================================
+SCREENSHOT EVIDENCE
+==================================================
+
+Capture screenshots showing useful academic evidence.
+
+At minimum:
+
+m9_gui_alice.png
+m9_gui_bob.png
+
+Prefer screenshots that visibly establish:
+
+- identity
+- peer/conversation
+- secure session status
+- exchanged messages.
+
+Do not capture private keys or sensitive host information unnecessarily.
+
+==================================================
+OPTIONAL EVIDENCE
+==================================================
+
+If useful, capture additional screenshots for:
+
+- connection state transition
+- wrong PeerID failure
+- duplicate connection behavior.
+
+Do not create unnecessary artifacts.
+
+==================================================
+TEST / REGRESSION VERIFICATION
+==================================================
+
+M9.3 must not regress backend behavior.
+
+Run:
+
+go vet ./...
+
+go test ./...
+
+go test -race -p 1 ./...
+
+go build ./...
+
+and:
+
+go build -tags gui -o meshchat-gui ./cmd/meshchat-gui
+
+The GUI build is specifically required for M9.3.
+
+Do not claim GUI runtime success unless the GUI was actually launched and
+observed.
+
+==================================================
+REPRODUCIBILITY
+==================================================
+
+Record:
+
+go version
+uname -a
+git rev-parse --short HEAD
+git status --short
+
+Record the exact GUI commands used.
+
+Record the exact interaction sequence.
+
+If the GUI runtime cannot be executed due to environment limitations,
+STOP and report the limitation rather than fabricating screenshots.
+
+==================================================
+ACADEMIC BOUNDARY
+==================================================
+
+M9.3 demonstrates:
+
+- user-facing identity
+- authenticated connection
+- secure session establishment
+- conversation creation
+- bidirectional encrypted messaging at the application level
+- duplicate connection handling
+- wrong PeerID failure
+- separation of transport-connected and secure-session states.
+
+M9.3 does NOT independently prove:
+
+- relay blindness
+- cryptographic strength
+- formal anonymity
+- metadata protection
+- production-grade availability.
+
+Those are demonstrated elsewhere or remain explicit non-goals.
+
+==================================================
+CHANGE SCOPE
+==================================================
+
+Ideally M9.3 should require NO production source changes.
+
+If source changes are proposed, STOP before making them and report why they
+are necessary.
+
+M9.3 is evidence capture, not feature development.
+
+==================================================
+GIT
+==================================================
+
+Before execution:
+
+git status --short
+
+After execution:
+
+git status --short
+git diff --stat
+git diff
+
+Do not revert unrelated work.
+
+Do not modify the documentation vault.
+
+==================================================
+M9.3 ACCEPTANCE CRITERIA
+==================================================
+
+M9.3 PASS requires:
+
+[ ] GUI builds successfully.
+
+[ ] Alice GUI launches.
+
+[ ] Bob GUI launches.
+
+[ ] Local public identity is visible.
+
+[ ] Manual peer connection succeeds.
+
+[ ] TCP-connected state is distinguishable from secure-session-established
+    state.
+
+[ ] Conversation is created/displayed.
+
+[ ] Alice → Bob message succeeds.
+
+[ ] Bob → Alice message succeeds.
+
+[ ] Duplicate connection attempt is handled without breaking the existing
+    conversation/session.
+
+[ ] Wrong PeerID attempt fails authentication/session establishment.
+
+[ ] Screenshots/evidence are captured.
+
+[ ] Backend regression tests pass.
+
+[ ] Race tests pass.
+
+[ ] No production security architecture changed.
+
+[ ] No crypto/protocol/schema/routing changes.
+
+==================================================
+STOP CONDITION
+==================================================
+
+After completing M9.3:
+
+STOP.
+
+DO NOT begin M9.4.
+
+DO NOT modify the documentation vault.
+
+Return an M9.3 implementation/evidence report containing:
+
+1. GUI build result.
+2. GUI runtime result.
+3. Exact commands used.
+4. Exact interaction sequence.
+5. Identity evidence.
+6. Connection-state evidence.
+7. Secure-session evidence.
+8. Alice → Bob evidence.
+9. Bob → Alice evidence.
+10. Duplicate connection evidence.
+11. Wrong PeerID evidence.
+12. Screenshots captured.
+13. Backend regression results.
+14. Race-test results.
+15. Git status/diff summary.
+16. Any limitations.
+17. M9.3 PASS/FAIL recommendation.
+
+M9.3 will receive independent review before M9.4 is authorized.
+
+```
+
+
+```
+You are now authorized to execute M9.4 — FINAL EVIDENCE ASSEMBLY + DOCUMENTATION SYNCHRONIZATION.
+
+PROJECT:
+~/Documents/Noctis/CrytpProject
+
+Do NOT rename, move, clone, copy, recreate, or relocate the project.
+
+ROLE:
+You are the implementation/documentation agent.
+The Project Overseer will independently audit your report before approving M9.4.
+
+============================================================
+OBJECTIVE
+============================================================
+
+Assemble the final M9 evidence package and synchronize the project's
+Obsidian documentation with the ACTUAL approved state of M9.
+
+M9 STATUS BEFORE THIS TASK:
+
+M9 Architecture  APPROVED
+M9.1             CLOSED / PASS
+M9.2             CLOSED / PASS
+M9.3             CLOSED / PASS
+
+M9.4             NOW AUTHORIZED
+
+M9.4 is documentation/evidence assembly only.
+
+DO NOT introduce new production functionality.
+DO NOT modify cryptographic behavior.
+DO NOT modify routing behavior.
+DO NOT modify transport behavior.
+DO NOT modify GUI behavior.
+DO NOT "improve" security claims.
+DO NOT fabricate screenshots, logs, test results, or runtime observations.
+
+============================================================
+AUTHORITATIVE M9 RESULTS
+============================================================
+
+M9.1 — E2EE / RELAY BLINDNESS
+--------------------------------
+
+PASS / CLOSED.
+
+Verified using a real 3-node topology:
+
+Alice -> Bob -> Carol
+
+Bob acts as the relay.
+
+The relay observed an APP_DATA packet containing routing metadata
+and ciphertext, including:
+
+- source identity
+- destination identity
+- packet ID
+- TTL
+- session ID
+- sequence number
+- ciphertext
+
+Bob does NOT contain the Alice–Carol endpoint application session
+required to decrypt the packet.
+
+Carol successfully received and decrypted the plaintext.
+
+The correct academic/security wording is:
+
+"Bob's implemented session manager does not contain the Alice–Carol
+endpoint application session required to decrypt the packet."
+
+Do NOT claim:
+
+"Bob can never possess the keys."
+"Bob is mathematically incapable of decrypting."
+"Bob cannot possibly possess endpoint keys."
+
+Do NOT claim anonymity or metadata hiding.
+
+The production Router does NOT contain a test observer API.
+
+The final M9.1 evidence uses test-local wrapping of Bob's existing
+OnMessage callback.
+
+No production observer/test instrumentation remains.
+
+M9.1 verified:
+
+- end-to-end encryption across a relay
+- relay blindness to plaintext
+- endpoint session ownership
+- packet forwarding
+- PacketID behavior
+- separation of routing and cryptographic layers
+
+------------------------------------------------------------
+
+M9.2 — SECURITY ATTACK DEMONSTRATIONS
+--------------------------------------
+
+PASS / CLOSED.
+
+Mandatory demonstrations:
+
+1. Wrong PeerID
+2. Ciphertext tampering
+3. AEAD replay
+4. Invalid signature
+5. Malformed packet
+6. TTL enforcement
+7. PacketID duplicate suppression
+8. Pending-handshake resource bound
+
+All demonstrations passed.
+
+The pending-handshake resource test MUST document the ACTUAL
+production configuration.
+
+Authoritative production limit:
+
+MaxPendingHandshakes = 10
+
+The test attempted:
+
+15 concurrent incomplete handshakes
+
+Observed:
+
+maximum simultaneously admitted pending handshakes <= 10
+
+Do NOT describe the test as using an artificial maximum of 1.
+
+Production listener configuration includes:
+
+maxActivePeers: 50
+maxPendingHandshakes: 10
+handshakeTimeout: 5 seconds
+pending semaphore capacity: 10
+
+M9.2 test coverage is test-only and must not be represented as
+production attack tooling.
+
+------------------------------------------------------------
+
+M9.3 — GUI LIVE DEMONSTRATION
+------------------------------
+
+PASS / CLOSED.
+
+IMPORTANT:
+
+The Project Overseer personally performed the live desktop verification.
+
+Do NOT claim Antigravity independently performed the GUI interaction.
+
+The live desktop verification confirmed the GUI worked as intended,
+including:
+
+1. Alice identity display
+2. Bob identity display
+3. Secure session establishment
+4. Alice -> Bob encrypted messaging
+5. Bob -> Alice encrypted messaging
+6. Duplicate Add Peer behavior
+7. Wrong PeerID behavior
+
+Expected evidence filenames:
+
+m9_gui_alice_identity.png
+m9_gui_bob_identity.png
+m9_gui_secure_session.png
+m9_gui_alice_to_bob.png
+m9_gui_bob_to_alice.png
+m9_gui_duplicate_connection.png
+m9_gui_wrong_peerid.png
+
+If these screenshots are NOT physically present in the project,
+DO NOT fabricate them and DO NOT claim they were generated by you.
+
+Instead document them as:
+
+"Verified by Project Overseer during live desktop execution."
+
+If screenshots exist, record their actual paths and include them in
+the evidence manifest.
+
+The earlier headless Antigravity runtime limitation MUST NOT be
+rewritten as a successful automated GUI run.
+
+Accurate wording:
+
+"Automated GUI interaction was unavailable in the headless environment;
+the GUI was subsequently verified manually by the Project Overseer
+on the desktop."
+
+------------------------------------------------------------
+
+============================================================
+M9.4 TASKS
+============================================================
+
+STEP 1 — INSPECT CURRENT REPOSITORY
+===================================
+
+From:
+
+~/Documents/Noctis/CrytpProject
+
+collect:
+
+- git status
+- git rev-parse --show-toplevel
+- git log -1 --oneline
+- go version
+- uname -a
+
+IMPORTANT:
+
+git rev-parse --show-toplevel may return:
+
+/home/sanchayjain/Documents/Noctis
+
+because CrytpProject is inside the Noctis monorepo.
+
+This is NOT a project-location error.
+
+The authoritative project working directory remains:
+
+~/Documents/Noctis/CrytpProject
+
+Record this accurately.
+
+Do NOT modify Git history.
+
+------------------------------------------------------------
+
+STEP 2 — VERIFY CURRENT TEST/BUILD STATE
+=========================================
+
+Run from CrytpProject:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+
+Also build the GUI if possible:
+
+go build -tags gui -o meshchat-gui ./cmd/meshchat-gui
+
+Do NOT modify code merely to make the commands pass.
+
+Record exact results.
+
+If any command fails, report the failure honestly and STOP the
+corresponding approval claim.
+
+Do not convert an old successful result into a current result.
+
+------------------------------------------------------------
+
+STEP 3 — INSPECT M9 IMPLEMENTATION EVIDENCE
+============================================
+
+Inspect the actual repository and confirm:
+
+M9.1:
+- no production TestObserver
+- relay evidence remains test-local
+- no routing-layer DecryptMessage
+- Alice–Carol session exists at endpoints
+- Bob operates only as relay
+
+M9.2:
+- all eight mandatory attack tests exist
+- pending handshake test uses production default 10
+- no production attack/debug hooks were added
+
+M9.3:
+- GUI build target exists
+- no fabricated screenshot/runtime mechanism was added
+- live verification remains documented as manual Project Overseer
+  verification
+
+------------------------------------------------------------
+
+STEP 4 — CREATE FINAL M9 EVIDENCE DIRECTORY
+============================================
+
+Create an evidence directory under the project documentation area.
+
+Use the existing project documentation hierarchy.
+
+DO NOT create a competing documentation hierarchy.
+
+First inspect the current Obsidian structure and determine where
+M9 evidence belongs.
+
+Create/maintain evidence files such as:
+
+m9_environment.txt
+m9_topology.mmd
+m9_test_suite.log
+m9_attack_evidence.md
+m9_relay_blindness.log
+m9_gui_evidence.md
+m9_evidence_manifest.md
+m9_final_report.md
+
+Only create files that fit the existing hierarchy.
+
+If equivalent files already exist, update them rather than creating
+duplicates.
+
+------------------------------------------------------------
+
+STEP 5 — m9_environment.txt
+============================
+
+Record actual current environment information:
+
+- project path
+- repository root
+- git commit
+- git status
+- Go version
+- OS/kernel information
+- relevant build information
+
+Clearly distinguish current verification from historical evidence.
+
+------------------------------------------------------------
+
+STEP 6 — m9_topology.mmd
+=========================
+
+Create a Mermaid topology diagram covering the two distinct M9
+demonstration topologies.
+
+TOPOLOGY A — Relay/E2EE Security Demonstration:
+
+Alice --> Bob --> Carol
+
+Annotate:
+
+Alice:
+- endpoint identity
+- Alice–Carol application session
+
+Bob:
+- relay
+- routing metadata
+- ciphertext only
+- no Alice–Carol endpoint application session
+
+Carol:
+- endpoint
+- decrypts ciphertext
+- receives plaintext
+
+TOPOLOGY B — GUI Demonstration:
+
+Alice <--> Bob
+
+Annotate:
+
+- direct TCP connection
+- authenticated session
+- encrypted bidirectional application messaging
+- GUI interaction
+
+Do NOT combine the two topologies into one misleading diagram.
+
+------------------------------------------------------------
+
+STEP 7 — m9_test_suite.log
+===========================
+
+Record the exact commands and their actual outcomes for:
+
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+go build -tags gui -o meshchat-gui ./cmd/meshchat-gui
+
+If a command cannot currently be run, say so.
+
+Do not fabricate output.
+
+------------------------------------------------------------
+
+STEP 8 — m9_attack_evidence.md
+===============================
+
+Document the eight M9.2 demonstrations.
+
+For each:
+
+- Attack/demo name
+- attacker action
+- expected security behavior
+- observed result
+- relevant test
+- PASS/FAIL
+
+Use concise technical language.
+
+Do NOT overclaim.
+
+The eight are:
+
+1. Wrong PeerID
+2. Ciphertext tampering
+3. AEAD replay
+4. Invalid signature
+5. Malformed packet
+6. TTL enforcement
+7. PacketID duplicate suppression
+8. Pending-handshake resource bound
+
+For #8 explicitly state:
+
+Configured production MaxPendingHandshakes = 10
+Attempted incomplete handshakes = 15
+Observed simultaneous admission <= 10
+
+------------------------------------------------------------
+
+STEP 9 — m9_relay_blindness.log
+===============================
+
+Document the M9.1 relay test.
+
+Include:
+
+Topology:
+Alice -> Bob -> Carol
+
+Observed packet:
+
+- packet type = APP_DATA
+- source
+- destination
+- packet ID
+- TTL
+- session ID
+- sequence number
+- ciphertext length
+
+DO NOT include plaintext as something Bob observed.
+
+Document that Carol received/decrypted the plaintext.
+
+Document the session ownership boundary:
+
+Alice and Carol possess the endpoint application session.
+
+Bob's implemented SessionManager does not contain the Alice–Carol
+endpoint application session required to decrypt the packet.
+
+Do not claim perfect relay blindness against every possible
+implementation compromise.
+
+------------------------------------------------------------
+
+STEP 10 — m9_gui_evidence.md
+=============================
+
+Document the seven GUI scenarios manually verified by the
+Project Overseer:
+
+- Alice identity
+- Bob identity
+- secure session
+- Alice -> Bob
+- Bob -> Alice
+- duplicate connection
+- wrong PeerID
+
+State clearly:
+
+"These GUI scenarios were verified manually by the Project Overseer
+on the desktop."
+
+If screenshot files exist, list their exact paths.
+
+If screenshots do not exist, do NOT invent them.
+
+------------------------------------------------------------
+
+STEP 11 — m9_evidence_manifest.md
+==================================
+
+Create a table:
+
+| Evidence | Type | Source | Status |
+|----------|------|--------|--------|
+
+Include:
+
+- environment capture
+- topology
+- automated tests
+- race tests
+- vet
+- build
+- GUI build
+- M9.1 relay evidence
+- M9.2 attack demonstrations
+- M9.3 GUI manual verification
+- screenshots if actually present
+
+Every evidence item must be traceable to an actual file, command,
+test, or explicit Project Overseer verification.
+
+------------------------------------------------------------
+
+STEP 12 — m9_final_report.md
+=============================
+
+Produce the final M9 report.
+
+Structure:
+
+# M9 — Security Validation, Demonstration & Evidence
+
+## 1. Executive Summary
+
+## 2. M9 Architecture
+
+## 3. M9.1 — E2EE Across Relay
+
+## 4. M9.2 — Security Attack Demonstrations
+
+## 5. M9.3 — GUI Demonstration
+
+## 6. Test and Build Verification
+
+## 7. Security Properties Demonstrated
+
+## 8. Security Properties NOT Demonstrated
+
+## 9. Known Limitations
+
+## 10. Evidence Manifest
+
+## 11. M9 Final Status
+
+The final status should state:
+
+M9.1 — PASS / CLOSED
+M9.2 — PASS / CLOSED
+M9.3 — PASS / CLOSED
+
+M9.4 — documentation/evidence assembly completed pending
+Project Overseer audit.
+
+Do NOT mark M9.4 "approved" yourself.
+
+------------------------------------------------------------
+
+STEP 13 — SECURITY CLAIMS AUDIT
+================================
+
+Before finishing, search the M9 documentation for prohibited or
+overstated terminology.
+
+Remove/replace claims such as:
+
+- military-grade
+- unhackable
+- perfectly secure
+- anonymous
+- complete anonymity
+- indistinguishable from random noise
+- impossible to decrypt
+- guaranteed delivery
+- perfect forward secrecy
+
+Use precise terminology.
+
+Correct crypto terminology:
+
+ChaCha20-Poly1305
+
+Not:
+
+XChaCha20
+AES-GCM
+
+Correct routing terminology:
+
+bounded managed flooding
+
+Not:
+
+DHT
+route discovery
+route selection
+
+unless explicitly describing a non-implemented future feature.
+
+------------------------------------------------------------
+
+STEP 14 — DOCUMENTATION SYNCHRONIZATION
+========================================
+
+Inspect the existing Obsidian documentation.
+
+Synchronize only facts that are already established by approved
+milestones M0–M9.3 and this evidence assembly.
+
+Update relevant:
+
+- milestone pages
+- architecture pages
+- security model
+- protocol documentation
+- testing documentation
+- threat model
+- implementation status
+- project timeline
+- M9 documentation
+- index/dashboard pages
+
+Preserve the existing terminology and hierarchy.
+
+Do NOT rewrite the entire knowledge base.
+
+Do NOT create duplicate pages if equivalent pages already exist.
+
+Ensure milestone status is consistent everywhere:
+
+M0  APPROVED
+M1  APPROVED
+M2  APPROVED
+M3  APPROVED
+M4  APPROVED
+M5  APPROVED
+M6  APPROVED
+M7  APPROVED
+M8  CLOSED
+M9  IN PROGRESS / M9.1–M9.3 CLOSED
+M9.4 CURRENT DOCUMENTATION/EVIDENCE ASSEMBLY
+
+Do NOT mark M9 fully approved unless explicitly instructed by the
+Project Overseer.
+
+------------------------------------------------------------
+
+STEP 15 — LINK INTEGRITY
+=========================
+
+Check Obsidian links.
+
+Do not introduce broken path-style links.
+
+Prefer the existing project naming convention.
+
+Verify that newly created M9 pages are reachable from the relevant
+index/dashboard/milestone pages.
+
+Do not unnecessarily restructure unrelated documentation.
+
+------------------------------------------------------------
+
+STEP 16 — FINAL DOCUMENTATION AUDIT
+====================================
+
+Run a final search for:
+
+- AES-GCM
+- XChaCha20
+- military-grade
+- unhackable
+- anonymous
+- perfect security
+- indistinguishable from random noise
+- route selection
+- DHT
+
+Any occurrence must be reviewed and corrected if it incorrectly
+describes the implemented system.
+
+Also verify:
+
+- M9.1 says relay blindness, not magical impossibility
+- M9.2 says MaxPendingHandshakes=10
+- M9.3 says Project Overseer manually verified GUI
+- Docker remains documented as NOT VERIFIED where applicable
+- Prometheus remains documented as NOT IMPLEMENTED
+- telemetry remains supporting/out-of-band
+- no plaintext/private keys/session keys are claimed to be logged
+- M6 remains bounded managed flooding
+- cryptographic terminology is correct
+
+------------------------------------------------------------
+
+STEP 17 — FINAL REPORT TO PROJECT OVERSEER
+==========================================
+
+Return a concise but complete report containing:
+
+1. Files created
+2. Files modified
+3. Files deleted, if any
+4. Current git status
+5. Current commit
+6. Test results
+7. Build results
+8. M9.1 evidence status
+9. M9.2 evidence status
+10. M9.3 evidence status
+11. Screenshot availability
+12. Documentation synchronization status
+13. Link-integrity status
+14. Security terminology audit
+15. Any unresolved issues
+16. Any evidence that could NOT be independently regenerated
+17. Recommended Project Overseer decision
+
+IMPORTANT:
+
+Do not claim M9.4 approval.
+
+End with:
+
+"M9.4 documentation/evidence assembly is ready for Project Overseer
+audit."
+
+============================================================
+STRICT RULES
+============================================================
+
+1. NO production feature changes.
+2. NO cryptographic changes.
+3. NO protocol changes.
+4. NO routing changes.
+5. NO GUI feature changes.
+6. NO fabricated evidence.
+7. NO fabricated screenshots.
+8. NO fabricated logs.
+9. NO invented test results.
+10. NO production test-observer APIs.
+11. NO secrets/private keys in documentation.
+12. NO plaintext relay logs.
+13. NO security overclaims.
+14. Preserve existing Obsidian hierarchy.
+15. Do not mark M9.4 approved.
+16. Do not modify Git history.
+17. Do not rename/move the project.
+18. Work exclusively inside:
+    ~/Documents/Noctis/CrytpProject
+
+Proceed carefully and report actual observed state.
+
+```
+
+
+
 ```
 
 

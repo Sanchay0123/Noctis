@@ -27,3 +27,10 @@ The routing layer is intentionally simple. Managed flooding does not discover op
 ## M6 Reference
 
 - [[00-governance/04-Architecture-Review-M6]] — authoritative M6 architecture and acceptance record
+
+
+## M8 Limitations
+
+The GUI is currently an in-memory presentation layer; persistent message storage is not part of M8. Automatic peer discovery and DHT remain outside scope. Live GUI runtime acceptance passed for the two-node manual chat workflow. Docker Compose regression remains unverified because external proxy/DNS restrictions prevented dependency resolution. Timestamp and message-order behavior are implemented but were not directly covered by dedicated M8.3 tests.
+
+M8 does not change the existing limitations around metadata visibility, malicious relay dropping, endpoint compromise, route manipulation, availability or anonymity.

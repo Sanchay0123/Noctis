@@ -2,106 +2,245 @@
 
 ## Milestone
 
-**M8 — Observability and UI**
+**M8 — Application Integration, Observability/UI Foundation and Functional GUI**
 
 ## Review authority
 
 Project Overseer / Security Architect / Technical Lead
 
-## Current status
+## Status
 
-**Phase 1 architecture: 🟢 APPROVED**  
-**M8.1 application-service foundation: 🟢 COMPLETE / VERIFIED / APPROVED**  
-**M8.2 Fyne GUI foundation: 🟢 COMPLETE / VERIFIED / APPROVED**
+**🟢 M8.3 COMPLETE / VERIFIED / APPROVED**
 
-M8 remains open because later M8 work, including concrete observability
-metrics/dashboard work, has not yet been implemented or approved.
+M8.1, M8.2 and M8.3 were implemented incrementally and independently reviewed.
+M8 extends the approved M6/M7 backend with an application-facing service boundary
+and a Fyne GUI while preserving the endpoint E2EE and relay-blind routing model.
 
-## Approved M8 architecture boundary
+## Scope
 
-M8 introduces an application-facing service layer between the UI and the
-existing cryptographic, session, mesh and routing subsystems. The GUI must not
-access raw crypto/session/routing internals.
+M8 covers:
 
-The approved application boundary exposes, at minimum:
+- application/service boundary above the secure mesh backend
+- conversation-oriented application state
+- endpoint decryption outside the routing layer
+- Fyne GUI foundation and functional chat workflow
+- explicit connection and secure-session status events
+- manual peer connection
+- local in-memory message presentation
+- GUI concurrency and shutdown lifecycle
+- application-layer multi-hop integration evidence
 
-- local identity as a display-safe identifier
-- explicit peer dialing
-- conversation start/listing by authenticated PeerID
-- message sending by PeerID and plaintext
-- lifecycle start/stop
-- application event subscription
+Concrete Prometheus/Grafana exporter implementation remains deferred; M7's
+telemetry hooks and security/cardinality constraints remain authoritative.
 
-A **PeerID** is the hex-encoded Ed25519 public identity. A network address is a
-transport locator and is not interchangeable with a PeerID. A conversation is
-an application-level view keyed by the authenticated remote PeerID; it is not
-a routing path or a transport connection.
+## M8.1 — Application Service Boundary
 
-Manual peer entry is the approved initial discovery model. DHT, automatic
-peer discovery and decentralized discovery protocols are not introduced by
-M8.1/M8.2.
+M8.1 introduced `internal/app` as the boundary between presentation and the
+existing crypto/session/mesh/routing implementation.
 
-## M8.1 implementation boundary
+The application API includes identity access, peer dialing, conversation
+creation, message sending, service lifecycle and event subscription.
 
-M8.1 implemented `internal/app` and the narrow routing/application boundary
-needed to deliver opaque application data upward without violating relay
-blindness.
+A critical M8.1 audit finding was that routing initially decrypted APP_DATA and
+passed plaintext upward. This was remediated before approval. The final design
+is:
 
-The routing layer does **not** decrypt APP_DATA. It forwards opaque session
-metadata and ciphertext to the application service. The application service
-looks up the endpoint session and performs `DecryptMessage`; only after
-successful AEAD authentication is plaintext emitted as an application event.
+```text
+remote ciphertext
+      ↓
+internal/routing
+      ↓ opaque APP_DATA
+internal/app
+      ↓ session lookup
+session.DecryptMessage()
+      ↓
+Application event
+      ↓
+GUI
+```
 
-The session manager maintains PeerID-to-session lookup for application
-message delivery. Removal is conditional so a stale session cannot delete a
-newer mapping for the same PeerID.
+`internal/routing` therefore remains blind to application plaintext.
 
-## M8.2 implementation boundary
+M8.1 also corrected stale peer-to-session mappings during removal.
 
-M8.2 adds the primary Fyne GUI under a `gui` build tag, keeping the headless
-backend build separate from GUI/CGO dependencies.
+**M8.1: 🟢 APPROVED**
 
-The GUI provides the approved foundation for:
+## M8.2 — Fyne GUI Foundation
 
-- conversation selection
-- message history/input
-- connection/status presentation
-- manual peer addition/dialing
-- display of the local identity
+M8.2 introduced a Fyne GUI isolated behind the application boundary. The GUI
+uses manual peer entry rather than automatic discovery or DHT mechanisms.
 
-The GUI receives application-level events and calls the application service;
-it does not directly access cryptographic keys, session keys, routing state,
-raw protobuf packets or raw sockets.
+The GUI does not receive private keys, session keys, nonces, sequence state,
+raw sockets, raw packets or crypto/session/routing internals.
 
-Mutable GUI state is encapsulated behind synchronized `UIState`. GUI shutdown
-signals the event consumer and then stops the application service.
+Mutable GUI state is protected by `sync.RWMutex`. GUI lifecycle and event
+consumption were tested at the application/state level.
 
-## Security constraints
+The GUI build requires native graphics dependencies and CGO on the target
+environment. The approved evidence did not establish visual runtime in the
+headless review environment.
 
-- Routing remains blind to application plaintext.
-- No private keys, ephemeral private keys, session keys, AEAD nonces or other
-  secret cryptographic material may cross into the GUI.
-- Observability remains out-of-band and must not become a dependency of the
-  E2EE path.
-- Future concrete metrics must use fixed, bounded label vocabularies; never
-  use attacker-controlled PeerIDs as arbitrary metric labels.
-- The project AEAD is **ChaCha20-Poly1305**; AES-GCM is not part of the design.
-- No anonymity, complete metadata hiding or endpoint compromise resistance is
-  claimed.
+**M8.2: 🟢 APPROVED**
 
-## Evidence qualification
+## M8.3 — Functional GUI Integration
 
-M8.1 passed the reported formatting, vetting, tests, race-detector and build
-validation, including the routing/application plaintext-boundary regression.
+M8.3 turned the GUI foundation into a functional chat client.
 
-M8.2 added application-service and GUI-state concurrency tests and passed the
-reported formatting, vetting, tests, race-detector and build validation.
-The GUI runtime was not available for interactive smoke testing in the review
-environment. The backend Docker E2E latest rerun was externally blocked by
-proxy/DNS timeout; previously approved M8.1 Docker E2E evidence remains the
-authoritative runtime evidence and no code regression was established.
+Implemented behavior includes:
+
+- manual peer connection through `ApplicationService.DialNode`
+- explicit `StartConversation` after successful dialing
+- application-level session-established events
+- distinction between TCP connectivity and authenticated secure-session state
+- public PeerID display and copy operation
+- structured in-memory messages with sender and timestamp fields
+- conversation association by authenticated PeerID
+- message sending through `ApplicationService.SendMessage`
+- received plaintext delivery through `SubscribeEvents`
+- synchronized GUI state
+- deterministic GUI event-consumer shutdown using `sync.WaitGroup`
+
+The Alice→Bob→Carol integration test uses real loopback TCP, real PeerManager,
+real routing/forwarding, real session establishment and real
+ChaCha20-Poly1305 encryption/decryption. The test is conservatively classified
+as **APPLICATION-LAYER INTEGRATION** because all three services run inside one
+test process. Remediation 4 separately verified that normal inbound transport
+admission no longer depends on `ExpectInbound` pre-authorization.
+
+## Security boundary
+
+The GUI remains a thin presentation client:
+
+```text
+Fyne GUI
+   ↓
+ApplicationService
+   ↓
+Session / Mesh / Routing / Crypto
+```
+
+The GUI does not implement encryption, decryption, nonce generation, sequence
+management, key derivation, handshake signing or X25519 operations.
+
+Routing remains opaque to application plaintext. Source-level verification
+reported no `DecryptMessage` call under `internal/routing` and no direct GUI
+imports of `internal/crypto`, `internal/session`, `internal/mesh` or
+`internal/routing`.
+
+## Identity boundary
+
+The GUI renders and copies the string returned by `GetLocalIdentity()`.
+`GetLocalIdentityBytes()` used by the application for public-identity handling
+returns the local Ed25519 public key only; no private key material is exposed.
+
+## Lifecycle boundary
+
+M8.3 remediated the GUI event-consumer shutdown lifecycle. The event-consumer
+worker is tracked by a `sync.WaitGroup`; GUI shutdown signals the worker and
+waits for its termination before `ApplicationService.Stop()` executes.
+
+This replaces reliance on process termination as the lifecycle guarantee.
+
+## Validation evidence
+
+M8.3 implementation verification passed:
+
+```text
+go test ./...
+go test -race -p 1 ./...
+go vet ./...
+go build ./...
+```
+
+The M8.3 Alice→Bob→Carol application integration test passed. Remediation 4
+added coverage for accepting an authenticated but previously unknown inbound
+peer and for preserving expected-PeerID verification after transport admission
+modernization.
+
+GUI build verification passed:
+
+```text
+go build -tags gui ./cmd/meshchat-gui
+```
+
+Docker Compose regression remained unverified because dependency resolution in
+the constrained environment was blocked by external proxy/DNS limitations.
+
+### Final live GUI acceptance
+
+The final two-node GUI acceptance passed after Remediation 4. Clean Alice and
+Bob instances were launched on `127.0.0.1:8000` and `127.0.0.1:8001`.
+
+Acceptance results:
+
+| Scenario | Result |
+|---|---|
+| Alice initiates first connection to Bob | PASS |
+| Bob initiates first connection to Alice | PASS |
+| Authenticated secure session establishment | PASS |
+| Alice → Bob encrypted message | PASS |
+| Bob → Alice encrypted message | PASS |
+| Duplicate Add Peer on established connection | PASS |
+| Existing conversation remains intact during duplicate attempt | PASS |
+
+The deterministic first-initiator failure identified during live acceptance was
+resolved by removing the transport-layer `ExpectInbound` pre-authorization
+dependency.
+
+## Remediation 4 — Transport Admission Modernization
+
+The M8.3 live failure exposed an architectural mismatch between GUI manual
+dialing and M5 inbound pre-authorization. The obsolete `ExpectInbound`,
+`expectedInbound` and `isExpectedInbound` mechanism was removed.
+
+The resulting admission model is:
+
+```text
+TCP accept
+    ↓
+bounded pending-handshake admission
+    ↓
+frame/protocol validation
+    ↓
+M3 authenticated handshake
+    ↓
+authenticated identity
+    ↓
+duplicate arbitration
+    ↓
+established peer/session
+```
+
+Transport admission is no longer dependent on out-of-band pre-authorization.
+Inbound resource exposure remains bounded by the existing pending-handshake
+limit, handshake timeout, frame-size validation and peer limits. Cryptographic
+authentication and expected-PeerID verification remain enforced.
+
+This remediation changes transport admission behavior but does not modify the
+frozen Protobuf schema, M3 handshake transcript, cryptographic construction,
+AEAD, replay protection or M6 routing semantics.
+
+The security review explicitly records that removal of pre-authorization
+increases exposure to unauthenticated handshake attempts; it does not provide
+a claim of immunity from flooding or DoS. Existing controls bound concurrent
+pending handshake work and incomplete-connection lifetime.
+
+**Remediation 4: 🟢 APPROVED**
+
+## Remaining limitations
+
+M8 does not provide:
+
+- automatic peer discovery or DHT
+- persistent message storage
+- anonymity or complete metadata hiding
+- endpoint compromise resistance
+- guaranteed delivery
+- a concrete Prometheus/Grafana exporter
 
 ## Gate decision
 
-M8.1 and M8.2 are approved within their reviewed scopes. **M8.3 must not
-begin until separately authorized.**
+**🟢 M8.3 APPROVED**
+
+M8 is formally closed at the functional GUI integration gate. M9 may proceed
+only after a separate milestone authorization.

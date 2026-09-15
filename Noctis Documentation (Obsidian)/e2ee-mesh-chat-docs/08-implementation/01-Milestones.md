@@ -220,47 +220,50 @@ resistance, endpoint compromise resistance or guaranteed delivery.
 
 ## M8 --- Observability and UI
 
-**Status:** 🟡 IN PROGRESS — M8.1 and M8.2 complete/approved; later M8 work pending
+**Status:** 🟢 COMPLETE / APPROVED / VERIFIED for the implemented M8.1–M8.3 scope
 
-### M8 Phase 1 — Application boundary
+### M8.1 — ApplicationService boundary
 
-**Status:** 🟢 APPROVED
-
-Define and approve the application-service boundary before UI implementation.
-PeerID, network address, conversation and routing path must remain distinct.
-The GUI must not access raw crypto/session/routing internals.
-
-### M8.1 — Application service foundation
-
-**Status:** 🟢 COMPLETE / APPROVED
-
-Implemented `internal/app`, application events and session lookup while keeping
-routing blind to plaintext. The router passes opaque APP_DATA upward; endpoint
-decryption occurs in the application service.
+Implemented the application-facing service and event boundary. A critical initial routing-decryption violation was remediated before approval: routing now forwards opaque APP_DATA and `internal/app` performs endpoint decryption after session lookup.
 
 ### M8.2 — Fyne GUI foundation
 
-**Status:** 🟢 COMPLETE / VERIFIED / APPROVED
+Implemented the Fyne GUI foundation with manual peer entry, synchronized UI state and lifecycle/event handling while keeping GUI code isolated from crypto/session/mesh/routing internals.
 
-Implemented the primary Fyne GUI behind the `gui` build tag, manual peer entry,
-conversation/message presentation and application-service integration. GUI
-state is synchronized and shutdown is coordinated with application-service
-lifecycle.
+### M8.3 — Functional GUI integration
 
-Interactive GUI runtime smoke testing was not available in the review
-environment. Backend Docker E2E rerun was externally blocked by DNS/proxy
-resolution, so prior approved E2E evidence remains authoritative.
+Implemented manual dialing followed by explicit conversation/session establishment, secure-session status events, public identity copy, structured in-memory messages, conversation handling, application-layer multi-hop integration and deterministic GUI event-consumer shutdown.
 
-### Remaining M8 scope
+The Alice→Bob→Carol integration test uses real loopback TCP, PeerManager, routing/forwarding, session establishment and ChaCha20-Poly1305 encryption/decryption. It is classified as **APPLICATION-LAYER INTEGRATION** because the three ApplicationServices execute within one test process.
 
-- Prometheus-compatible concrete metrics
-- structured security-safe events/log aggregation as implemented runtime
-- Grafana visualization/dashboard
-- telemetry failure isolation verification for the concrete stack
-- GUI/runtime smoke demonstration where the environment permits
+Validation passed `go test ./...`, `go test -race -p 1 ./...`, `go vet ./...` and `go build ./...`; GUI build verification also passed. Docker regression remains unverified because of external proxy/DNS limitations.
 
-**Gate:** observability safety review + GUI/runtime evidence. Each later M8
-phase requires separate authorization; M8.3 has not been authorized.
+Concrete Prometheus/Grafana exporter implementation remains deferred; M7 telemetry hooks and security/cardinality constraints remain authoritative.
+
+**Gate:** Project Overseer final evidence review — PASSED.
+
+### M8.3 Remediation 4 — Transport Admission Modernization
+
+A deterministic live GUI failure was traced to the M5 `ExpectInbound` transport
+pre-authorization mechanism. The first initiator could not connect because the
+remote listener had not pre-authorized that identity; the failed attempt left
+local authorization state that allowed the reverse direction.
+
+The obsolete `ExpectInbound`, `expectedInbound` and `isExpectedInbound`
+mechanism was removed. Inbound transport now proceeds through bounded
+handshake admission and normal M3 authentication before peer registration.
+Expected-PeerID verification remains enforced at the application boundary and
+duplicate arbitration remains unchanged. No protocol/schema or cryptographic
+construction changed.
+
+Regression coverage includes `TestListener_AcceptsUnknownPeer` and
+`TestExpectedPeerIDStillEnforced`. Full tests, race tests, vet and builds pass.
+
+Final live GUI acceptance passed in both initiation directions, with secure
+session establishment, bidirectional encrypted messaging and idempotent
+duplicate Add Peer behavior.
+
+**M8.3: 🟢 COMPLETE / LIVE ACCEPTED / APPROVED**
 
 ## M9 --- Demonstration environment
 

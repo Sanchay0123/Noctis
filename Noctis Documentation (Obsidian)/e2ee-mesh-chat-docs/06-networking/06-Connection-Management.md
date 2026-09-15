@@ -111,9 +111,18 @@ The runtime was validated with race detection, repeated race runs, explicit
 four-case duplicate-arbitration tests and a deliberate Docker simultaneous-dial
 collision between Dave and Bob.
 
-## M8 application dialing
 
-The application service exposes explicit dialing by network address. The GUI
-may request a dial through this service, but does not own raw TCP connections.
-After authentication, the resulting PeerID is the canonical identity used by
-the conversation layer.
+### M8.3 Transport Admission Modernization
+
+M8.3 removed the obsolete `ExpectInbound` pre-authorization dependency from
+normal inbound transport admission. A TCP peer may enter the bounded
+authenticated handshake without prior out-of-band authorization.
+
+Admission remains bounded by the pending-handshake limit, handshake deadline,
+frame-size validation and active-peer limit. Peer registration still requires
+successful cryptographic authentication, and duplicate connection arbitration
+remains unchanged. For manual GUI dialing, the supplied expected PeerID is
+still verified against the authenticated remote identity.
+
+This change resolves the first-initiator GUI connection failure without changing
+the M3 handshake or M6 routing protocol.

@@ -130,3 +130,15 @@ Relevant threats and controls include:
 M5 does not claim protection against routing attacks, global traffic analysis,
 perfect anonymity or compromised endpoints. Those properties remain outside the
 approved scope.
+
+
+## M8.3 transport admission change
+
+The removal of `ExpectInbound` changes inbound transport admission from
+pre-authorized to authenticated-on-connect. This increases the pre-authentication
+attack surface because unknown network clients can reach the bounded handshake
+path. The exposure remains constrained by pending-handshake capacity, handshake
+timeout, pre-allocation frame-size validation and peer limits.
+
+Cryptographic authentication, expected-PeerID verification and duplicate
+arbitration remain required before a peer becomes trusted/established.

@@ -182,3 +182,27 @@ identities are not propagated through the telemetry interface.
 
 M7 is complete and approved. M8 may introduce concrete observability and UI
 work only through its own milestone gates.
+
+
+## M8 Application and GUI Layer
+
+M8 adds an application-facing layer above the approved mesh/security backend. The Fyne GUI is intentionally a thin client of `internal/app`; it does not directly access cryptography, session management, mesh transport or routing.
+
+```mermaid
+flowchart TD
+    GUI[Fyne GUI] --> APP[ApplicationService]
+    APP --> SESSION[Session / E2EE]
+    APP --> MESH[PeerManager / Mesh]
+    MESH --> ROUTE[Routing / Forwarding]
+    SESSION --> ROUTE
+```
+
+Endpoint plaintext processing remains outside routing. APP_DATA reaches `internal/app` as opaque ciphertext and is decrypted only after the correct authenticated session is resolved.
+
+
+## M8.3 transport admission
+
+Normal inbound transport admission does not require out-of-band peer
+pre-authorization. Inbound connections enter the bounded handshake path and
+must complete the authenticated M3 exchange before peer registration. Expected
+PeerID verification remains an application-level check for manual dialing.

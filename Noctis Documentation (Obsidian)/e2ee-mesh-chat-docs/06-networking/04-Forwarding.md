@@ -53,9 +53,3 @@ Oversized raw router input is rejected at the routing boundary. Forwarded
 E2EE ciphertext remains opaque to relays.
 
 **Status: 🟢 M7 VERIFIED**
-
-## M8 forwarding boundary
-
-Forwarding remains application-content blind. M8 does not change the M6
-forwarding model: relays forward ciphertext and routing metadata without
-endpoint session keys or plaintext.

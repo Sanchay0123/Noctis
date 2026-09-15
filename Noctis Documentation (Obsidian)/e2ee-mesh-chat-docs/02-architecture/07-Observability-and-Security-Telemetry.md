@@ -2,7 +2,7 @@
 
 ## Status
 
-**Approved supporting design; runtime hooks implemented; concrete Prometheus exporter deferred to M8**
+**Approved supporting design; runtime hooks implemented; concrete Prometheus exporter deferred to later work**
 
 Observability is an out-of-band supporting subsystem. It is not part of
 the E2EE message-routing or cryptographic trust path.

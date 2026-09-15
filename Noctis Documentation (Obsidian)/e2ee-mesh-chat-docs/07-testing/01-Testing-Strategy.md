@@ -162,21 +162,11 @@ A deliberate Docker integration scenario simultaneously dials Dave and Bob in
 both directions and verifies that the connection initiated by the smaller
 identity survives with exactly one active peer on each side.
 
-## M8 application/UI testing
 
-M8 extends testing beyond the backend cryptographic/routing layers to the
-application boundary and GUI state lifecycle.
+## M8 Testing Strategy
 
-Required checks include:
+M8 adds application-boundary and GUI-state testing without duplicating cryptographic tests. The principal M8 integration evidence is `TestApplicationService_AliceBobCarol_Integration`, which uses real loopback TCP and the approved PeerManager, routing, session and ChaCha20-Poly1305 paths before delivering plaintext through `SubscribeEvents()`.
 
-- application-service operation and error handling
-- opaque routing-to-application delivery boundary
-- absence of routing-layer decryption
-- concurrent UI-state access under the race detector
-- event processing
-- send success/failure propagation
-- GUI/application shutdown coordination
-- headless backend regression
+GUI state tests cover synchronized concurrent access, event processing, message/conversation association, send failures and lifecycle behavior. Dedicated timestamp and message-order tests were not directly reported at the M8.3 gate.
 
-Interactive GUI smoke testing is an environment-dependent acceptance item and
-must be reported separately from compile/test evidence.
+GUI visual runtime is an environment-dependent smoke test; the final two-node GUI workflow was verified live for M8.3, while Docker Compose regression remains environment-dependent and unverified due external proxy/DNS restrictions.
