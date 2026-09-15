@@ -21,8 +21,8 @@ type PeerManager interface {
 }
 
 type peerManager struct {
-	mu              sync.RWMutex
-	peers           map[string]*peer
+	mu    sync.RWMutex
+	peers map[string]*peer
 
 	localIdent *crypto.NodeIdentity
 	telemetry  TelemetryRecorder
@@ -45,12 +45,12 @@ func NewPeerManager(localIdent *crypto.NodeIdentity, telemetry TelemetryRecorder
 	}
 
 	pm := &peerManager{
-		peers:           make(map[string]*peer),
-		localIdent:      localIdent,
-		telemetry:       telemetry,
-		onMsg:           onMsg,
-		telemetryQ:      make(chan func(), 100), // Bounded non-blocking queue
-		quitTelemetry:   make(chan struct{}),
+		peers:         make(map[string]*peer),
+		localIdent:    localIdent,
+		telemetry:     telemetry,
+		onMsg:         onMsg,
+		telemetryQ:    make(chan func(), 100), // Bounded non-blocking queue
+		quitTelemetry: make(chan struct{}),
 	}
 
 	pm.dialer = NewDialer(pm)
@@ -87,10 +87,6 @@ func (pm *peerManager) telemetryWorker() {
 		}
 	}
 }
-
-
-
-
 
 func (pm *peerManager) Connect(ctx context.Context, endpoint string, expectedIdentity []byte) error {
 	if pm.shuttingDown.Load() {

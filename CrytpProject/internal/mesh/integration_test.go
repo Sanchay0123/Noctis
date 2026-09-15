@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"google.golang.org/protobuf/proto"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/sanchayjain/meshchat/internal/crypto"
 	"github.com/sanchayjain/meshchat/internal/mesh"
+	"github.com/sanchayjain/meshchat/internal/protocol"
 	"github.com/sanchayjain/meshchat/internal/routing"
 	"github.com/sanchayjain/meshchat/internal/session"
 )
@@ -49,29 +52,59 @@ func TestRelayCannotDecryptEndpointSession(t *testing.T) {
 	aliceRouter.OnAppData = aliceOnMsg
 	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil)
 	bobRouter.OnAppData = bobOnMsg
+
+	// M9.1: Test-only instrumentation for Relay Blindness Evidence
+	var relayObservationCount atomic.Int32
+	bobOnMsgWrapper := func(peerID []byte, rawMsg []byte) {
+		var pkt protocol.MeshPacket
+		if err := proto.Unmarshal(rawMsg, &pkt); err == nil {
+			fmt.Printf("M9.1 EVIDENCE - RELAY PACKET OBSERVATION at Bob\n")
+			fmt.Printf("  Packet Type: %v\n", pkt.Type)
+			fmt.Printf("  SourceNode : %x...\n", pkt.SourceNode[:4])
+			fmt.Printf("  DestNode   : %x...\n", pkt.DestNode[:4])
+			fmt.Printf("  PacketID   : %x...\n", pkt.PacketId[:4])
+			fmt.Printf("  TTL        : %d\n", pkt.Ttl)
+
+			if appData, ok := pkt.Payload.(*protocol.MeshPacket_AppData); ok {
+				fmt.Printf("  Payload    : APP_DATA\n")
+				fmt.Printf("  SessionID  : %x...\n", appData.AppData.SessionId[:4])
+				fmt.Printf("  SequenceNum: %d\n", appData.AppData.SequenceNum)
+				fmt.Printf("  Ciphertext : %d bytes observed\n", len(appData.AppData.Ciphertext))
+
+				// Verify Bob doesn't have the session
+				if _, ok := bobSM.Lookup(*(*[32]byte)(appData.AppData.SessionId)); ok {
+					t.Errorf("CRITICAL VIOLATION: Bob possesses the endpoint session!")
+				} else {
+					fmt.Printf("  Validation : Bob's implemented session manager does not contain the Alice-Carol endpoint application session required to decrypt this ciphertext.\n")
+				}
+				relayObservationCount.Add(1)
+			}
+		}
+		bobRouter.OnMessage(peerID, rawMsg)
+	}
 	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil)
 	carolRouter.OnAppData = carolOnMsg
 
 	alicePM := mesh.NewPeerManager(aliceIdent, nil, aliceRouter.OnMessage)
-	bobPM := mesh.NewPeerManager(bobIdent, nil, bobRouter.OnMessage)
+	bobPM := mesh.NewPeerManager(bobIdent, nil, bobOnMsgWrapper)
 	carolPM := mesh.NewPeerManager(carolIdent, nil, carolRouter.OnMessage)
 
 	aliceRouter.SetPeerManager(alicePM)
 	bobRouter.SetPeerManager(bobPM)
 	carolRouter.SetPeerManager(carolPM)
 
-	bobPM.Listen("127.0.0.1:8100")
-	carolPM.Listen("127.0.0.1:8101")
+	bobPM.Listen("127.0.0.1:8200")
+	carolPM.Listen("127.0.0.1:8201")
 
 	time.Sleep(100 * time.Millisecond)
 
 	_ = alicePM // alicePM.ExpectInbound(bobIdent.PublicKey())
-	_ = bobPM // bobPM.ExpectInbound(aliceIdent.PublicKey())
-	_ = bobPM // bobPM.ExpectInbound(carolIdent.PublicKey())
+	_ = bobPM   // bobPM.ExpectInbound(aliceIdent.PublicKey())
+	_ = bobPM   // bobPM.ExpectInbound(carolIdent.PublicKey())
 	_ = carolPM // carolPM.ExpectInbound(bobIdent.PublicKey())
 
-	alicePM.Connect(context.Background(), "127.0.0.1:8100", bobIdent.PublicKey())
-	bobPM.Connect(context.Background(), "127.0.0.1:8101", carolIdent.PublicKey())
+	alicePM.Connect(context.Background(), "127.0.0.1:8200", bobIdent.PublicKey())
+	bobPM.Connect(context.Background(), "127.0.0.1:8201", carolIdent.PublicKey())
 
 	time.Sleep(200 * time.Millisecond)
 
@@ -91,8 +124,16 @@ func TestRelayCannotDecryptEndpointSession(t *testing.T) {
 	}
 
 	// Send APP_DATA
+	t.Logf("M9.1 EVIDENCE - SESSION OWNERSHIP")
+	t.Logf("  Alice possesses Alice-Carol endpoint application session.")
+	t.Logf("  Carol possesses Alice-Carol endpoint application session.")
+	t.Logf("  Alice encrypting application plaintext 'Hello Carol' using existing ChaCha20-Poly1305 implementation...")
 	sendAppDataHelper(aliceRouter, aliceSM, carolIdent.PublicKey(), []byte("Hello Carol"))
 	time.Sleep(200 * time.Millisecond)
+
+	if relayObservationCount.Load() == 0 {
+		t.Errorf("Relay blindness evidence failed: Bob never observed the forwarded APP_DATA packet")
+	}
 
 	alicePM.Shutdown()
 	bobPM.Shutdown()
@@ -116,11 +157,41 @@ func TestPeerLossDoesNotInvalidateEndpointSession(t *testing.T) {
 	aliceRouter.OnAppData = aliceOnMsg
 	bobRouter := routing.NewRouter(bobIdent, nil, bobSM, nil)
 	bobRouter.OnAppData = bobOnMsg
+
+	// M9.1: Test-only instrumentation for Relay Blindness Evidence
+	var relayObservationCount atomic.Int32
+	bobOnMsgWrapper := func(peerID []byte, rawMsg []byte) {
+		var pkt protocol.MeshPacket
+		if err := proto.Unmarshal(rawMsg, &pkt); err == nil {
+			fmt.Printf("M9.1 EVIDENCE - RELAY PACKET OBSERVATION at Bob\n")
+			fmt.Printf("  Packet Type: %v\n", pkt.Type)
+			fmt.Printf("  SourceNode : %x...\n", pkt.SourceNode[:4])
+			fmt.Printf("  DestNode   : %x...\n", pkt.DestNode[:4])
+			fmt.Printf("  PacketID   : %x...\n", pkt.PacketId[:4])
+			fmt.Printf("  TTL        : %d\n", pkt.Ttl)
+
+			if appData, ok := pkt.Payload.(*protocol.MeshPacket_AppData); ok {
+				fmt.Printf("  Payload    : APP_DATA\n")
+				fmt.Printf("  SessionID  : %x...\n", appData.AppData.SessionId[:4])
+				fmt.Printf("  SequenceNum: %d\n", appData.AppData.SequenceNum)
+				fmt.Printf("  Ciphertext : %d bytes observed\n", len(appData.AppData.Ciphertext))
+
+				// Verify Bob doesn't have the session
+				if _, ok := bobSM.Lookup(*(*[32]byte)(appData.AppData.SessionId)); ok {
+					t.Errorf("CRITICAL VIOLATION: Bob possesses the endpoint session!")
+				} else {
+					fmt.Printf("  Validation : Bob's implemented session manager does not contain the Alice-Carol endpoint application session required to decrypt this ciphertext.\n")
+				}
+				relayObservationCount.Add(1)
+			}
+		}
+		bobRouter.OnMessage(peerID, rawMsg)
+	}
 	carolRouter := routing.NewRouter(carolIdent, nil, carolSM, nil)
 	carolRouter.OnAppData = carolOnMsg
 
 	alicePM := mesh.NewPeerManager(aliceIdent, nil, aliceRouter.OnMessage)
-	bobPM := mesh.NewPeerManager(bobIdent, nil, bobRouter.OnMessage)
+	bobPM := mesh.NewPeerManager(bobIdent, nil, bobOnMsgWrapper)
 	carolPM := mesh.NewPeerManager(carolIdent, nil, carolRouter.OnMessage)
 
 	aliceRouter.SetPeerManager(alicePM)
@@ -133,8 +204,8 @@ func TestPeerLossDoesNotInvalidateEndpointSession(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	_ = alicePM // alicePM.ExpectInbound(bobIdent.PublicKey())
-	_ = bobPM // bobPM.ExpectInbound(aliceIdent.PublicKey())
-	_ = bobPM // bobPM.ExpectInbound(carolIdent.PublicKey())
+	_ = bobPM   // bobPM.ExpectInbound(aliceIdent.PublicKey())
+	_ = bobPM   // bobPM.ExpectInbound(carolIdent.PublicKey())
 	_ = carolPM // carolPM.ExpectInbound(bobIdent.PublicKey())
 
 	alicePM.Connect(context.Background(), "127.0.0.1:8200", bobIdent.PublicKey())
@@ -240,10 +311,10 @@ func TestRelayCiphertextBoundary(t *testing.T) {
 	carolPM.Listen("127.0.0.1:8301")
 	time.Sleep(100 * time.Millisecond)
 
-	_ = alicePM // alicePM.ExpectInbound(bobIdent.PublicKey())
+	_ = alicePM   // alicePM.ExpectInbound(bobIdent.PublicKey())
 	_ = baseBobPM // baseBobPM.ExpectInbound(aliceIdent.PublicKey())
 	_ = baseBobPM // baseBobPM.ExpectInbound(carolIdent.PublicKey())
-	_ = carolPM // carolPM.ExpectInbound(bobIdent.PublicKey())
+	_ = carolPM   // carolPM.ExpectInbound(bobIdent.PublicKey())
 
 	alicePM.Connect(context.Background(), "127.0.0.1:8300", bobIdent.PublicKey())
 	baseBobPM.Connect(context.Background(), "127.0.0.1:8301", carolIdent.PublicKey())

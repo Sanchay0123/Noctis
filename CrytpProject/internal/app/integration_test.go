@@ -52,7 +52,7 @@ func TestApplicationService_AliceBobCarol_Integration(t *testing.T) {
 		carolApp.Stop()
 	}()
 
-	_ = bobMgr // bobMgr.ExpectInbound(decodeHex(t, aliceID))
+	_ = bobMgr   // bobMgr.ExpectInbound(decodeHex(t, aliceID))
 	_ = carolMgr // carolMgr.ExpectInbound(decodeHex(t, bobID))
 
 	carolEvents := carolApp.SubscribeEvents()

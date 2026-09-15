@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"math"
 	"sync"
 	"testing"
@@ -282,6 +283,10 @@ func TestDifferentIdentitySignature(t *testing.T) {
 	if err := hB.ProcessInit(initMsg); err == nil {
 		t.Fatalf("ProcessInit succeeded with signature from wrong identity")
 	}
+
+	fmt.Printf("M9.2 EVIDENCE - INVALID SIGNATURE\n")
+	fmt.Printf("  Signature verification: FAILED\n")
+	fmt.Printf("  Session established: NO\n")
 }
 
 func TestOldResponseNewInit(t *testing.T) {
